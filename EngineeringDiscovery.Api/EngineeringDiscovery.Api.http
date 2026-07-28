@@ -1,0 +1,6 @@
+@EngineeringDiscovery.Api_HostAddress = http://localhost:5012
+
+GET {{EngineeringDiscovery.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="EngineeringDiscovery.Api/EngineeringDiscovery.Api.csproj" />
+  <Project Path="EngineeringDiscovery.Core.Tests/EngineeringDiscovery.Core.Tests.csproj" />
+  <Project Path="EngineeringDiscovery.Core/EngineeringDiscovery.Core.csproj" />
+</Solution>
