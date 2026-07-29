@@ -1,5 +1,7 @@
 @using EngineeringDiscovery.Core.Domain.Investigation
 @using EngInv = EngineeringDiscovery.Core.Domain.Investigation
+@using System.Linq
+@using System.Collections.Generic
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 
 @code {
@@ -13,6 +15,22 @@
     private string ReadinessMessage => (FindingsByType.Contains(FindingType.Question) && FindingsByType[ FindingType.Question ].Any())
         ? "Planning is blocked until outstanding questions are resolved."
         : "Investigation appears ready for planning.";
+
+    private IEnumerable<string> Recommendations =>
+        Enum.GetValues(typeof(FindingType)).Cast<FindingType>()
+            .Where(t => FindingsByType[t].Any())
+            .Select(t => t switch
+            {
+                FindingType.Question => "Resolve outstanding questions before planning.",
+                FindingType.Risk => "Review identified risks before implementation.",
+                FindingType.TechnicalDebt => "Address technical debt during planning.",
+                FindingType.Dependency => "Validate external dependencies.",
+                FindingType.Architecture => "Review architecture before implementation.",
+                FindingType.Decision => "Confirm architectural decisions with stakeholders.",
+                FindingType.Observation => "Consider observations during planning discussions.",
+                _ => string.Empty
+            })
+            .Where(s => !string.IsNullOrEmpty(s));
 
 }
 
@@ -50,6 +68,24 @@
         <p>Outstanding Questions: @FindingsByType[ FindingType.Question ].Count()</p>
         <p>Observations: @FindingsByType[ FindingType.Observation ].Count()</p>
         <p><strong>@ReadinessMessage</strong></p>
+    </section>
+
+    <section class="workspace__section">
+        <h4>Planning Recommendations</h4>
+
+        @if (!Recommendations.Any())
+        {
+            <p>No recommendations at this time.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var r in Recommendations)
+                {
+                    <li>@r</li>
+                }
+            </ul>
+        }
     </section>
 
 </section>
