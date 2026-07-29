@@ -13,6 +13,7 @@
     private string? ErrorMessage { get; set; }
 
     private string NewFindingDescription { get; set; } = string.Empty;
+    private EngInv.FindingType NewFindingType { get; set; } = EngInv.FindingType.Observation;
 
     // Fail fast: Investigation is required. Do not silently create placeholder data.
     protected override void OnParametersSet()
@@ -88,8 +89,7 @@
         {
             var desc = NewFindingDescription?.Trim();
             if (string.IsNullOrEmpty(desc)) return;
-
-            var f = new EngInv.Finding(Guid.NewGuid(), desc);
+            var f = new EngInv.Finding(Guid.NewGuid(), NewFindingType, desc);
             Sample.AddFinding(f);
             NewFindingDescription = string.Empty;
             ClearError();
@@ -173,11 +173,21 @@
     <ul>
         @foreach (var f in Sample.Findings)
         {
-            <li>@f.Description</li>
+            <li><strong>@f.Type:</strong> @f.Description</li>
         }
     </ul>
 
     <div class="add-finding">
+        <select @bind="NewFindingType">
+            <option value="Architecture">Architecture</option>
+            <option value="Risk">Risk</option>
+            <option value="Decision">Decision</option>
+            <option value="Question">Question</option>
+            <option value="Dependency">Dependency</option>
+            <option value="TechnicalDebt">Technical Debt</option>
+            <option value="Observation">Observation</option>
+        </select>
+
         <input @bind="NewFindingDescription" placeholder="New finding description" />
         <button class="btn" @onclick="AddFinding">Add Finding</button>
     </div>

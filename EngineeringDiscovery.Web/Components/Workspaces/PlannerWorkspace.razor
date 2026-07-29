@@ -1,21 +1,55 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngInv = EngineeringDiscovery.Core.Domain.Investigation
 @namespace EngineeringDiscovery.Web.Components.Workspaces
+
+@code {
+    [Parameter]
+    public EngInv.Investigation? Investigation { get; set; }
+
+    private IEnumerable<Finding> Findings => Investigation?.Findings ?? Enumerable.Empty<Finding>();
+
+    private ILookup<FindingType, Finding> FindingsByType => Findings.ToLookup(f => f.Type);
+
+    private string ReadinessMessage => (FindingsByType.Contains(FindingType.Question) && FindingsByType[ FindingType.Question ].Any())
+        ? "Planning is blocked until outstanding questions are resolved."
+        : "Investigation appears ready for planning.";
+
+}
 
 <section class="workspace workspace--planner">
     <h3>Planner Workspace</h3>
-    <p>The Planner focuses on scoping, milestones, and coordinating the investigation activities.</p>
+
+    <InvestigationSummary Investigation="@Investigation" />
 
     <section class="workspace__section">
-        <h4>Milestones</h4>
-        <p>Placeholder for milestone planning and timelines.</p>
+        <h4>Planning Dashboard</h4>
+
+        @foreach (FindingType type in Enum.GetValues(typeof(FindingType)))
+        {
+            var group = FindingsByType[type];
+            if (!group.Any()) continue;
+
+            <h5>@type</h5>
+            <ul>
+                @foreach (var f in group)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
     </section>
 
     <section class="workspace__section">
-        <h4>Backlog</h4>
-        <p>Placeholder for prioritised work items and tickets.</p>
+        <h4>Planning Readiness</h4>
+        <p>Architecture Findings: @FindingsByType[ FindingType.Architecture ].Count()</p>
+        <p>Risks: @FindingsByType[ FindingType.Risk ].Count()</p>
+        <p>Technical Debt: @FindingsByType[ FindingType.TechnicalDebt ].Count()</p>
+        <p>Dependencies: @FindingsByType[ FindingType.Dependency ].Count()</p>
+        <p>Decisions: @FindingsByType[ FindingType.Decision ].Count()</p>
+        <p>Outstanding Questions: @FindingsByType[ FindingType.Question ].Count()</p>
+        <p>Observations: @FindingsByType[ FindingType.Observation ].Count()</p>
+        <p><strong>@ReadinessMessage</strong></p>
     </section>
 
-    <section class="workspace__section">
-        <h4>Stakeholders</h4>
-        <p>Placeholder for stakeholder notes and communication plan.</p>
-    </section>
 </section>

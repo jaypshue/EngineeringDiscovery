@@ -12,6 +12,7 @@
     private string? ErrorMessage { get; set; }
 
     private string NewFindingDescription { get; set; } = string.Empty;
+    private EngInv.FindingType NewFindingType { get; set; } = EngInv.FindingType.Observation;
 
     private void ClearError() => ErrorMessage = null;
 
@@ -79,8 +80,7 @@
         {
             var desc = NewFindingDescription?.Trim();
             if (string.IsNullOrEmpty(desc)) return; // nothing to add
-
-            var f = new EngInv.Finding(Guid.NewGuid(), desc);
+            var f = new EngInv.Finding(Guid.NewGuid(), NewFindingType, desc);
             Investigation!.AddFinding(f);
             NewFindingDescription = string.Empty;
             ClearError();
@@ -97,6 +97,22 @@
     <p>The Architect focuses on high level design, system boundaries, and technical decisions that shape the investigation.</p>
 
     <InvestigationWorkspace Investigation="@Investigation" />
+    <InvestigationSummary Investigation="@Investigation" />
+
+    <div class="add-finding">
+        <select @bind="NewFindingType">
+            <option value="Architecture">Architecture</option>
+            <option value="Risk">Risk</option>
+            <option value="Decision">Decision</option>
+            <option value="Question">Question</option>
+            <option value="Dependency">Dependency</option>
+            <option value="TechnicalDebt">Technical Debt</option>
+            <option value="Observation">Observation</option>
+        </select>
+
+        <input @bind="NewFindingDescription" placeholder="New finding description" />
+        <button class="btn" @onclick="AddFinding">Add Finding</button>
+    </div>
 
     <section class="workspace__section">
         <h4>Design Canvas</h4>

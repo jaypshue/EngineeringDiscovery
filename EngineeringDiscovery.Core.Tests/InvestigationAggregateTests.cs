@@ -124,7 +124,7 @@ namespace EngineeringDiscovery.Core.Tests
             // Arrange
             var inv = Investigation.Create(Guid.NewGuid(), "/");
             inv.Start();
-            var f = new Finding(Guid.NewGuid(), "desc");
+            var f = new Finding(Guid.NewGuid(), FindingType.Observation, "desc");
 
             // Act
             inv.AddFinding(f);
@@ -138,7 +138,7 @@ namespace EngineeringDiscovery.Core.Tests
         {
             // Arrange
             var inv = Investigation.Create(Guid.NewGuid(), "/");
-            var f = new Finding(Guid.NewGuid(), "desc");
+            var f = new Finding(Guid.NewGuid(), FindingType.Observation, "desc");
 
             // Act & Assert
             Assert.Throws<InvalidOperationException>(() => inv.AddFinding(f));
