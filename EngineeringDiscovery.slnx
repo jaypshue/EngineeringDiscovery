@@ -2,4 +2,5 @@
   <Project Path="EngineeringDiscovery.Api/EngineeringDiscovery.Api.csproj" />
   <Project Path="EngineeringDiscovery.Core.Tests/EngineeringDiscovery.Core.Tests.csproj" />
   <Project Path="EngineeringDiscovery.Core/EngineeringDiscovery.Core.csproj" />
+  <Project Path="EngineeringDiscovery.Web/EngineeringDiscovery.Web.csproj" Id="2d7c362a-d701-43a1-aba2-f05fc5559919" />
 </Solution>

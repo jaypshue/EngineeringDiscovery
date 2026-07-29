@@ -1,0 +1,80 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+@namespace EngineeringDiscovery.Web.Components.Dashboard
+
+<nav class="role-nav" aria-label="Role navigation">
+    <div class="role-nav__header">Roles</div>
+
+    <ul class="role-nav__list">
+        @foreach (var role in ItemsResolved)
+        {
+            var isActive = string.Equals(role, ActiveRole, StringComparison.OrdinalIgnoreCase);
+            <li class="role-nav__item @(isActive ? "active" : string.Empty)"
+                role="button"
+                tabindex="0"
+                aria-current="@(isActive ? "page" : null)"
+                @onclick="() => SelectRole(role)"
+                @onkeydown="(e) => OnKeyDown(e, role)">
+                <span class="role-nav__name">@role</span>
+            </li>
+        }
+    </ul>
+
+    @if (ChildContent is not null)
+    {
+        <div class="role-nav__extra">
+            @ChildContent
+        </div>
+    }
+</nav>
+
+@code {
+    /// <summary>
+    /// The currently active role name. Comparison is case-insensitive.
+    /// </summary>
+    [Parameter]
+    public string ActiveRole { get; set; } = "Architect";
+
+    /// <summary>
+    /// Optional callback invoked when the active role changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> ActiveRoleChanged { get; set; }
+
+    /// <summary>
+    /// Roles to render. Defaults to the core engineering roles.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<string>? Items { get; set; }
+
+    /// <summary>
+    /// Optional additional content rendered below the role list (e.g. sections like Engineering Assets).
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private static readonly string[] DefaultRoles = new[] { "Architect", "Planner", "Developer", "Verifier", "Reviewer" };
+
+    private IEnumerable<string> ItemsResolved => Items ?? DefaultRoles;
+
+    private async Task SelectRole(string role)
+    {
+        if (string.Equals(role, ActiveRole, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        ActiveRole = role;
+        if (ActiveRoleChanged.HasDelegate)
+        {
+            await ActiveRoleChanged.InvokeAsync(role);
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e, string role)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await SelectRole(role);
+        }
+    }
+}
