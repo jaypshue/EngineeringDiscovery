@@ -25,6 +25,7 @@ namespace EngineeringDiscovery.Web.Services
 
             string target = defaultTarget;
             int projectCount = 0;
+            var discoveredProjectNames = new List<string>();
 
             if (!string.IsNullOrEmpty(solutionPath) && File.Exists(solutionPath))
             {
@@ -36,6 +37,30 @@ namespace EngineeringDiscovery.Web.Services
                     var lines = File.ReadAllLines(solutionPath);
                     // Count Project definitions that reference a project file (simple string match)
                     projectCount = lines.Count(l => l.Contains(".csproj", StringComparison.OrdinalIgnoreCase) || l.Contains("Project("));
+
+                    // Try to extract project names from lines that include .csproj references
+                    var projectLines = lines.Where(l => l.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    foreach (var pl in projectLines)
+                    {
+                        try
+                        {
+                            // Typical .sln project line: Project("{...}") = "Name", "path\to\project.csproj", "{GUID}"
+                            var parts = pl.Split('=');
+                            if (parts.Length < 2) continue;
+                            var rhs = parts[1];
+                            var namePart = rhs.Split(',').Select(p => p.Trim()).FirstOrDefault();
+                            if (string.IsNullOrEmpty(namePart)) continue;
+                            // Trim surrounding quotes
+                            namePart = namePart.Trim();
+                            if (namePart.StartsWith("\"")) namePart = namePart.Trim('"');
+                            // Collect discovered project name to add later
+                            discoveredProjectNames.Add(namePart);
+                        }
+                        catch
+                        {
+                            // ignore individual parse errors
+                        }
+                    }
                 }
                 catch
                 {
@@ -68,6 +93,19 @@ namespace EngineeringDiscovery.Web.Services
             if (projectCount > 0)
             {
                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {projectCount} projects."));
+            }
+
+            // Add observations for each discovered project name
+            foreach (var name in discoveredProjectNames)
+            {
+                try
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project discovered: {name}"));
+                }
+                catch
+                {
+                    // ignore
+                }
             }
 
             return inv;
