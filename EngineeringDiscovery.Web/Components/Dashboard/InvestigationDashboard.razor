@@ -1,0 +1,362 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using System.Text.RegularExpressions
+@namespace EngineeringDiscovery.Web.Components.Dashboard
+
+@inherits ComponentBase
+
+<div class="investigation-dashboard">
+    <h3>Investigation: @Investigation?.Target ?? "(unknown)"</h3>
+
+    <div class="summary-cards" style="display:flex; gap:12px; margin-bottom:12px;">
+        <div class="card">Projects<br/><strong>@Projects.Count</strong></div>
+        <div class="card">Namespaces<br/><strong>@NamespaceCount</strong></div>
+        <div class="card">Types<br/><strong>@TypeCount</strong></div>
+        <div class="card">Members<br/><strong>@MemberCount</strong></div>
+        <div class="card">Dependencies<br/><strong>@Dependencies.Count</strong></div>
+        <div class="card">Technologies<br/><strong>@Technologies.Count</strong></div>
+        <div class="card">Findings<br/><strong>@FindingsOnly.Count</strong></div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+        <input placeholder="Search discovery..." @bind="SearchTerm" style="width:100%; padding:6px;" />
+    </div>
+
+    <div style="display:flex; gap:16px;">
+        <div style="width:320px; border-right:1px solid #ddd; padding-right:12px;">
+            <h4>Project Explorer</h4>
+            @if (!Projects.Any())
+            {
+                <p class="muted">No projects discovered.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var p in Projects.OrderBy(p => p.Key))
+                    {
+                        <li>
+                            <button class="link" @onclick="() => ToggleProject(p.Key)">@((ExpandedProjects.Contains(p.Key) ? "▼" : "▶"))</button>
+                            <strong>@p.Key</strong>
+                            @if (ExpandedProjects.Contains(p.Key))
+                            {
+                                <ul>
+                                    @foreach (var ns in p.Value.Namespaces.OrderBy(n => n.Key))
+                                    {
+                                        if (!MatchesFilter(ns.Key)) continue;
+                                        <li>
+                                            <button class="link" @onclick="() => ToggleNamespace(p.Key, ns.Key)">@((ExpandedNamespaces.Contains(GetNamespaceId(p.Key, ns.Key)) ? "▼" : "▶"))</button>
+                                            @ns.Key
+                                            @if (ExpandedNamespaces.Contains(GetNamespaceId(p.Key, ns.Key)))
+                                            {
+                                                <ul>
+                                                    @foreach (var t in ns.Value.Types.OrderBy(t => t.Key))
+                                                    {
+                                                        if (!MatchesFilter(t.Key)) continue;
+                                                        <li>
+                                                            <button class="link" @onclick="() => ToggleType(p.Key, ns.Key, t.Key)">@((ExpandedTypes.Contains(GetTypeId(p.Key, ns.Key, t.Key)) ? "▼" : "▶"))</button>
+                                                            @t.Key (@t.Value.Kind)
+                                                            @if (ExpandedTypes.Contains(GetTypeId(p.Key, ns.Key, t.Key)))
+                                                            {
+                                                                <ul>
+                                                                    @foreach (var m in t.Value.Members)
+                                                                    {
+                                                                        if (!MatchesFilter(m)) continue;
+                                                                        <li>@m</li>
+                                                                    }
+                                                                </ul>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div style="flex:1; padding-left:12px;">
+            <h4>Discovery Details</h4>
+
+            <div>
+                <h5>Findings (engineering conclusions)</h5>
+                @if (!FindingsOnly.Any())
+                {
+                    <p class="muted">No findings categorized beyond observations.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var f in FindingsOnly)
+                        {
+                            <li><strong>@f.Type</strong>: @f.Description</li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div style="margin-top:12px;">
+                <h5>Dependencies</h5>
+                @if (!Dependencies.Any())
+                {
+                    <p class="muted">No dependencies discovered.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var d in Dependencies.OrderBy(d => d))
+                        {
+                            if (!MatchesFilter(d)) continue;
+                            <li>@d</li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div style="margin-top:12px;">
+                <h5>Technologies</h5>
+                @if (!Technologies.Any())
+                {
+                    <p class="muted">No technologies discovered.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var t in Technologies.OrderBy(t => t))
+                        {
+                            if (!MatchesFilter(t)) continue;
+                            <li>@t</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Investigation? Investigation { get; set; }
+
+    private string SearchTerm { get; set; } = string.Empty;
+
+    private Dictionary<string, ProjectModel> Projects { get; set; } = new();
+    private HashSet<string> Dependencies { get; set; } = new();
+    private HashSet<string> Technologies { get; set; } = new();
+    private List<Finding> FindingsOnly { get; set; } = new();
+
+    private HashSet<string> ExpandedProjects { get; } = new HashSet<string>();
+    private HashSet<string> ExpandedNamespaces { get; } = new HashSet<string>();
+    private HashSet<string> ExpandedTypes { get; } = new HashSet<string>();
+
+    private int NamespaceCount => Projects.Values.SelectMany(p => p.Namespaces.Keys).Distinct().Count();
+    private int TypeCount => Projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Keys).Distinct().Count();
+    private int MemberCount => Projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Values).SelectMany(t => t.Members).Count();
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        RebuildModel();
+    }
+
+    private void RebuildModel()
+    {
+        Projects = new Dictionary<string, ProjectModel>(StringComparer.OrdinalIgnoreCase);
+        Dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Technologies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        FindingsOnly = new List<Finding>();
+
+        if (Investigation == null) return;
+
+        var findings = Investigation.Findings ?? new List<Finding>();
+
+        // categorize
+        foreach (var f in findings)
+        {
+            if (f.Type != FindingType.Observation)
+            {
+                FindingsOnly.Add(f);
+            }
+
+            var desc = f.Description ?? string.Empty;
+
+            // Project occurrences: "Project '{name}' ..."
+            foreach (Match m in Regex.Matches(desc, "Project '\\s*(?<p>[^']+)'", RegexOptions.IgnoreCase))
+            {
+                var pname = m.Groups["p"].Value.Trim();
+                EnsureProject(pname);
+            }
+
+            // Project without quotes: Project Name appears at start 'Project Name is located...'
+            foreach (Match m in Regex.Matches(desc, "Project (?<p>[A-Za-z0-9_.-]+) ", RegexOptions.IgnoreCase))
+            {
+                var pname = m.Groups["p"].Value.Trim();
+                EnsureProject(pname);
+            }
+
+            // Project defines namespace: "defines namespace '{ns}'"
+            var nsMatches = Regex.Matches(desc, "defines namespace '\\s*(?<ns>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match nm in nsMatches)
+            {
+                var ns = nm.Groups["ns"].Value.Trim();
+                var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
+                var proj = EnsureProject(p);
+                EnsureNamespace(proj, ns);
+            }
+
+            // Type definitions: "defines (class|interface|record|struct|enum|delegate) '{type}' in namespace '{ns}'"
+            var typeRegex = new Regex("defines (?:class|interface|record|struct|enum|delegate) '\\s*(?<type>[^']+)' in namespace '\\s*(?<ns>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match tm in typeRegex.Matches(desc))
+            {
+                var typeName = tm.Groups["type"].Value.Trim();
+                var ns = tm.Groups["ns"].Value.Trim();
+                var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
+                var proj = EnsureProject(p);
+                var nsModel = EnsureNamespace(proj, ns);
+                EnsureType(nsModel, typeName, KindFromDesc(desc));
+            }
+
+            // Member definitions: "defines method 'X' in type 'T'"
+            var memberRegex = new Regex("defines (?<kind>constructor|method|property|field|event) '\\s*(?<member>[^']+)' in type '\\s*(?<type>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match mm in memberRegex.Matches(desc))
+            {
+                var kind = mm.Groups["kind"].Value.Trim();
+                var member = mm.Groups["member"].Value.Trim();
+                var typeName = mm.Groups["type"].Value.Trim();
+                var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
+                var proj = EnsureProject(p);
+                // find type across namespaces
+                var tmodel = proj.Namespaces.Values.SelectMany(n => n.Types.Values).FirstOrDefault(t => string.Equals(t.Name, typeName, StringComparison.OrdinalIgnoreCase));
+                if (tmodel == null)
+                {
+                    // unknown namespace - put under <global>
+                    var nsModel = EnsureNamespace(proj, "<global>");
+                    var newType = EnsureType(nsModel, typeName, "type");
+                    newType.Members.Add($"{kind}: {member}");
+                }
+                else
+                {
+                    tmodel.Members.Add($"{kind}: {member}");
+                }
+            }
+
+            // Dependencies: package/framework/analyzer references
+            var depRegex = new Regex("references package '(?<pkg>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match dm in depRegex.Matches(desc)) Dependencies.Add(dm.Groups["pkg"].Value.Trim());
+            var frameRegex = new Regex("references framework '(?<fw>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match dm in frameRegex.Matches(desc)) Dependencies.Add(dm.Groups["fw"].Value.Trim());
+            var analyzerRegex = new Regex("references analyzer '(?<an>[^']+)'", RegexOptions.IgnoreCase);
+            foreach (Match dm in analyzerRegex.Matches(desc)) Dependencies.Add(dm.Groups["an"].Value.Trim());
+
+            // Technologies: "uses {sdk}" or "uses {tech}"
+            var usesRegex = new Regex("uses (?<tech>[A-Za-z0-9_.-]+)", RegexOptions.IgnoreCase);
+            foreach (Match um in usesRegex.Matches(desc))
+            {
+                var tech = um.Groups["tech"].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(tech) && tech.Length < 100) Technologies.Add(tech);
+            }
+        }
+    }
+
+    private string? ExtractProjectFromDesc(string desc)
+    {
+        var m = Regex.Match(desc, "Project '\\s*(?<p>[^']+)'", RegexOptions.IgnoreCase);
+        if (m.Success) return m.Groups["p"].Value.Trim();
+        var m2 = Regex.Match(desc, "Project (?<p>[A-Za-z0-9_.-]+)", RegexOptions.IgnoreCase);
+        if (m2.Success) return m2.Groups["p"].Value.Trim();
+        return null;
+    }
+
+    private ProjectModel EnsureProject(string name)
+    {
+        if (!Projects.TryGetValue(name, out var p))
+        {
+            p = new ProjectModel { Name = name };
+            Projects[name] = p;
+        }
+        return p;
+    }
+
+    private NamespaceModel EnsureNamespace(ProjectModel project, string ns)
+    {
+        if (!project.Namespaces.TryGetValue(ns, out var n))
+        {
+            n = new NamespaceModel { Name = ns };
+            project.Namespaces[ns] = n;
+        }
+        return n;
+    }
+
+    private TypeModel EnsureType(NamespaceModel nsModel, string typeName, string kind)
+    {
+        if (!nsModel.Types.TryGetValue(typeName, out var t))
+        {
+            t = new TypeModel { Name = typeName, Kind = kind };
+            nsModel.Types[typeName] = t;
+        }
+        return t;
+    }
+
+    private string KindFromDesc(string desc)
+    {
+        if (desc.IndexOf("interface", StringComparison.OrdinalIgnoreCase) >= 0) return "interface";
+        if (desc.IndexOf("record", StringComparison.OrdinalIgnoreCase) >= 0) return "record";
+        if (desc.IndexOf("struct", StringComparison.OrdinalIgnoreCase) >= 0) return "struct";
+        if (desc.IndexOf("enum", StringComparison.OrdinalIgnoreCase) >= 0) return "enum";
+        if (desc.IndexOf("delegate", StringComparison.OrdinalIgnoreCase) >= 0) return "delegate";
+        return "class";
+    }
+
+    private bool MatchesFilter(string text)
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm)) return true;
+        return text.IndexOf(SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private void ToggleProject(string project)
+    {
+        if (!ExpandedProjects.Remove(project)) ExpandedProjects.Add(project);
+    }
+
+    private string GetNamespaceId(string project, string ns) => project + ":" + ns;
+    private void ToggleNamespace(string project, string ns)
+    {
+        var id = GetNamespaceId(project, ns);
+        if (!ExpandedNamespaces.Remove(id)) ExpandedNamespaces.Add(id);
+    }
+
+    private string GetTypeId(string project, string ns, string type) => project + ":" + ns + ":" + type;
+    private void ToggleType(string project, string ns, string type)
+    {
+        var id = GetTypeId(project, ns, type);
+        if (!ExpandedTypes.Remove(id)) ExpandedTypes.Add(id);
+    }
+
+    private bool ExpandedNamespacesContains(string id) => ExpandedNamespaces.Contains(id);
+
+    private int NamespaceCountInternal() => Projects.Values.SelectMany(p => p.Namespaces.Keys).Distinct().Count();
+
+    private int TypeCountInternal() => Projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Keys).Distinct().Count();
+
+    private class ProjectModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public Dictionary<string, NamespaceModel> Namespaces { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private class NamespaceModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public Dictionary<string, TypeModel> Types { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private class TypeModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Kind { get; set; } = "class";
+        public List<string> Members { get; } = new();
+    }
+}

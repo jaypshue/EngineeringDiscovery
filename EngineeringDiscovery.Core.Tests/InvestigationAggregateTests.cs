@@ -58,6 +58,9 @@ namespace EngineeringDiscovery.Core.Tests
             // Arrange
             var inv = Investigation.Create(Guid.NewGuid(), "/");
 
+            //JPS - added assertion to check initial status
+            Assert.Equal(InvestigationStatus.Created, inv.Status);
+
             // Act
             inv.Start();
 

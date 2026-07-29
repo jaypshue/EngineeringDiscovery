@@ -73,7 +73,10 @@
 
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation { get; set; }
 
-    // Removed UseCurrentRepository because repository root must originate exclusively from user selection.
+    private void UseCurrentRepository()
+    {
+        SelectedRepositoryPath = SelectedRepositoryPath; // placeholder - disabled
+    }
 
     private void DiscoverSolutions()
     {
@@ -106,15 +109,8 @@
         // Use SelectedRepositoryPath as the repository root; engine will locate the solution automatically.
         SampleInvestigation = engine.CreateInvestigation(string.IsNullOrWhiteSpace(SelectedRepositoryPath) ? null : SelectedRepositoryPath, string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
 
-        // Starting discovery should also transition the Investigation to Started automatically
-        try
-        {
-            SampleInvestigation?.Start();
-        }
-        catch (InvalidOperationException)
-        {
-            // Ignore: investigation may already be started by the engine
-        }
+        // The Discovery Engine is responsible for starting the Investigation (if appropriate).
+        // Do not call Start() here to avoid duplicate starts.
 
         DiscoveryStatus = "Complete";
     }
