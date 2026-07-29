@@ -21,3 +21,6 @@ Business rules belong in the domain
 Infrastructure introduced only when earned
 
 The application intentionally delays persistence, AI integration, and infrastructure until the workflow demonstrates a genuine need for them.
+
+Engineering Principle
+Each workspace presents a role-specific representation of the shared Investigation.

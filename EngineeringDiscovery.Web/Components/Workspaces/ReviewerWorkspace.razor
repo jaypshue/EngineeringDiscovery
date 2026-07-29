@@ -1,21 +1,127 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngInv = EngineeringDiscovery.Core.Domain.Investigation
+@using System.Linq
 @namespace EngineeringDiscovery.Web.Components.Workspaces
+
+@code {
+    [Parameter]
+    public EngInv.Investigation? Investigation { get; set; }
+
+    private IEnumerable<Finding> Findings => Investigation?.Findings ?? Enumerable.Empty<Finding>();
+    private ILookup<FindingType, Finding> FindingsByType => Findings.ToLookup(f => f.Type);
+
+    private bool HasObjective => !string.IsNullOrWhiteSpace(Investigation?.Goal);
+
+    private bool HasArchitectureConsiderations => FindingsByType[ FindingType.Architecture ].Any();
+    private bool HasDependencies => FindingsByType[ FindingType.Dependency ].Any();
+    private bool HasRisks => FindingsByType[ FindingType.Risk ].Any();
+    private bool HasQuestions => FindingsByType[ FindingType.Question ].Any();
+    private bool HasTechnicalDebt => FindingsByType[ FindingType.TechnicalDebt ].Any();
+
+    private string OverallReadiness
+    {
+        get
+        {
+            if (HasQuestions) return "Not Ready";
+            if (HasRisks || HasTechnicalDebt) return "Ready with Concerns";
+            return "Ready";
+        }
+    }
+}
 
 <section class="workspace workspace--reviewer">
     <h3>Reviewer Workspace</h3>
-    <p>The Reviewer focuses on feedback, code review, and final sign-off of findings and recommendations.</p>
+
+    <InvestigationSummary Investigation="@Investigation" />
 
     <section class="workspace__section">
-        <h4>Review Queue</h4>
-        <p>Placeholder for pending reviews and assignments.</p>
-    </section>
+        <h4>Review Report</h4>
 
-    <section class="workspace__section">
-        <h4>Comments</h4>
-        <p>Placeholder for aggregated comments and discussion threads.</p>
-    </section>
+        <h5>1. Objective Review</h5>
+        <p>@(HasObjective ? "Objective present." : "Objective missing.")</p>
 
-    <section class="workspace__section">
-        <h4>Approval</h4>
-        <p>Placeholder for approval state and sign-off history.</p>
+        <h5>2. Architecture Review</h5>
+        @if (HasArchitectureConsiderations)
+        {
+            <p>Architecture considerations are present.</p>
+            <ul>
+                @foreach (var f in FindingsByType[ FindingType.Architecture ])
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No architecture considerations found.</p>
+        }
+
+        <h5>3. Dependency Review</h5>
+        @if (HasDependencies)
+        {
+            <p>Dependencies identified.</p>
+            <ul>
+                @foreach (var f in FindingsByType[ FindingType.Dependency ])
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No dependencies found.</p>
+        }
+
+        <h5>4. Risk Review</h5>
+        @if (HasRisks)
+        {
+            <p>Risks acknowledged.</p>
+            <ul>
+                @foreach (var f in FindingsByType[ FindingType.Risk ])
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No risks identified.</p>
+        }
+
+        <h5>5. Outstanding Questions</h5>
+        @if (HasQuestions)
+        {
+            <p>Outstanding questions remain and reduce implementation readiness.</p>
+            <ul>
+                @foreach (var f in FindingsByType[ FindingType.Question ])
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No outstanding questions.</p>
+        }
+
+        <h5>6. Technical Debt Review</h5>
+        @if (HasTechnicalDebt)
+        {
+            <p>Technical debt has been identified.</p>
+            <ul>
+                @foreach (var f in FindingsByType[ FindingType.TechnicalDebt ])
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No technical debt findings.</p>
+        }
+
+        <h5>7. Overall Readiness</h5>
+        <p><strong>@OverallReadiness</strong></p>
+
     </section>
 </section>

@@ -1,8 +1,22 @@
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 
+@using EngineeringDiscovery.Core.Domain.Investigation
+
+@code {
+    [Parameter, EditorRequired]
+    public Investigation Investigation { get; set; } = default!;
+}
+
 <section class="workspace workspace--verifier">
     <h3>Verifier Workspace</h3>
-    <p>The Verifier focuses on tests, verification steps, and validating findings.</p>
+    <p>
+        Verification for:
+        <strong>@Investigation.Target</strong>
+    </p>
+
+    <p>
+        Verification functionality will be introduced in ED-111.
+    </p>
 
     <section class="workspace__section">
         <h4>Test Runs</h4>
