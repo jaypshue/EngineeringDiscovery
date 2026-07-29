@@ -24,8 +24,7 @@ namespace EngineeringDiscovery.Web.Services
             var defaultTarget = "engineering-discovery";
 
             string target = defaultTarget;
-            int projectCount = 0;
-            var discoveredProjectNames = new List<string>();
+            var discoveredProjects = new List<(string Name, string Path)>();
 
             if (!string.IsNullOrEmpty(solutionPath) && File.Exists(solutionPath))
             {
@@ -35,11 +34,10 @@ namespace EngineeringDiscovery.Web.Services
                     target = fileName;
 
                     var lines = File.ReadAllLines(solutionPath);
-                    // Count Project definitions that reference a project file (simple string match)
-                    projectCount = lines.Count(l => l.Contains(".csproj", StringComparison.OrdinalIgnoreCase) || l.Contains("Project("));
 
-                    // Try to extract project names from lines that include .csproj references
+                    // Look for lines that reference project files and try to extract the project name and path
                     var projectLines = lines.Where(l => l.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    var solutionDir = Path.GetDirectoryName(solutionPath) ?? Directory.GetCurrentDirectory();
                     foreach (var pl in projectLines)
                     {
                         try
@@ -48,13 +46,21 @@ namespace EngineeringDiscovery.Web.Services
                             var parts = pl.Split('=');
                             if (parts.Length < 2) continue;
                             var rhs = parts[1];
-                            var namePart = rhs.Split(',').Select(p => p.Trim()).FirstOrDefault();
-                            if (string.IsNullOrEmpty(namePart)) continue;
-                            // Trim surrounding quotes
-                            namePart = namePart.Trim();
+                            var segments = rhs.Split(',').Select(p => p.Trim()).ToArray();
+                            if (segments.Length < 2) continue;
+                            var namePart = segments[0].Trim();
+                            var pathPart = segments[1].Trim();
                             if (namePart.StartsWith("\"")) namePart = namePart.Trim('"');
-                            // Collect discovered project name to add later
-                            discoveredProjectNames.Add(namePart);
+                            if (pathPart.StartsWith("\"")) pathPart = pathPart.Trim('"');
+
+                            // Resolve relative project path against the solution directory
+                            var projectPath = pathPart;
+                            if (!Path.IsPathRooted(projectPath))
+                            {
+                                projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
+                            }
+
+                            discoveredProjects.Add((Name: namePart, Path: projectPath));
                         }
                         catch
                         {
@@ -66,7 +72,7 @@ namespace EngineeringDiscovery.Web.Services
                 {
                     // Fall back to defaults on any IO error
                     target = defaultTarget;
-                    projectCount = 0;
+                    discoveredProjects.Clear();
                 }
             }
 
@@ -93,21 +99,32 @@ namespace EngineeringDiscovery.Web.Services
             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.TechnicalDebt, "Legacy authentication module requires refactoring."));
 
             // Add observation about solution/project count when discovered
+            var projectCount = discoveredProjects.Count;
             if (projectCount > 0)
             {
                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {projectCount} projects."));
             }
 
-            // Add observations for each discovered project name
-            foreach (var name in discoveredProjectNames)
+            // Infer project types using simple filename/name conventions and add observations
+            foreach (var proj in discoveredProjects)
             {
                 try
                 {
-                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project discovered: {name}"));
+                    var name = proj.Name ?? Path.GetFileNameWithoutExtension(proj.Path) ?? "Unnamed";
+                    var lowered = name.ToLowerInvariant();
+                    string projType;
+
+                    if (lowered.Contains("test") || lowered.Contains("tests")) projType = "Test Project";
+                    else if (lowered.Contains("web") || lowered.Contains("api")) projType = "Web";
+                    else if (lowered.Contains("console") || lowered.Contains("app")) projType = "Console";
+                    else if (lowered.Contains("core") || lowered.Contains("lib") || lowered.Contains("common") || lowered.Contains("shared")) projType = "Class Library";
+                    else projType = "Unknown";
+
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} (Project Type: {projType})"));
                 }
                 catch
                 {
-                    // ignore
+                    // ignore per-project errors
                 }
             }
 
