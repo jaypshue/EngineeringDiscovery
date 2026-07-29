@@ -626,6 +626,193 @@ namespace EngineeringDiscovery.Web.Services
             }
             catch { }
 
+            // Dependency graph discovery: build project dependency graph using ProjectReference elements
+            try
+            {
+                // Map project full path -> name for quick lookup
+                var pathToName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var p in discoveredProjects)
+                {
+                    try
+                    {
+                        var full = Path.GetFullPath(p.Path ?? string.Empty);
+                        if (!string.IsNullOrWhiteSpace(full) && !pathToName.ContainsKey(full)) pathToName[full] = p.Name ?? Path.GetFileNameWithoutExtension(p.Path) ?? full;
+                    }
+                    catch { }
+                }
+
+                // Build adjacency list (source -> list of referenced project names)
+                var adjacency = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var p in discoveredProjects)
+                {
+                    var sourceName = p.Name ?? Path.GetFileNameWithoutExtension(p.Path) ?? "Unnamed";
+                    if (!adjacency.ContainsKey(sourceName)) adjacency[sourceName] = new List<string>();
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(p.Path) || !File.Exists(p.Path)) continue;
+                        var doc = XDocument.Load(p.Path);
+                        var projectReferences = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "ProjectReference", StringComparison.OrdinalIgnoreCase));
+                        var sourceDir = Path.GetDirectoryName(p.Path) ?? Directory.GetCurrentDirectory();
+                        foreach (var pr in projectReferences)
+                        {
+                            try
+                            {
+                                var includeAttr = pr.Attribute("Include")?.Value;
+                                if (string.IsNullOrWhiteSpace(includeAttr)) continue;
+                                var referencedPath = includeAttr;
+                                if (!Path.IsPathRooted(referencedPath)) referencedPath = Path.GetFullPath(Path.Combine(sourceDir, referencedPath));
+                                else referencedPath = Path.GetFullPath(referencedPath);
+
+                                var referencedName = pathToName.ContainsKey(referencedPath) ? pathToName[referencedPath] : Path.GetFileNameWithoutExtension(referencedPath) ?? referencedPath;
+                                if (!string.Equals(sourceName, referencedName, StringComparison.OrdinalIgnoreCase) && !adjacency[sourceName].Contains(referencedName))
+                                {
+                                    adjacency[sourceName].Add(referencedName);
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{sourceName}' depends on project '{referencedName}'."));
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    catch { }
+                }
+
+                // Ensure all discovered projects appear in adjacency (even if they have no outgoing refs)
+                foreach (var p in discoveredProjects)
+                {
+                    var name = p.Name ?? Path.GetFileNameWithoutExtension(p.Path) ?? "Unnamed";
+                    if (!adjacency.ContainsKey(name)) adjacency[name] = new List<string>();
+                }
+
+                // Compute incoming counts
+                var incoming = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                foreach (var key in adjacency.Keys) incoming[key] = 0;
+                foreach (var kv in adjacency)
+                {
+                    foreach (var dep in kv.Value)
+                    {
+                        if (!incoming.ContainsKey(dep)) incoming[dep] = 0;
+                        incoming[dep]++;
+                    }
+                }
+
+                // Emit counts and standalone findings
+                foreach (var projName in adjacency.Keys)
+                {
+                    var outCount = adjacency[projName].Count;
+                    var inCount = incoming.ContainsKey(projName) ? incoming[projName] : 0;
+
+                    if (outCount == 0)
+                    {
+                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{projName}' has no project dependencies."));
+                    }
+                    else
+                    {
+                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{projName}' has {outCount} outgoing project dependencies."));
+                    }
+
+                    if (inCount == 0)
+                    {
+                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{projName}' is not referenced by any project."));
+                    }
+                    else
+                    {
+                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{projName}' has {inCount} incoming project dependencies."));
+                    }
+                }
+
+                // Detect cycles using DFS and record unique cycles
+                var cycles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var tempStack = new Stack<string>();
+                var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                void Dfs(string node, HashSet<string> onStack)
+                {
+                    if (onStack.Contains(node)) return;
+                    onStack.Add(node);
+                    tempStack.Push(node);
+                    if (adjacency.TryGetValue(node, out var nbrs))
+                    {
+                        foreach (var n in nbrs)
+                        {
+                            if (tempStack.Contains(n))
+                            {
+                                var arr = tempStack.Reverse().ToArray();
+                                var idx = Array.IndexOf(arr, n);
+                                if (idx >= 0)
+                                {
+                                    var cycle = arr.Take(idx + 1).Reverse().ToArray();
+                                    var cycleKey = string.Join("->", cycle);
+                                    if (!cycles.Contains(cycleKey))
+                                    {
+                                        cycles.Add(cycleKey);
+                                    }
+                                }
+                            }
+                            else if (!visited.Contains(n))
+                            {
+                                Dfs(n, onStack);
+                            }
+                        }
+                    }
+                    tempStack.Pop();
+                    onStack.Remove(node);
+                    visited.Add(node);
+                }
+
+                foreach (var n in adjacency.Keys)
+                {
+                    try { Dfs(n, new HashSet<string>(StringComparer.OrdinalIgnoreCase)); } catch { }
+                }
+
+                foreach (var c in cycles)
+                {
+                    var nodes = c.Split(new[] { "->" }, StringSplitOptions.RemoveEmptyEntries);
+                    var cyc = string.Join(" -> ", nodes) + " -> " + nodes.First();
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Circular dependency detected: {cyc}"));
+                }
+
+                // Determine the longest dependency chain (longest simple path)
+                List<string> bestPath = new List<string>();
+
+                List<string> DfsLongest(string node, HashSet<string> visitedLocal)
+                {
+                    if (visitedLocal.Contains(node)) return new List<string>();
+                    visitedLocal.Add(node);
+                    List<string> best = new List<string> { node };
+                    if (adjacency.TryGetValue(node, out var nbrs))
+                    {
+                        foreach (var nb in nbrs)
+                        {
+                            var path = DfsLongest(nb, new HashSet<string>(visitedLocal));
+                            if (path.Count + 1 > best.Count)
+                            {
+                                var newPath = new List<string> { node };
+                                newPath.AddRange(path);
+                                best = newPath;
+                            }
+                        }
+                    }
+                    return best;
+                }
+
+                foreach (var n in adjacency.Keys)
+                {
+                    try
+                    {
+                        var p = DfsLongest(n, new HashSet<string>());
+                        if (p.Count > bestPath.Count) bestPath = p;
+                    }
+                    catch { }
+                }
+
+                if (bestPath.Count > 1)
+                {
+                    var chainText = string.Join(Environment.NewLine + "↓" + Environment.NewLine, bestPath);
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Longest dependency chain found:{Environment.NewLine}{chainText}"));
+                }
+            }
+            catch { }
+
             return inv;
         }
 
