@@ -28,6 +28,14 @@ namespace EngineeringDiscovery.Web.Services
             string target = defaultTarget;
             var discoveredProjects = new List<(string Name, string Path)>();
 
+            // Solution-wide type totals
+            var totalClasses = 0;
+            var totalInterfaces = 0;
+            var totalRecords = 0;
+            var totalStructs = 0;
+            var totalEnums = 0;
+            var totalDelegates = 0;
+
             if (!string.IsNullOrEmpty(solutionPath) && File.Exists(solutionPath))
             {
                 try
@@ -579,6 +587,61 @@ namespace EngineeringDiscovery.Web.Services
                             catch { }
                         }
                         catch { }
+
+                        // Type discovery: scan .cs files for declared types (class, interface, record, struct, enum, delegate)
+                        try
+                        {
+                            var classCount = 0;
+                            var interfaceCount = 0;
+                            var recordCount = 0;
+                            var structCount = 0;
+                            var enumCount = 0;
+                            var delegateCount = 0;
+
+                            if (!string.IsNullOrWhiteSpace(projectFolder) && Directory.Exists(projectFolder))
+                            {
+                                var csFilesAll = Directory.GetFiles(projectFolder, "*.cs", SearchOption.AllDirectories);
+                                var typeRegex = new Regex("\\b(class|interface|record(?:\\s+class|\\s+struct)?|struct|enum|delegate)\\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
+                                var nsRegexPerFile = new Regex("\\bnamespace\\s+([A-Za-z_][A-Za-z0-9_.]*)", RegexOptions.Compiled);
+
+                                foreach (var csf in csFilesAll)
+                                {
+                                    try
+                                    {
+                                        var text = File.ReadAllText(csf);
+                                        var nsMatch = nsRegexPerFile.Match(text);
+                                        var fileNs = nsMatch.Success ? nsMatch.Groups[1].Value.Trim() : (rootNamespace ?? string.Empty);
+                                        var matches = typeRegex.Matches(text);
+
+                                        foreach (Match m in matches)
+                                        {
+                                            var kindRaw = m.Groups[1].Value.Trim();
+                                            var typeName = m.Groups[2].Value.Trim();
+                                            string kind;
+                                            if (kindRaw.StartsWith("record", StringComparison.OrdinalIgnoreCase)) kind = "record";
+                                            else kind = kindRaw.ToLowerInvariant();
+
+                                            switch (kind)
+                                            {
+                                                case "class": classCount++; totalClasses++; break;
+                                                case "interface": interfaceCount++; totalInterfaces++; break;
+                                                case "record": recordCount++; totalRecords++; break;
+                                                case "struct": structCount++; totalStructs++; break;
+                                                case "enum": enumCount++; totalEnums++; break;
+                                                case "delegate": delegateCount++; totalDelegates++; break;
+                                            }
+
+                                            var fileNameOnly = Path.GetFileName(csf);
+                                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines {kind} '{typeName}' in namespace '{(string.IsNullOrWhiteSpace(fileNs) ? "<global>" : fileNs)}' (file: {fileNameOnly})."));
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {classCount} classes, {interfaceCount} interfaces, {recordCount} records, {structCount} structs, {enumCount} enums, {delegateCount} delegates."));
+                        }
+                        catch { }
                     }
                     catch { }
                 }
@@ -944,6 +1007,18 @@ namespace EngineeringDiscovery.Web.Services
                 {
                     inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution uses SDK(s): {string.Join(", ", sdks)}."));
                 }
+
+                // Type summary across solution
+                try
+                {
+                    if (totalClasses > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalClasses} classes."));
+                    if (totalInterfaces > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalInterfaces} interfaces."));
+                    if (totalRecords > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalRecords} records."));
+                    if (totalStructs > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalStructs} structs."));
+                    if (totalEnums > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalEnums} enums."));
+                    if (totalDelegates > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalDelegates} delegates."));
+                }
+                catch { }
 
                 // Configuration summary
                 if (all.Any(d => d.IndexOf("contains appsettings", StringComparison.OrdinalIgnoreCase) >= 0))

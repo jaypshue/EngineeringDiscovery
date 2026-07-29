@@ -2,7 +2,12 @@
 
 ## Discovery
 
+### HIGH PRIORITY
+- Exclude generated folders (bin/obj)
+
+
 ### Discovery Status
+
 Replace string-based DiscoveryStatus with a strongly typed enum.
 
 ```csharp
