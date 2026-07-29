@@ -1,6 +1,7 @@
 @using EngineeringDiscovery.Core.Domain.Models
 @using EngineeringDiscovery.Core.Domain.Investigation
 @using EngineeringDiscovery.Core.Domain
+@using Microsoft.AspNetCore.Components.Forms
 @using EngineeringDiscovery.Web.Components.Workspaces
 @namespace EngineeringDiscovery.Web.Components.Dashboard
 
@@ -9,10 +10,21 @@
 
     <section class="discovery">
         <h4>Investigation Dashboard</h4>
-        <p><strong>Investigation Target:</strong> @CurrentTarget</p>
+        <p><strong>Investigation Target:</strong></p>
+        <div class="target-selector">
+            <input readonly value="@(SelectedSolutionFileName ?? CurrentTarget)" placeholder="No solution selected" />
+            <InputFile OnChange="OnSolutionSelected" accept=".sln" />
+        </div>
         <p><strong>Discovery Status:</strong> @DiscoveryStatus</p>
         <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
-        <input @bind="CurrentTarget" placeholder="Investigation target (optional)" />
+        @if (SelectedSolutionFileName is null)
+        {
+            <p class="muted">No solution selected — using automatic discovery (temporary fallback).</p>
+        }
+        else
+        {
+            <p class="muted">Selected solution: @SelectedSolutionFileName</p>
+        }
         <button class="btn" @onclick="StartDiscovery" disabled="@(DiscoveryStatus != "Idle")">Start Discovery</button>
     </section>
 
@@ -35,21 +47,61 @@
         _ => "Workspace"
     };
 
-    // WorkspaceHost now receives a shared Investigation from a Discovery Engine and passes it into workspaces.
-    // Prefer SolutionDiscoveryEngine when available so the UI reflects the current solution under development.
-    private readonly EngineeringDiscovery.Web.Services.IDiscoveryEngine discoveryEngine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine();
-
+    // WorkspaceHost manages the selected solution for discovery. If no solution is selected in-session,
+    // the SolutionDiscoveryEngine will fall back to automatic discovery (temporary compatibility behavior).
     private string CurrentTarget { get; set; } = string.Empty;
 
     private string DiscoveryStatus { get; set; } = "Idle";
 
+    // Selected solution information (session-scoped)
+    private string? SelectedSolutionFileName { get; set; }
+    private string? SelectedSolutionPath { get; set; }
+
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation { get; set; }
+
+    private async Task OnSolutionSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        // Save the uploaded solution file to a temp location for server-side discovery
+        try
+        {
+            var tempName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + Path.GetExtension(file.Name));
+            using var stream = file.OpenReadStream();
+            using var fs = File.Create(tempName);
+            await stream.CopyToAsync(fs);
+
+            SelectedSolutionFileName = file.Name;
+            SelectedSolutionPath = tempName;
+            // Use the solution filename (without extension) as the default investigation target name
+            CurrentTarget = Path.GetFileNameWithoutExtension(file.Name) ?? string.Empty;
+        }
+        catch
+        {
+            SelectedSolutionFileName = null;
+            SelectedSolutionPath = null;
+        }
+    }
 
     private void StartDiscovery()
     {
         DiscoveryStatus = "Running";
+
+        // If the engineer selected a solution this session, use it; otherwise allow the engine fallback.
+        EngineeringDiscovery.Web.Services.IDiscoveryEngine engine;
+        if (!string.IsNullOrWhiteSpace(SelectedSolutionPath))
+        {
+            engine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine(SelectedSolutionPath);
+        }
+        else
+        {
+            // Temporary fallback behavior: allow automatic upward search if the user didn't select a solution.
+            engine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine();
+        }
+
         // Execute discovery synchronously and store the resulting investigation
-        SampleInvestigation = discoveryEngine.CreateInvestigation(string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
+        SampleInvestigation = engine.CreateInvestigation(string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
 
         // Starting discovery should also transition the Investigation to Started automatically
         try

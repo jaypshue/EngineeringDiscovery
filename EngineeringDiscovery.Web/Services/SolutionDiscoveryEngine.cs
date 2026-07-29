@@ -171,6 +171,12 @@ namespace EngineeringDiscovery.Web.Services
                         catch
                         {
                             // ignore individual project reference parse errors
+                                                        
+                            //Eventually:
+                            //    FindingType.Warning
+                            //    Unable to inspect project:
+                            //    EngineeringDiscovery.Web.csproj
+
                         }
                     }
                 }
