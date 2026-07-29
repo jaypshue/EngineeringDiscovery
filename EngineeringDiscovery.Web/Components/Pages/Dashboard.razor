@@ -2,11 +2,13 @@
 
 <PageTitle>Engineering Discovery</PageTitle>
 
+@using EngineeringDiscovery.Core.Domain.Models
+
 <div style="display:flex;">
 
     <div style="width:250px; border-right:1px solid lightgray; padding:15px;">
 
-        <RoleNavigation />
+        <RoleNavigation @bind-ActiveRole="SelectedRole" />
 
     </div>
 
@@ -14,9 +16,7 @@
 
         <h1>Engineering Discovery</h1>
 
-        <h3>Architect Workspace</h3>
-
-        <p>Workspace coming soon.</p>
+        <WorkspaceHost Role="SelectedRole" />
 
     </div>
 
@@ -25,3 +25,7 @@
 <hr />
 
 <p>Status: Ready</p>
+
+@code {
+    private EngineeringRole SelectedRole { get; set; } = EngineeringRole.Architect;
+}

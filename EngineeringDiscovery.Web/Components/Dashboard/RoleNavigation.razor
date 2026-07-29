@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
+@using EngineeringDiscovery.Core.Domain.Models
 
 @namespace EngineeringDiscovery.Web.Components.Dashboard
 
@@ -9,7 +10,7 @@
     <ul class="role-nav__list">
         @foreach (var role in ItemsResolved)
         {
-            var isActive = string.Equals(role, ActiveRole, StringComparison.OrdinalIgnoreCase);
+            var isActive = role == ActiveRole;
             <li class="role-nav__item @(isActive ? "active" : string.Empty)"
                 role="button"
                 tabindex="0"
@@ -34,19 +35,19 @@
     /// The currently active role name. Comparison is case-insensitive.
     /// </summary>
     [Parameter]
-    public string ActiveRole { get; set; } = "Architect";
+    public EngineeringRole ActiveRole { get; set; } = EngineeringRole.Architect;
 
     /// <summary>
     /// Optional callback invoked when the active role changes.
     /// </summary>
     [Parameter]
-    public EventCallback<string> ActiveRoleChanged { get; set; }
+    public EventCallback<EngineeringRole> ActiveRoleChanged { get; set; }
 
     /// <summary>
     /// Roles to render. Defaults to the core engineering roles.
     /// </summary>
     [Parameter]
-    public IEnumerable<string>? Items { get; set; }
+    public IEnumerable<EngineeringRole>? Items { get; set; }
 
     /// <summary>
     /// Optional additional content rendered below the role list (e.g. sections like Engineering Assets).
@@ -54,14 +55,13 @@
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private static readonly string[] DefaultRoles = new[] { "Architect", "Planner", "Developer", "Verifier", "Reviewer" };
+    private static readonly EngineeringRole[] DefaultRoles = new[] { EngineeringRole.Architect, EngineeringRole.Planner, EngineeringRole.Developer, EngineeringRole.Verifier, EngineeringRole.Reviewer };
 
-    private IEnumerable<string> ItemsResolved => Items ?? DefaultRoles;
+    private IEnumerable<EngineeringRole> ItemsResolved => Items ?? DefaultRoles;
 
-    private async Task SelectRole(string role)
+    private async Task SelectRole(EngineeringRole role)
     {
-        if (string.Equals(role, ActiveRole, StringComparison.OrdinalIgnoreCase))
-            return;
+        if (role == ActiveRole) return;
 
         ActiveRole = role;
         if (ActiveRoleChanged.HasDelegate)
@@ -70,7 +70,7 @@
         }
     }
 
-    private async Task OnKeyDown(KeyboardEventArgs e, string role)
+    private async Task OnKeyDown(KeyboardEventArgs e, EngineeringRole role)
     {
         if (e.Key == "Enter" || e.Key == " ")
         {

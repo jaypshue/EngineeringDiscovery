@@ -1,0 +1,49 @@
+@using EngineeringDiscovery.Core.Domain.Models
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Core.Domain
+@using EngineeringDiscovery.Web.Components.Workspaces
+@namespace EngineeringDiscovery.Web.Components.Dashboard
+
+<section class="workspace-host">
+    <h2>@Title</h2>
+    <div class="workspace-placeholder">
+        @RenderWorkspace()
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public EngineeringRole Role { get; set; }
+
+    private string Title => Role switch
+    {
+        EngineeringRole.Architect => "Architect Workspace",
+        EngineeringRole.Planner => "Planner Workspace",
+        EngineeringRole.Developer => "Developer Workspace",
+        EngineeringRole.Verifier => "Verifier Workspace",
+        EngineeringRole.Reviewer => "Reviewer Workspace",
+        _ => "Workspace"
+    };
+
+    // WorkspaceHost now owns a single in-memory Investigation instance and passes it into workspaces.
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation SampleInvestigation { get; } = EngineeringDiscovery.Core.Domain.Investigation.Investigation.Create(
+        Guid.NewGuid(),
+        repositoryPath: "/",
+        goal: "Assess repository for maintainability and security risks.",
+        owner: "alice@example.com",
+        target: "engineering-discovery",
+        architectureStatus: EngineeringStageStatus.NotStarted,
+        planningStatus: EngineeringStageStatus.NotStarted,
+        developmentStatus: EngineeringStageStatus.NotStarted,
+        verificationStatus: EngineeringStageStatus.NotStarted);
+
+    private RenderFragment RenderWorkspace() => Role switch
+    {
+        EngineeringRole.Architect => (__builder) => { __builder.OpenComponent(0, typeof(ArchitectWorkspace)); __builder.AddAttribute(1, "Investigation", (object)SampleInvestigation); __builder.CloseComponent(); },
+        EngineeringRole.Planner => (__builder) => { __builder.OpenComponent(0, typeof(PlannerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)SampleInvestigation); __builder.CloseComponent(); },
+        EngineeringRole.Developer => (__builder) => { __builder.OpenComponent(0, typeof(DeveloperWorkspace)); __builder.AddAttribute(1, "Investigation", (object)SampleInvestigation); __builder.CloseComponent(); },
+        EngineeringRole.Verifier => (__builder) => { __builder.OpenComponent(0, typeof(VerifierWorkspace)); __builder.AddAttribute(1, "Investigation", (object)SampleInvestigation); __builder.CloseComponent(); },
+        EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(ReviewerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)SampleInvestigation); __builder.CloseComponent(); },
+        _ => (__builder) => { __builder.AddContent(0, "Workspace content."); }
+    };
+}

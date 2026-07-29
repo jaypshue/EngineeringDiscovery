@@ -11,6 +11,12 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             RepositoryPath = repositoryPath ?? throw new ArgumentNullException(nameof(repositoryPath));
             Status = InvestigationStatus.Created;
             Findings = new List<Finding>();
+
+            // Default engineering stage statuses
+            ArchitectureStatus = EngineeringStageStatus.NotStarted;
+            PlanningStatus = EngineeringStageStatus.NotStarted;
+            DevelopmentStatus = EngineeringStageStatus.NotStarted;
+            VerificationStatus = EngineeringStageStatus.NotStarted;
         }
 
         public Guid Id { get; private set; }
@@ -25,12 +31,46 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
 
         public DateTime? CompletedAt { get; private set; }
 
+        // New domain properties
+        public string Goal { get; private set; } = string.Empty;
+
+        public string Owner { get; private set; } = string.Empty;
+
+        public string Target { get; private set; } = string.Empty;
+
+        // Engineering lifecycle stages
+        public EngineeringStageStatus ArchitectureStatus { get; private set; }
+
+        public EngineeringStageStatus PlanningStatus { get; private set; }
+
+        public EngineeringStageStatus DevelopmentStatus { get; private set; }
+
+        public EngineeringStageStatus VerificationStatus { get; private set; }
+
         public static Investigation Create(Guid id, string repositoryPath)
+            => Create(id, repositoryPath, goal: string.Empty, owner: string.Empty, target: string.Empty);
+
+        public static Investigation Create(Guid id, string repositoryPath, string goal, string owner, string target,
+            EngineeringStageStatus architectureStatus = EngineeringStageStatus.NotStarted,
+            EngineeringStageStatus planningStatus = EngineeringStageStatus.NotStarted,
+            EngineeringStageStatus developmentStatus = EngineeringStageStatus.NotStarted,
+            EngineeringStageStatus verificationStatus = EngineeringStageStatus.NotStarted)
         {
             if (id == Guid.Empty) throw new ArgumentException("id must be provided", nameof(id));
             if (string.IsNullOrWhiteSpace(repositoryPath)) throw new ArgumentException("repositoryPath must be provided", nameof(repositoryPath));
 
-            return new Investigation(id, repositoryPath);
+            var inv = new Investigation(id, repositoryPath)
+            {
+                Goal = goal ?? string.Empty,
+                Owner = owner ?? string.Empty,
+                Target = target ?? string.Empty,
+                ArchitectureStatus = architectureStatus,
+                PlanningStatus = planningStatus,
+                DevelopmentStatus = developmentStatus,
+                VerificationStatus = verificationStatus
+            };
+
+            return inv;
         }
 
         public void Start()
@@ -67,5 +107,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
 
             Findings.Add(finding);
         }
+
+        // Allow updating stage statuses in a controlled way
+        public void SetArchitectureStatus(EngineeringStageStatus status) => ArchitectureStatus = status;
+        public void SetPlanningStatus(EngineeringStageStatus status) => PlanningStatus = status;
+        public void SetDevelopmentStatus(EngineeringStageStatus status) => DevelopmentStatus = status;
+        public void SetVerificationStatus(EngineeringStageStatus status) => VerificationStatus = status;
     }
 }
