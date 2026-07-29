@@ -80,6 +80,9 @@ namespace EngineeringDiscovery.Web.Services
             // allow the caller (UI) to override the discovered target
             if (!string.IsNullOrWhiteSpace(targetOverride)) target = targetOverride;
 
+            // Solution directory (if available) for solution-level discovery
+            var solutionDirLocal = !string.IsNullOrWhiteSpace(solutionPath) ? Path.GetDirectoryName(solutionPath) : null;
+
             var inv = Investigation.Create(
                 Guid.NewGuid(),
                 repositoryPath: "/",
@@ -404,6 +407,62 @@ namespace EngineeringDiscovery.Web.Services
                                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains Startup.cs."));
                                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' uses a Startup class for application bootstrap."));
                             }
+
+                            // Configuration discovery per-project: appsettings, launchSettings, UserSecretsId, environment usage, config providers
+                            try
+                            {
+                                // appsettings files
+                                if (!string.IsNullOrWhiteSpace(projectFolder) && Directory.Exists(projectFolder))
+                                {
+                                    var appSettings = Directory.GetFiles(projectFolder, "appsettings*.json", SearchOption.TopDirectoryOnly);
+                                    foreach (var af in appSettings)
+                                    {
+                                        var fileName = Path.GetFileName(af);
+                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {fileName}."));
+                                    }
+
+                                    // launchSettings.json under Properties
+                                    var launch = Path.Combine(projectFolder, "Properties", "launchSettings.json");
+                                    if (File.Exists(launch))
+                                    {
+                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains launchSettings.json."));
+                                    }
+                                }
+
+                                // UserSecretsId in csproj
+                                try
+                                {
+                                    var userSecretsId = doc.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, "UserSecretsId", StringComparison.OrdinalIgnoreCase))?.Value;
+                                    if (!string.IsNullOrWhiteSpace(userSecretsId))
+                                    {
+                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines a User Secrets identifier."));
+                                    }
+                                }
+                                catch { }
+
+                                // Environment usage and configuration providers (from Program.cs if present)
+                                try
+                                {
+                                    if (File.Exists(programPath))
+                                    {
+                                        var programText2 = File.ReadAllText(programPath);
+                                        if (programText2.IndexOf("ASPNETCORE_ENVIRONMENT", StringComparison.OrdinalIgnoreCase) >= 0
+                                            || programText2.IndexOf("GetEnvironmentVariable", StringComparison.OrdinalIgnoreCase) >= 0)
+                                        {
+                                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references environment variables or ASP.NET Core environment usage."));
+                                        }
+
+                                        if (programText2.IndexOf("AddJsonFile", StringComparison.OrdinalIgnoreCase) >= 0
+                                            || programText2.IndexOf("AddEnvironmentVariables", StringComparison.OrdinalIgnoreCase) >= 0
+                                            || programText2.IndexOf("ConfigureAppConfiguration", StringComparison.OrdinalIgnoreCase) >= 0)
+                                        {
+                                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' configures configuration providers in Program.cs."));
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                            catch { }
                         }
                         catch { }
                     }
