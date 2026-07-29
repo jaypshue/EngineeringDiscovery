@@ -267,6 +267,89 @@ namespace EngineeringDiscovery.Web.Services
                         }
                     }
                     catch { }
+
+                    // Solution Structure Discovery: project folder, assembly name, root namespace, output type, project type, potential startup
+                    try
+                    {
+                        var projectFolder = Path.GetDirectoryName(proj.Path) ?? string.Empty;
+
+                        // AssemblyName
+                        var assemblyName = doc.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, "AssemblyName", StringComparison.OrdinalIgnoreCase))?.Value;
+
+                        // RootNamespace
+                        var rootNamespace = doc.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, "RootNamespace", StringComparison.OrdinalIgnoreCase))?.Value;
+
+                        // OutputType
+                        var outputType = doc.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, "OutputType", StringComparison.OrdinalIgnoreCase))?.Value;
+
+                        if (!string.IsNullOrWhiteSpace(projectFolder))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' is located in folder '{projectFolder}'."));
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(assemblyName))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has assembly name '{assemblyName}'."));
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(rootNamespace))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has root namespace '{rootNamespace}'."));
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(outputType))
+                        {
+                            var ot = outputType.Trim();
+                            if (string.Equals(ot, "Exe", StringComparison.OrdinalIgnoreCase) || string.Equals(ot, "exe", StringComparison.OrdinalIgnoreCase))
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' is an executable application."));
+                            }
+                            else if (string.Equals(ot, "Library", StringComparison.OrdinalIgnoreCase) || string.Equals(ot, "library", StringComparison.OrdinalIgnoreCase))
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' is a class library."));
+                            }
+                            else
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has output type '{ot}'."));
+                            }
+                        }
+
+                        // Determine project type (more specific classification)
+                        string detailedType;
+                        var loweredName = name.ToLowerInvariant();
+                        var sdkAttrSmall = doc.Root?.Attribute("Sdk")?.Value ?? string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(sdkAttrSmall) && sdkAttrSmall.IndexOf("microsoft.net.sdk.web", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            detailedType = "Web Application";
+                        }
+                        else if (!string.IsNullOrWhiteSpace(outputType) && outputType.IndexOf("exe", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            detailedType = "Console Application";
+                        }
+                        else if (loweredName.Contains("test") || loweredName.Contains("tests"))
+                        {
+                            detailedType = "Test Project";
+                        }
+                        else if (loweredName.Contains("web") || loweredName.Contains("api"))
+                        {
+                            detailedType = "Web Application";
+                        }
+                        else
+                        {
+                            detailedType = "Class Library";
+                        }
+
+                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' appears to be a {detailedType}."));
+
+                        // Potential startup project
+                        var isPotentialStartup = (detailedType == "Web Application") || (!string.IsNullOrWhiteSpace(outputType) && outputType.IndexOf("exe", StringComparison.OrdinalIgnoreCase) >= 0);
+                        if (isPotentialStartup)
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' is a potential startup application."));
+                        }
+                    }
+                    catch { }
                 }
                 catch
                 {
