@@ -8,11 +8,12 @@
     <h2>@Title</h2>
 
     <section class="discovery">
-        <h4>Discovery</h4>
+        <h4>Investigation Dashboard</h4>
         <p><strong>Investigation Target:</strong> @CurrentTarget</p>
         <p><strong>Discovery Status:</strong> @DiscoveryStatus</p>
+        <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
         <input @bind="CurrentTarget" placeholder="Investigation target (optional)" />
-        <button class="btn" @onclick="StartDiscovery">Start Discovery</button>
+        <button class="btn" @onclick="StartDiscovery" disabled="@(DiscoveryStatus != "Idle")">Start Discovery</button>
     </section>
 
     <div class="workspace-placeholder">
@@ -49,6 +50,17 @@
         DiscoveryStatus = "Running";
         // Execute discovery synchronously and store the resulting investigation
         SampleInvestigation = discoveryEngine.CreateInvestigation(string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
+
+        // Starting discovery should also transition the Investigation to Started automatically
+        try
+        {
+            SampleInvestigation?.Start();
+        }
+        catch (InvalidOperationException)
+        {
+            // Ignore: investigation may already be started by the engine
+        }
+
         DiscoveryStatus = "Complete";
     }
 
@@ -57,19 +69,9 @@
         // Do not render any workspace until an Investigation has been produced by the Discovery Engine.
         if (SampleInvestigation is null)
         {
-            return (__builder) =>
-            {
-                __builder.OpenElement(0, "div");
-                __builder.AddAttribute(1, "class", "ready-to-start");
-                __builder.AddContent(2, "Ready to Start Discovery");
-                __builder.AddMarkupContent(3, "<br/>");
-                __builder.OpenElement(4, "button");
-                __builder.AddAttribute(5, "class", "btn");
-                __builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, StartDiscovery));
-                __builder.AddContent(7, "Start Discovery");
-                __builder.CloseElement();
-                __builder.CloseElement();
-            };
+            // At startup the Investigation Dashboard (above) contains the single Start Discovery action.
+            // The workspace area stays empty until discovery completes.
+            return (__builder) => { };
         }
 
         // After discovery completes, render the appropriate workspace and always pass a non-null Investigation.

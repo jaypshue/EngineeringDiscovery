@@ -30,18 +30,7 @@
 
     private void ClearError() => ErrorMessage = null;
 
-    private void Start()
-    {
-        try
-        {
-            Sample.Start();
-            ClearError();
-        }
-        catch (InvalidOperationException ex)
-        {
-            HandleException(ex);
-        }
-    }
+
 
     private void Complete()
     {
@@ -113,7 +102,6 @@
 
     <h5>Lifecycle</h5>
     <div class="lifecycle-actions">
-        <button class="btn" @onclick="Start">Start Investigation</button>
         <button class="btn" @onclick="Complete">Complete Investigation</button>
         <button class="btn" @onclick="Reopen">Reopen Investigation</button>
     </div>

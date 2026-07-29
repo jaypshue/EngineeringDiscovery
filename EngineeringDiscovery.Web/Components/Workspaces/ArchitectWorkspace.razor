@@ -21,18 +21,7 @@
         ErrorMessage = ex.Message;
     }
 
-    private void Start()
-    {
-        try
-        {
-            Investigation!.Start();
-            ClearError();
-        }
-        catch (InvalidOperationException ex)
-        {
-            HandleException(ex);
-        }
-    }
+
 
     private void Complete()
     {
