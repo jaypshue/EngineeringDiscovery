@@ -59,6 +59,21 @@ Eventually.
 SDK.props / SDK.targets
 Eventually.
 
+### ED-125
+#### Graph Queries
+Imagine the Architect asking, Which projects depend on Core? The graph answers instantly.
+
+ex.Show every path from Web to Shared.
+Graph.
+
+Which projects become unreachable if Infrastructure disappears?
+Graph.
+
+Find all leaf projects.
+Graph.
+
+Find all root projects.
+Graph.
 
 ## various Notes
 

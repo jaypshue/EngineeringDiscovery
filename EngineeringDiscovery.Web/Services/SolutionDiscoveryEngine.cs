@@ -813,6 +813,110 @@ namespace EngineeringDiscovery.Web.Services
             }
             catch { }
 
+            // Solution Profile Discovery: summarize previously discovered findings into a concise solution profile
+            try
+            {
+                var all = inv.Findings.Select(f => f.Description).ToList();
+
+                // Solution overview
+                var totalProjects = discoveredProjects.Count;
+                var executableCount = all.Count(d => d.IndexOf("is an executable application", StringComparison.OrdinalIgnoreCase) >= 0
+                    || d.IndexOf("appears to be a Console Application", StringComparison.OrdinalIgnoreCase) >= 0);
+                var classLibraryCount = all.Count(d => d.IndexOf("is a class library", StringComparison.OrdinalIgnoreCase) >= 0
+                    || d.IndexOf("appears to be a Class Library", StringComparison.OrdinalIgnoreCase) >= 0);
+                var testCount = all.Count(d => d.IndexOf("Test Project", StringComparison.OrdinalIgnoreCase) >= 0
+                    || d.IndexOf("appears to be a Test Project", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalProjects} projects."));
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {executableCount} executable projects."));
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {classLibraryCount} class libraries."));
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {testCount} test projects."));
+
+                // Technologies summary (basic keywords)
+                if (all.Any(d => d.IndexOf("Microsoft.NET.Sdk.Web", StringComparison.OrdinalIgnoreCase) >= 0
+                                  || d.IndexOf("uses the ASP.NET Core minimal hosting model", StringComparison.OrdinalIgnoreCase) >= 0
+                                  || d.IndexOf("references framework 'Microsoft.AspNetCore.App'", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains ASP.NET Core projects."));
+                }
+
+                if (all.Any(d => d.IndexOf("references SignalR packages", StringComparison.OrdinalIgnoreCase) >= 0
+                                  || d.IndexOf("references Microsoft.AspNetCore.SignalR", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains SignalR packages."));
+                }
+
+                if (all.Any(d => d.IndexOf("Entity Framework Core", StringComparison.OrdinalIgnoreCase) >= 0
+                                  || d.IndexOf("references Entity Framework Core packages", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains Entity Framework Core packages."));
+                }
+
+                if (all.Any(d => d.IndexOf("OpenTelemetry", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains OpenTelemetry packages."));
+                }
+
+                if (all.Any(d => d.IndexOf("Serilog", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains Serilog packages."));
+                }
+
+                // Frameworks and SDKs summary
+                var frameworks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var d in all.Where(x => x.IndexOf("targets ", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    var idx = d.IndexOf("targets ", StringComparison.OrdinalIgnoreCase);
+                    var val = d.Substring(idx + "targets ".Length).Trim().TrimEnd('.');
+                    if (!string.IsNullOrWhiteSpace(val)) frameworks.Add(val);
+                }
+                if (frameworks.Count > 0)
+                {
+                    var list = string.Join(", ", frameworks);
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution targets {list}."));
+                }
+
+                var sdks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var d in all.Where(x => x.IndexOf("uses ", StringComparison.OrdinalIgnoreCase) >= 0 && x.IndexOf("Microsoft.NET.Sdk", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    // description like "Name uses Microsoft.NET.Sdk.Web."
+                    var parts = d.Split(new[] { " uses " }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 1) sdks.Add(parts[1].Trim().TrimEnd('.'));
+                }
+                if (sdks.Count > 0)
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution uses SDK(s): {string.Join(", ", sdks)}."));
+                }
+
+                // Configuration summary
+                if (all.Any(d => d.IndexOf("contains appsettings", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains application configuration files (appsettings.json variants)."));
+                }
+                if (all.Any(d => d.IndexOf("launchSettings.json", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution contains launch profiles (launchSettings.json)."));
+                }
+                if (all.Any(d => d.IndexOf("User Secrets identifier", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, "Solution uses User Secrets."));
+                }
+
+                // Dependency summary
+                var directDeps = all.Count(d => d.IndexOf("depends on project", StringComparison.OrdinalIgnoreCase) >= 0);
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {directDeps} direct project dependencies."));
+
+                var hasCycles = all.Any(d => d.IndexOf("Circular dependency detected", StringComparison.OrdinalIgnoreCase) >= 0);
+                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, hasCycles ? "Solution contains circular project dependencies." : "Solution contains no circular project dependencies."));
+
+                var longest = all.FirstOrDefault(d => d.IndexOf("Longest dependency chain found:", StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!string.IsNullOrWhiteSpace(longest))
+                {
+                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, longest));
+                }
+            }
+            catch { }
+
             return inv;
         }
 
