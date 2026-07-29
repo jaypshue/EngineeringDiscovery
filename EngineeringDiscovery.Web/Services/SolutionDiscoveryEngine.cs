@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Xml.Linq;
 using EngineeringDiscovery.Core.Domain;
+using System.Text.RegularExpressions;
 using EngineeringDiscovery.Core.Domain.Investigation;
 
 namespace EngineeringDiscovery.Web.Services
@@ -228,6 +229,7 @@ namespace EngineeringDiscovery.Web.Services
                     }
                     catch { }
 
+
                     // (Capability detection deferred until packages are collected below)
 
                     // Target frameworks
@@ -356,6 +358,61 @@ namespace EngineeringDiscovery.Web.Services
                         {
                             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has root namespace '{rootNamespace}'."));
                         }
+
+                        // Namespace discovery: scan .cs files for namespace declarations (lightweight, no Roslyn)
+                        try
+                        {
+                            var namespaces = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            if (!string.IsNullOrWhiteSpace(projectFolder) && Directory.Exists(projectFolder))
+                            {
+                                var csFiles = Directory.GetFiles(projectFolder, "*.cs", SearchOption.AllDirectories);
+                                var nsRegex = new Regex("\\bnamespace\\s+([A-Za-z_][A-Za-z0-9_.]*)", RegexOptions.Compiled);
+                                foreach (var csf in csFiles)
+                                {
+                                    try
+                                    {
+                                        var text = File.ReadAllText(csf);
+                                        var matches = nsRegex.Matches(text);
+                                        foreach (Match m in matches)
+                                        {
+                                            var ns = m.Groups[1].Value?.Trim();
+                                            if (!string.IsNullOrWhiteSpace(ns)) namespaces.Add(ns);
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            if (namespaces.Count > 0)
+                            {
+                                foreach (var ns in namespaces.OrderBy(x => x))
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines namespace '{ns}'."));
+                                }
+
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {namespaces.Count} namespaces."));
+
+                                // Determine root namespace: prefer RootNamespace from csproj when present, otherwise pick the least-nested namespace
+                                var rootNs = rootNamespace;
+                                if (string.IsNullOrWhiteSpace(rootNs))
+                                {
+                                    rootNs = namespaces.OrderBy(s => s.Count(c => c == '.')).FirstOrDefault();
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(rootNs))
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' root namespace is '{rootNs}'."));
+                                }
+
+                                // Nested namespaces count
+                                var nestedCount = namespaces.Count(s => s.Contains('.'));
+                                if (nestedCount > 0)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {nestedCount} nested namespaces."));
+                                }
+                            }
+                        }
+                        catch { }
 
                         if (!string.IsNullOrWhiteSpace(outputType))
                         {
