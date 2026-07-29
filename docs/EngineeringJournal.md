@@ -23,3 +23,14 @@ Discovered every role consumes the previous artifact and produces the next.
 
 22:00
 Realized the software and the development methodology were evolving together.
+
+
+Day 2
+
+09:30
+
+Separated Engineering Discovery from the Engineering Workflow.
+
+The workflow no longer knows where engineering knowledge originates.
+
+Established the Discovery Engine as the boundary between repository analysis and the engineering lifecycle.

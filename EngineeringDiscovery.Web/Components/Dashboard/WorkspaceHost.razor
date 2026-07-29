@@ -25,17 +25,9 @@
         _ => "Workspace"
     };
 
-    // WorkspaceHost now owns a single in-memory Investigation instance and passes it into workspaces.
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation SampleInvestigation { get; } = EngineeringDiscovery.Core.Domain.Investigation.Investigation.Create(
-        Guid.NewGuid(),
-        repositoryPath: "/",
-        goal: "Assess repository for maintainability and security risks.",
-        owner: "alice@example.com",
-        target: "engineering-discovery",
-        architectureStatus: EngineeringStageStatus.NotStarted,
-        planningStatus: EngineeringStageStatus.NotStarted,
-        developmentStatus: EngineeringStageStatus.NotStarted,
-        verificationStatus: EngineeringStageStatus.NotStarted);
+    // WorkspaceHost now receives a shared Investigation from a Discovery Engine and passes it into workspaces.
+    private readonly EngineeringDiscovery.Web.Services.IDiscoveryEngine discoveryEngine = new EngineeringDiscovery.Web.Services.SampleDiscoveryEngine();
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation SampleInvestigation => discoveryEngine.CreateInvestigation();
 
     private RenderFragment RenderWorkspace() => Role switch
     {
