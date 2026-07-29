@@ -4,6 +4,6 @@ namespace EngineeringDiscovery.Web.Services
 {
     public interface IDiscoveryEngine
     {
-        Investigation CreateInvestigation();
+        Investigation CreateInvestigation(string? targetOverride = null);
     }
 }

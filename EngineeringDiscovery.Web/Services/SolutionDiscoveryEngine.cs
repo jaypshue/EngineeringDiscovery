@@ -16,7 +16,7 @@ namespace EngineeringDiscovery.Web.Services
             this.solutionPath = solutionPath ?? FindSolutionInParents();
         }
 
-        public Investigation CreateInvestigation()
+        public Investigation CreateInvestigation(string? targetOverride = null)
         {
             // Default sample values
             var defaultGoal = "Assess repository for maintainability and security risks.";
@@ -69,6 +69,9 @@ namespace EngineeringDiscovery.Web.Services
                     projectCount = 0;
                 }
             }
+
+            // allow the caller (UI) to override the discovered target
+            if (!string.IsNullOrWhiteSpace(targetOverride)) target = targetOverride;
 
             var inv = Investigation.Create(
                 Guid.NewGuid(),
