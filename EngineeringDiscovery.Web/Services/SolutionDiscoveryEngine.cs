@@ -348,6 +348,64 @@ namespace EngineeringDiscovery.Web.Services
                         {
                             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' is a potential startup application."));
                         }
+                        // Startup & Entry Point Discovery: inspect common entry files and bootstrap patterns
+                        try
+                        {
+                            projectFolder = Path.GetDirectoryName(proj.Path) ?? string.Empty;
+                            var programPath = Path.Combine(projectFolder, "Program.cs");
+                            var startupPath = Path.Combine(projectFolder, "Startup.cs");
+
+                            if (File.Exists(programPath))
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains Program.cs."));
+                                string programText = File.ReadAllText(programPath);
+                                var textLower = programText.ToLowerInvariant();
+
+                                var usesWebAppCreate = programText.IndexOf("WebApplication.CreateBuilder", StringComparison.OrdinalIgnoreCase) >= 0;
+                                if (usesWebAppCreate)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' creates a WebApplication using WebApplication.CreateBuilder()."));
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' uses the ASP.NET Core minimal hosting model."));
+                                }
+
+                                var usesWebAppBuild = programText.IndexOf("WebApplication.Build", StringComparison.OrdinalIgnoreCase) >= 0;
+                                if (usesWebAppBuild)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' calls WebApplication.Build()."));
+                                }
+
+                                var usesHostCreate = programText.IndexOf("Host.CreateDefaultBuilder", StringComparison.OrdinalIgnoreCase) >= 0;
+                                if (usesHostCreate)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' uses Host.CreateDefaultBuilder()."));
+                                }
+
+                                var usesHostAppBuilder = programText.IndexOf("HostApplicationBuilder", StringComparison.OrdinalIgnoreCase) >= 0;
+                                if (usesHostAppBuilder)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' uses HostApplicationBuilder."));
+                                }
+
+                                var hasStaticMain = programText.IndexOf("static void Main(", StringComparison.OrdinalIgnoreCase) >= 0;
+                                if (hasStaticMain)
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains a static Main entry point."));
+                                }
+
+                                // Top-level statements heuristic: Program.cs exists but no static Main and contains builder or statements
+                                if (!hasStaticMain && (usesWebAppCreate || programText.IndexOf("var builder", StringComparison.OrdinalIgnoreCase) >= 0 || programText.IndexOf("var app", StringComparison.OrdinalIgnoreCase) >= 0))
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' appears to use top-level statements for its entry point."));
+                                }
+                            }
+
+                            if (File.Exists(startupPath))
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains Startup.cs."));
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' uses a Startup class for application bootstrap."));
+                            }
+                        }
+                        catch { }
                     }
                     catch { }
                 }
