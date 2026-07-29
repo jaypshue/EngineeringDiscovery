@@ -1,10 +1,65 @@
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 
 @using EngineeringDiscovery.Core.Domain.Investigation
+@using System
+@using System.Linq
+@using System.Collections.Generic
 
 @code {
     [Parameter, EditorRequired]
     public Investigation Investigation { get; set; } = default!;
+
+    private IReadOnlyList<object> Findings =>
+        Investigation.Findings?.Cast<object>().ToList() ?? new List<object>();
+
+    private int FindingCount => Findings.Count;
+
+    private IEnumerable<string> CoverageAreas =>
+        Findings
+            .Select(GetFindingArea)
+            .Where(area => !string.IsNullOrWhiteSpace(area))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(area => area);
+
+    private IDictionary<string, int> EvidenceSummary =>
+        CoverageAreas.ToDictionary(
+            area => area,
+            area => Findings.Count(finding =>
+                string.Equals(GetFindingArea(finding), area, StringComparison.OrdinalIgnoreCase)));
+
+    private bool HasOpenQuestions =>
+        CoverageAreas.Any(area => area.Contains("question", StringComparison.OrdinalIgnoreCase));
+
+    private string GoalVerification =>
+        FindingCount switch
+        {
+            0 => "No evidence has been captured yet for this investigation target.",
+            _ when HasOpenQuestions => "Evidence exists, but open questions still affect confidence in goal verification.",
+            _ => "Available evidence supports verification of the investigation target."
+        };
+
+    private string CompletionAssessment =>
+        FindingCount switch
+        {
+            0 => "Additional investigation required",
+            _ when HasOpenQuestions => "Partially complete",
+            _ => "Complete"
+        };
+
+    private string VerificationResult =>
+        CompletionAssessment switch
+        {
+            "Complete" => "Verified",
+            "Partially complete" => "Conditionally verified",
+            _ => "Not verified"
+        };
+
+    private static string GetFindingArea(object finding)
+    {
+        var typeProperty = finding.GetType().GetProperty("Type");
+        var typeValue = typeProperty?.GetValue(finding)?.ToString();
+        return string.IsNullOrWhiteSpace(typeValue) ? finding.GetType().Name : typeValue;
+    }
 }
 
 <section class="workspace workspace--verifier">
@@ -14,22 +69,48 @@
         <strong>@Investigation.Target</strong>
     </p>
 
-    <p>
-        Verification functionality will be introduced in ED-111.
-    </p>
-
     <section class="workspace__section">
-        <h4>Test Runs</h4>
-        <p>Placeholder for test execution results and status.</p>
-    </section>
+        <h4>Verification Report</h4>
 
-    <section class="workspace__section">
-        <h4>Checks</h4>
-        <p>Placeholder for verification checklists and evidence collection.</p>
-    </section>
+        <h5>1. Goal Verification</h5>
+        <p>@GoalVerification</p>
 
-    <section class="workspace__section">
-        <h4>Reports</h4>
-        <p>Placeholder for verification reports and summaries.</p>
+        <h5>2. Evidence Summary</h5>
+        <p><strong>Total findings:</strong> @FindingCount</p>
+        @if (!EvidenceSummary.Any())
+        {
+            <p>No categorized evidence is available.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var summaryItem in EvidenceSummary)
+                {
+                    <li>@summaryItem.Key: @summaryItem.Value</li>
+                }
+            </ul>
+        }
+
+        <h5>3. Coverage Assessment</h5>
+        @if (!CoverageAreas.Any())
+        {
+            <p>No coverage areas identified from findings.</p>
+        }
+        else
+        {
+            <p>Evidence coverage includes:</p>
+            <ul>
+                @foreach (var area in CoverageAreas)
+                {
+                    <li>@area</li>
+                }
+            </ul>
+        }
+
+        <h5>4. Completion Assessment</h5>
+        <p>@CompletionAssessment</p>
+
+        <h5>5. Verification Result</h5>
+        <p>@VerificationResult</p>
     </section>
 </section>
