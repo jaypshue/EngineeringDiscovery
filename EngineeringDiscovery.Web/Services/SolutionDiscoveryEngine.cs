@@ -228,6 +228,8 @@ namespace EngineeringDiscovery.Web.Services
                     }
                     catch { }
 
+                    // (Capability detection deferred until packages are collected below)
+
                     // Target frameworks
                     try
                     {
@@ -248,7 +250,8 @@ namespace EngineeringDiscovery.Web.Services
                     }
                     catch { }
 
-                    // PackageReferences (detect common packages)
+                    // PackageReferences: report every referenced package and collect for capability inference and analyzer detection
+                    List<string> discoveredPackages = new List<string>();
                     try
                     {
                         var packageRefs = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "PackageReference", StringComparison.OrdinalIgnoreCase));
@@ -257,15 +260,69 @@ namespace EngineeringDiscovery.Web.Services
                             var include = pr.Attribute("Include")?.Value ?? pr.Elements().FirstOrDefault(e => string.Equals(e.Name.LocalName, "Include", StringComparison.OrdinalIgnoreCase))?.Value;
                             if (string.IsNullOrWhiteSpace(include)) continue;
 
-                            var lowered = include.ToLowerInvariant();
-                            // If package matches a known indicator, add a finding
-                            foreach (var indicator in packageIndicators)
+                            discoveredPackages.Add(include);
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references package '{include}'."));
+                        }
+                    }
+                    catch { }
+
+                    // Capability detection from discovered packages
+                    try
+                    {
+                        var lpacks = discoveredPackages.Select(p => p.ToLowerInvariant()).ToList();
+                        if (lpacks.Any(p => p.Contains("signalr")))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references SignalR packages."));
+                        }
+
+                        if (lpacks.Any(p => p.Contains("entityframeworkcore") || p.Contains("efcore") || p.Contains("microsoft.entityframeworkcore")))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references Entity Framework Core packages."));
+                        }
+
+                        if (lpacks.Any(p => p.Contains("serilog")))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references Serilog packages."));
+                        }
+
+                        if (lpacks.Any(p => p.Contains("opentelemetry")))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references OpenTelemetry packages."));
+                        }
+                    }
+                    catch { }
+
+                    // FrameworkReference elements
+                    try
+                    {
+                        var frameworkRefs = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "FrameworkReference", StringComparison.OrdinalIgnoreCase));
+                        foreach (var fr in frameworkRefs)
+                        {
+                            var inc = fr.Attribute("Include")?.Value;
+                            if (string.IsNullOrWhiteSpace(inc)) continue;
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references framework '{inc}'."));
+                        }
+                    }
+                    catch { }
+
+                    // Analyzer elements and package-based analyzers
+                    try
+                    {
+                        var analyzerElems = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "Analyzer", StringComparison.OrdinalIgnoreCase));
+                        foreach (var ae in analyzerElems)
+                        {
+                            var inc = ae.Attribute("Include")?.Value ?? ae.Value;
+                            if (string.IsNullOrWhiteSpace(inc)) continue;
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references analyzer '{inc}'."));
+                        }
+
+                        // Detect analyzer packages among package references
+                        foreach (var pkg in discoveredPackages)
+                        {
+                            var lp = pkg.ToLowerInvariant();
+                            if (lp.Contains("microsoft.codeanalysis") || lp.Contains("stylecop") || lp.Contains("analyzers") || lp.Contains("fxcop") )
                             {
-                                if (lowered.Contains(indicator))
-                                {
-                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} references {include}."));
-                                    break;
-                                }
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' references analyzer package '{pkg}'."));
                             }
                         }
                     }
@@ -456,7 +513,7 @@ namespace EngineeringDiscovery.Web.Services
                                             || programText2.IndexOf("AddEnvironmentVariables", StringComparison.OrdinalIgnoreCase) >= 0
                                             || programText2.IndexOf("ConfigureAppConfiguration", StringComparison.OrdinalIgnoreCase) >= 0)
                                         {
-                                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' configures configuration providers in Program.cs."));
+                                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' configures custom configuration providers."));
                                         }
                                     }
                                 }

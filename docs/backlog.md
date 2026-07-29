@@ -40,9 +40,35 @@ documentation
 
 Internally, "Solution" should mean:
 
+### ED-124: Package & Framework Discovery
 
+Package versions, Eventually discover: Serilog 9.1.0, EF Core 10.0, OpenTelemetry 1.12
+Still factual.
+
+Central Package Management
+Detect
+Directory.Packages.props
+Very common now.
+
+NuGet.config
+Worth knowing.
+
+Local package feeds
+Eventually.
+
+SDK.props / SDK.targets
+Eventually.
 
 
 ## various Notes
 
-richer ProjectModel that contains them as strongly typed properties instead of emitting everything as standalone findings. The findings remain the communication mechanism, but the underlying model can become richer over time. That's an internal evolution and doesn't need to change ED-121.
+- richer ProjectModel that contains them as strongly typed properties instead of emitting everything as standalone findings. The findings remain the communication mechanism, but the underlying model can become richer over time. That's an internal evolution and doesn't need to change ED-121.
+
+
+- Report which providers were added.
+- Parse appsettings contents.
+- Environment hierarchy.
+- Configuration binding.
+- Options pattern.
+
+

@@ -24,3 +24,12 @@ The application intentionally delays persistence, AI integration, and infrastruc
 
 Engineering Principle
 Each workspace presents a role-specific representation of the shared Investigation.
+
+
+Engineering Discovery is not a .NET analysis tool.
+
+Engineering Discovery is a language-agnostic engineering reasoning platform.
+
+Language providers extract facts.
+
+Engineering workspaces reason over those facts.
