@@ -186,6 +186,94 @@ namespace EngineeringDiscovery.Web.Services
                 }
             }
 
+            // Technology discovery: inspect each project for SDK, TargetFramework(s), and PackageReferences
+            var packageIndicators = new[]
+            {
+                "entityframeworkcore",
+                "efcore",
+                "serilog",
+                "automapper",
+                "mediatR".ToLowerInvariant(),
+                "xunit",
+                "nunit",
+                "mstest",
+                "fluentvalidation",
+                "swashbuckle",
+                "signalr",
+            };
+
+            foreach (var proj in discoveredProjects)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(proj.Path)) continue;
+                    var projFile = proj.Path;
+                    if (!File.Exists(projFile)) continue;
+
+                    var doc = XDocument.Load(projFile);
+
+                    var name = proj.Name ?? Path.GetFileNameWithoutExtension(proj.Path) ?? "Unnamed";
+
+                    // Project SDK (from Project/@Sdk)
+                    try
+                    {
+                        var sdkAttr = doc.Root?.Attribute("Sdk")?.Value;
+                        if (!string.IsNullOrWhiteSpace(sdkAttr))
+                        {
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} uses {sdkAttr}."));
+                        }
+                    }
+                    catch { }
+
+                    // Target frameworks
+                    try
+                    {
+                        var tfElems = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "TargetFramework", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(x.Name.LocalName, "TargetFrameworks", StringComparison.OrdinalIgnoreCase));
+                        foreach (var tf in tfElems)
+                        {
+                            var tfValue = (tf?.Value ?? string.Empty).Trim();
+                            if (string.IsNullOrWhiteSpace(tfValue)) continue;
+
+                            // TargetFrameworks can be semicolon-separated
+                            var frameworks = tfValue.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim());
+                            foreach (var f in frameworks)
+                            {
+                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project {name} targets {f}."));
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // PackageReferences (detect common packages)
+                    try
+                    {
+                        var packageRefs = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "PackageReference", StringComparison.OrdinalIgnoreCase));
+                        foreach (var pr in packageRefs)
+                        {
+                            var include = pr.Attribute("Include")?.Value ?? pr.Elements().FirstOrDefault(e => string.Equals(e.Name.LocalName, "Include", StringComparison.OrdinalIgnoreCase))?.Value;
+                            if (string.IsNullOrWhiteSpace(include)) continue;
+
+                            var lowered = include.ToLowerInvariant();
+                            // If package matches a known indicator, add a finding
+                            foreach (var indicator in packageIndicators)
+                            {
+                                if (lowered.Contains(indicator))
+                                {
+                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} references {include}."));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                catch
+                {
+                    // ignore per-project tech discovery errors
+                }
+            }
+
             return inv;
         }
 
