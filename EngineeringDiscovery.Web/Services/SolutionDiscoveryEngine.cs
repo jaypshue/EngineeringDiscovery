@@ -6,19 +6,17 @@ using System.Xml.Linq;
 using EngineeringDiscovery.Core.Domain;
 using System.Text.RegularExpressions;
 using EngineeringDiscovery.Core.Domain.Investigation;
+using System.Diagnostics;
 
 namespace EngineeringDiscovery.Web.Services
 {
     public class SolutionDiscoveryEngine : IDiscoveryEngine
     {
-        private readonly string? solutionPath;
-
-        public SolutionDiscoveryEngine(string? solutionPath = null)
+        public SolutionDiscoveryEngine()
         {
-            this.solutionPath = solutionPath ?? FindSolutionInParents();
         }
 
-        public Investigation CreateInvestigation(string? targetOverride = null)
+        public Investigation CreateInvestigation(string? repositoryRoot = null, string? targetOverride = null)
         {
             // Default sample values
             var defaultGoal = "Assess repository for maintainability and security risks.";
@@ -28,6 +26,53 @@ namespace EngineeringDiscovery.Web.Services
             string target = defaultTarget;
             var discoveredProjects = new List<(string Name, string Path)>();
 
+            // Create discovery context to share state and diagnostics
+            var context = new DiscoveryContext(null);
+            // repositoryRoot may be provided by the UI; the engine will search for solutions under it when needed
+            var effectiveRepositoryRoot = repositoryRoot;
+
+            // Determine effective solution path based on repositoryRoot
+            string? effectiveSolutionPath = null;
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(effectiveRepositoryRoot))
+                {
+                    // If the provided repositoryRoot is actually a solution file, use it directly
+                    if (File.Exists(effectiveRepositoryRoot) && (effectiveRepositoryRoot.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) || effectiveRepositoryRoot.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        effectiveSolutionPath = effectiveRepositoryRoot;
+                    }
+                    else if (Directory.Exists(effectiveRepositoryRoot))
+                    {
+                        var sols = FindSolutionsInRepository(effectiveRepositoryRoot);
+                        if (sols.Length == 1)
+                        {
+                            effectiveSolutionPath = sols[0];
+                        }
+                        else if (sols.Length == 0)
+                        {
+                            context.AddDiagnostic($"No solution files (*.sln, *.slnx) found under repository root: {effectiveRepositoryRoot}");
+                        }
+                        else
+                        {
+                            // Multiple solutions found - choose the first but note the ambiguity
+                            context.AddDiagnostic($"Multiple solutions found under repository root: {effectiveRepositoryRoot}. Using first: {Path.GetFileName(sols[0])}");
+                            effectiveSolutionPath = sols[0];
+                        }
+                    }
+                }
+                else
+                {
+                    // No repositoryRoot provided - intentionally do not fall back to execution directory.
+                    // Discovery requires an explicit repositoryRoot from the UI. Record a diagnostic.
+                    context.AddDiagnostic("No repository root provided. Discovery requires an explicit repository root from the UI.");
+                }
+            }
+            catch (Exception ex)
+            {
+                context.AddDiagnostic($"Failed locating solution: {ex.Message}");
+            }
+
             // Solution-wide type totals
             var totalClasses = 0;
             var totalInterfaces = 0;
@@ -35,46 +80,116 @@ namespace EngineeringDiscovery.Web.Services
             var totalStructs = 0;
             var totalEnums = 0;
             var totalDelegates = 0;
+            var totalConstructors = 0;
+            var totalMethods = 0;
+            var totalProperties = 0;
+            var totalFields = 0;
+            var totalEvents = 0;
 
-            if (!string.IsNullOrEmpty(solutionPath) && File.Exists(solutionPath))
+            if (!string.IsNullOrEmpty(effectiveSolutionPath) && File.Exists(effectiveSolutionPath))
             {
                 try
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(solutionPath) ?? defaultTarget;
+                    var fileName = Path.GetFileNameWithoutExtension(effectiveSolutionPath) ?? defaultTarget;
                     target = fileName;
 
-                    var lines = File.ReadAllLines(solutionPath);
+                    var lines = File.ReadAllLines(effectiveSolutionPath);
+
+                    //debug
+                    Debug.WriteLine($"Solution: {effectiveSolutionPath}");
+                    Debug.WriteLine($"Extension: {Path.GetExtension(effectiveSolutionPath)}");
+                    Debug.WriteLine($"Line Count: {lines.Length}");
+                    //end debug
 
                     // Look for lines that reference project files and try to extract the project name and path
-                    var projectLines = lines.Where(l => l.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-                    var solutionDir = Path.GetDirectoryName(solutionPath) ?? Directory.GetCurrentDirectory();
-                    foreach (var pl in projectLines)
+                    var solutionDir = Path.GetDirectoryName(effectiveSolutionPath) ?? throw new InvalidOperationException("Solution path must have a directory when provided.");
+                    var solutionExtension = Path.GetExtension(effectiveSolutionPath);
+
+                    if (string.Equals(solutionExtension, ".slnx", StringComparison.OrdinalIgnoreCase))
                     {
+                        // Dedicated .slnx parser: parse XML and extract project paths from Project/@Path
                         try
                         {
-                            // Typical .sln project line: Project("{...}") = "Name", "path\to\project.csproj", "{GUID}"
-                            var parts = pl.Split('=');
-                            if (parts.Length < 2) continue;
-                            var rhs = parts[1];
-                            var segments = rhs.Split(',').Select(p => p.Trim()).ToArray();
-                            if (segments.Length < 2) continue;
-                            var namePart = segments[0].Trim();
-                            var pathPart = segments[1].Trim();
-                            if (namePart.StartsWith("\"")) namePart = namePart.Trim('"');
-                            if (pathPart.StartsWith("\"")) pathPart = pathPart.Trim('"');
+                            var slnxDoc = XDocument.Load(effectiveSolutionPath);
+                            var projectElements = slnxDoc
+                                .Descendants()
+                                .Where(x => string.Equals(x.Name.LocalName, "Project", StringComparison.OrdinalIgnoreCase));
 
-                            // Resolve relative project path against the solution directory
-                            var projectPath = pathPart;
-                            if (!Path.IsPathRooted(projectPath))
+                            foreach (var pe in projectElements)
                             {
-                                projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
-                            }
+                                try
+                                {
+                                    var pathAttr = pe.Attribute("Path")?.Value;
+                                    if (string.IsNullOrWhiteSpace(pathAttr)) continue;
+                                    if (pathAttr.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) < 0) continue;
 
-                            discoveredProjects.Add((Name: namePart, Path: projectPath));
+                                    var projectPath = pathAttr;
+                                    if (!Path.IsPathRooted(projectPath))
+                                    {
+                                        projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
+                                    }
+
+                                    var nameAttr = pe.Attribute("Name")?.Value;
+                                    var projectName = !string.IsNullOrWhiteSpace(nameAttr)
+                                        ? nameAttr
+                                        : (Path.GetFileNameWithoutExtension(projectPath) ?? "Unnamed");
+
+                                    discoveredProjects.Add((Name: projectName, Path: projectPath));
+                                    context.DiscoveredProjects.Add((Name: projectName, Path: projectPath));
+                                }
+                                catch (Exception ex)
+                                {
+                                    context.AddDiagnostic($"Failed to parse project entry in .slnx: {ex.Message}");
+                                }
+                            }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // ignore individual parse errors
+                            context.AddDiagnostic($"Failed parsing .slnx for projects: {ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        var projectLines = lines.Where(l => l.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+
+                        //debug
+                        Debug.WriteLine($"Project Lines: {projectLines.Count}");
+                        foreach (var line in projectLines)
+                        {
+                            Debug.WriteLine(line);
+                        }
+                        //end debug
+
+                        foreach (var pl in projectLines)
+                        {
+                            try
+                            {
+                                // Typical .sln project line: Project("{...}") = "Name", "path\to\project.csproj", "{GUID}"
+                                var parts = pl.Split('=');
+                                if (parts.Length < 2) continue;
+                                var rhs = parts[1];
+                                var segments = rhs.Split(',').Select(p => p.Trim()).ToArray();
+                                if (segments.Length < 2) continue;
+                                var namePart = segments[0].Trim();
+                                var pathPart = segments[1].Trim();
+                                if (namePart.StartsWith("\"")) namePart = namePart.Trim('"');
+                                if (pathPart.StartsWith("\"")) pathPart = pathPart.Trim('"');
+
+                                // Resolve relative project path against the solution directory
+                                var projectPath = pathPart;
+                                if (!Path.IsPathRooted(projectPath))
+                                {
+                                    // Resolve relative project path against the discovered solution directory
+                                    projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
+                                }
+
+                                discoveredProjects.Add((Name: namePart, Path: projectPath));
+                                context.DiscoveredProjects.Add((Name: namePart, Path: projectPath));
+                            }
+                            catch
+                            {
+                                context.AddDiagnostic($"Failed to parse project line: {pl}");
+                            }
                         }
                     }
                 }
@@ -83,6 +198,7 @@ namespace EngineeringDiscovery.Web.Services
                     // Fall back to defaults on any IO error
                     target = defaultTarget;
                     discoveredProjects.Clear();
+                    context.AddDiagnostic("Failed to read solution file during project enumeration.");
                 }
             }
 
@@ -90,11 +206,11 @@ namespace EngineeringDiscovery.Web.Services
             if (!string.IsNullOrWhiteSpace(targetOverride)) target = targetOverride;
 
             // Solution directory (if available) for solution-level discovery
-            var solutionDirLocal = !string.IsNullOrWhiteSpace(solutionPath) ? Path.GetDirectoryName(solutionPath) : null;
+            var solutionDirLocal = !string.IsNullOrWhiteSpace(effectiveSolutionPath) ? Path.GetDirectoryName(effectiveSolutionPath) : null;
 
             var inv = Investigation.Create(
                 Guid.NewGuid(),
-                repositoryPath: "/",
+                repositoryPath: effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? "/",
                 goal: defaultGoal,
                 owner: defaultOwner,
                 target: target,
@@ -112,7 +228,7 @@ namespace EngineeringDiscovery.Web.Services
             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.TechnicalDebt, "Legacy authentication module requires refactoring."));
 
             // Add observation about solution/project count when discovered
-            var projectCount = discoveredProjects.Count;
+            var projectCount = context.DiscoveredProjects.Count;
             if (projectCount > 0)
             {
                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {projectCount} projects."));
@@ -161,7 +277,7 @@ namespace EngineeringDiscovery.Web.Services
                             if (string.IsNullOrWhiteSpace(includeAttr)) continue;
 
                             // Resolve referenced project path relative to the source project's directory
-                            var sourceDir = Path.GetDirectoryName(projFile) ?? Directory.GetCurrentDirectory();
+                            var sourceDir = Path.GetDirectoryName(projFile) ?? throw new InvalidOperationException("Project file path must be rooted or within a discovered solution directory.");
                             var referencedPath = includeAttr;
                             if (!Path.IsPathRooted(referencedPath)) referencedPath = Path.GetFullPath(Path.Combine(sourceDir, referencedPath));
                             else referencedPath = Path.GetFullPath(referencedPath);
@@ -597,6 +713,11 @@ namespace EngineeringDiscovery.Web.Services
                             var structCount = 0;
                             var enumCount = 0;
                             var delegateCount = 0;
+                            var constructorCount = 0;
+                            var methodCount = 0;
+                            var propertyCount = 0;
+                            var fieldCount = 0;
+                            var eventCount = 0;
 
                             if (!string.IsNullOrWhiteSpace(projectFolder) && Directory.Exists(projectFolder))
                             {
@@ -612,6 +733,24 @@ namespace EngineeringDiscovery.Web.Services
                                         var nsMatch = nsRegexPerFile.Match(text);
                                         var fileNs = nsMatch.Success ? nsMatch.Groups[1].Value.Trim() : (rootNamespace ?? string.Empty);
                                         var matches = typeRegex.Matches(text);
+
+                                        string ExtractBalancedBlock(string source, int startIndex)
+                                        {
+                                            var openIndex = source.IndexOf('{', startIndex);
+                                            if (openIndex < 0) return string.Empty;
+                                            var depth = 1;
+                                            for (var i = openIndex + 1; i < source.Length; i++)
+                                            {
+                                                var ch = source[i];
+                                                if (ch == '{') depth++;
+                                                else if (ch == '}') depth--;
+                                                if (depth == 0)
+                                                {
+                                                    return source.Substring(openIndex, i - openIndex + 1);
+                                                }
+                                            }
+                                            return string.Empty;
+                                        }
 
                                         foreach (Match m in matches)
                                         {
@@ -633,13 +772,76 @@ namespace EngineeringDiscovery.Web.Services
 
                                             var fileNameOnly = Path.GetFileName(csf);
                                             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines {kind} '{typeName}' in namespace '{(string.IsNullOrWhiteSpace(fileNs) ? "<global>" : fileNs)}' (file: {fileNameOnly})."));
+
+                                            // Detect members inside the current type body only (balanced-brace extraction)
+                                            try
+                                            {
+                                                var typeBody = ExtractBalancedBlock(text, m.Index);
+                                                if (!string.IsNullOrWhiteSpace(typeBody))
+                                                {
+                                                    // Constructors
+                                                    var ctorRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+" + Regex.Escape(typeName) + "\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                    foreach (Match cm in ctorRegex.Matches(typeBody))
+                                                    {
+                                                        constructorCount++;
+                                                        totalConstructors++;
+                                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines constructor '{typeName}' in type '{typeName}'."));
+                                                    }
+
+                                                    // Methods
+                                                    var methodRegexLocal = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|async\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                    foreach (Match mm in methodRegexLocal.Matches(typeBody))
+                                                    {
+                                                        var methodName = mm.Groups[4].Value.Trim();
+                                                        if (string.IsNullOrWhiteSpace(methodName)) continue;
+                                                        if (string.Equals(methodName, typeName, StringComparison.OrdinalIgnoreCase)) continue;
+                                                        methodCount++;
+                                                        totalMethods++;
+                                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines method '{methodName}' in type '{typeName}'."));
+                                                    }
+
+                                                    // Properties
+                                                    var propertyRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{\\s*(get\\s*;|set\\s*;|init\\s*;|get\\s*\\{|set\\s*\\{|init\\s*\\{)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                    foreach (Match pm in propertyRegex.Matches(typeBody))
+                                                    {
+                                                        var propertyName = pm.Groups[4].Value.Trim();
+                                                        if (string.IsNullOrWhiteSpace(propertyName)) continue;
+                                                        propertyCount++;
+                                                        totalProperties++;
+                                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines property '{propertyName}' in type '{typeName}'."));
+                                                    }
+
+                                                    // Fields
+                                                    var fieldRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|readonly\\s+|const\\s+|volatile\\s+|new\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=|;)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                    foreach (Match fm in fieldRegex.Matches(typeBody))
+                                                    {
+                                                        var fieldName = fm.Groups[4].Value.Trim();
+                                                        if (string.IsNullOrWhiteSpace(fieldName)) continue;
+                                                        fieldCount++;
+                                                        totalFields++;
+                                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines field '{fieldName}' in type '{typeName}'."));
+                                                    }
+
+                                                    // Events
+                                                    var eventRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+event\\s+[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                    foreach (Match em in eventRegex.Matches(typeBody))
+                                                    {
+                                                        var eventName = em.Groups[3].Value.Trim();
+                                                        if (string.IsNullOrWhiteSpace(eventName)) continue;
+                                                        eventCount++;
+                                                        totalEvents++;
+                                                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines event '{eventName}' in type '{typeName}'."));
+                                                    }
+                                                }
+                                            }
+                                            catch { }
                                         }
                                     }
                                     catch { }
                                 }
                             }
 
-                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {classCount} classes, {interfaceCount} interfaces, {recordCount} records, {structCount} structs, {enumCount} enums, {delegateCount} delegates."));
+                            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {classCount} classes, {interfaceCount} interfaces, {recordCount} records, {structCount} structs, {enumCount} enums, {delegateCount} delegates, {constructorCount} constructors, {methodCount} methods, {propertyCount} properties, {fieldCount} fields, {eventCount} events."));
                         }
                         catch { }
                     }
@@ -716,7 +918,7 @@ namespace EngineeringDiscovery.Web.Services
                             {
                                 var includeAttr = pr.Attribute("Include")?.Value;
                                 if (string.IsNullOrWhiteSpace(includeAttr)) continue;
-                                var sourceDir = Path.GetDirectoryName(projFile) ?? Directory.GetCurrentDirectory();
+                                var sourceDir = Path.GetDirectoryName(projFile) ?? throw new InvalidOperationException("Project file path must be rooted or within a discovered solution directory.");
                                 var referencedPath = includeAttr;
                                 if (!Path.IsPathRooted(referencedPath)) referencedPath = Path.GetFullPath(Path.Combine(sourceDir, referencedPath));
                                 else referencedPath = Path.GetFullPath(referencedPath);
@@ -1017,6 +1219,13 @@ namespace EngineeringDiscovery.Web.Services
                     if (totalStructs > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalStructs} structs."));
                     if (totalEnums > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalEnums} enums."));
                     if (totalDelegates > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalDelegates} delegates."));
+                    if (totalConstructors > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalConstructors} constructors."));
+                    if (totalMethods > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalMethods} methods."));
+                    if (totalProperties > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalProperties} properties."));
+                    if (totalFields > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalFields} fields."));
+                    if (totalEvents > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalEvents} events."));
+                    var totalMembers = totalConstructors + totalMethods + totalProperties + totalFields + totalEvents;
+                    if (totalMembers > 0) inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {totalMembers} members (constructors, methods, properties, fields, events)."));
                 }
                 catch { }
 
@@ -1056,6 +1265,8 @@ namespace EngineeringDiscovery.Web.Services
         {
             try
             {
+                // Note: Do not use AppContext.BaseDirectory or Directory.GetCurrentDirectory() to find repository.
+                // This helper remains for legacy upward search but is no longer used by CreateInvestigation when repositoryRoot is required.
                 var dir = AppContext.BaseDirectory ?? Directory.GetCurrentDirectory();
                 var info = new DirectoryInfo(dir);
                 while (info != null)
@@ -1070,6 +1281,23 @@ namespace EngineeringDiscovery.Web.Services
                 // ignore
             }
             return null;
+        }
+
+        // Find solutions under a repository root honoring exclusions
+        public string[] FindSolutionsInRepository(string repositoryRoot)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(repositoryRoot) || !Directory.Exists(repositoryRoot)) return Array.Empty<string>();
+                var ctx = new DiscoveryContext(null);
+                var files = Directory.GetFiles(repositoryRoot, "*.sln*", SearchOption.AllDirectories)
+                    .Where(f => !ctx.IsExcludedPath(f)).ToArray();
+                return files;
+            }
+            catch
+            {
+                return Array.Empty<string>();
+            }
         }
     }
 }

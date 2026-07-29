@@ -6,11 +6,11 @@ namespace EngineeringDiscovery.Web.Services
 {
     public class SampleDiscoveryEngine : IDiscoveryEngine
     {
-        public Investigation CreateInvestigation(string? targetOverride = null)
+        public Investigation CreateInvestigation(string? repositoryRoot = null, string? targetOverride = null)
         {
             var inv = Investigation.Create(
                 Guid.NewGuid(),
-                repositoryPath: "/",
+                repositoryPath: repositoryRoot ?? "/",
                 goal: "Assess repository for maintainability and security risks.",
                 owner: "alice@example.com",
                 target: targetOverride ?? "engineering-discovery",
