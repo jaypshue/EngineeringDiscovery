@@ -42,6 +42,29 @@
             return messages;
         }
     }
+
+    // Implementation Plan derived from Investigation and planner recommendations (presentation only)
+    private IEnumerable<string> ImplementationPriorities
+    {
+        get
+        {
+            // Order: Architecture review, Dependency validation, Risk mitigation, Technical debt, Outstanding questions, Feature implementation
+            var list = new List<string>();
+            if (ArchitectureCount > 0) list.Add("Review architecture");
+            if (DependencyCount > 0) list.Add("Validate dependencies");
+            if (RiskCount > 0) list.Add("Mitigate identified risks");
+            if (TechnicalDebtCount > 0) list.Add("Plan to address technical debt");
+            if (FindingsByType[ FindingType.Question ].Any()) list.Add("Resolve outstanding questions");
+            list.Add("Plan feature implementation");
+            return list;
+        }
+    }
+
+    private IEnumerable<Finding> ArchitectureFindings => FindingsByType[ FindingType.Architecture ];
+    private IEnumerable<Finding> DependencyFindings => FindingsByType[ FindingType.Dependency ];
+    private IEnumerable<Finding> RiskFindings => FindingsByType[ FindingType.Risk ];
+    private IEnumerable<Finding> QuestionFindings => FindingsByType[ FindingType.Question ];
+    private IEnumerable<Finding> TechnicalDebtFindings => FindingsByType[ FindingType.TechnicalDebt ];
 }
 
 <section class="workspace workspace--developer">
@@ -89,5 +112,76 @@
                 <li>@item</li>
             }
         </ol>
+    </section>
+
+    <section class="workspace__section">
+        <h4>Implementation Plan</h4>
+
+        <h5>Objective</h5>
+        <p>@Investigation?.Goal</p>
+
+        <h5>Implementation Priorities</h5>
+        <ol>
+            @foreach (var p in ImplementationPriorities)
+            {
+                <li>@p</li>
+            }
+        </ol>
+
+        @if (ArchitectureFindings.Any())
+        {
+            <h5>Architecture Considerations</h5>
+            <ul>
+                @foreach (var f in ArchitectureFindings)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
+        @if (DependencyFindings.Any())
+        {
+            <h5>Dependencies</h5>
+            <ul>
+                @foreach (var f in DependencyFindings)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
+        @if (RiskFindings.Any())
+        {
+            <h5>Risks</h5>
+            <ul>
+                @foreach (var f in RiskFindings)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
+        @if (QuestionFindings.Any())
+        {
+            <h5>Outstanding Questions</h5>
+            <ul>
+                @foreach (var f in QuestionFindings)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
+        @if (TechnicalDebtFindings.Any())
+        {
+            <h5>Technical Debt</h5>
+            <ul>
+                @foreach (var f in TechnicalDebtFindings)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
+
     </section>
 </section>
