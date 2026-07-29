@@ -26,7 +26,8 @@
     };
 
     // WorkspaceHost now receives a shared Investigation from a Discovery Engine and passes it into workspaces.
-    private readonly EngineeringDiscovery.Web.Services.IDiscoveryEngine discoveryEngine = new EngineeringDiscovery.Web.Services.SampleDiscoveryEngine();
+    // Prefer SolutionDiscoveryEngine when available so the UI reflects the current solution under development.
+    private readonly EngineeringDiscovery.Web.Services.IDiscoveryEngine discoveryEngine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine();
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation SampleInvestigation => discoveryEngine.CreateInvestigation();
 
     private RenderFragment RenderWorkspace() => Role switch
