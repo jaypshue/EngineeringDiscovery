@@ -1,21 +1,93 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngInv = EngineeringDiscovery.Core.Domain.Investigation
+@using System.Linq
 @namespace EngineeringDiscovery.Web.Components.Workspaces
+
+@code {
+    [Parameter]
+    public EngInv.Investigation? Investigation { get; set; }
+
+    private IEnumerable<Finding> Findings => Investigation?.Findings ?? Enumerable.Empty<Finding>();
+
+    private ILookup<FindingType, Finding> FindingsByType => Findings.ToLookup(f => f.Type);
+
+    private int ArchitectureCount => FindingsByType[ FindingType.Architecture ].Count();
+    private int TechnicalDebtCount => FindingsByType[ FindingType.TechnicalDebt ].Count();
+    private int DependencyCount => FindingsByType[ FindingType.Dependency ].Count();
+    private int RiskCount => FindingsByType[ FindingType.Risk ].Count();
+
+    private IEnumerable<string> DevelopmentFocus
+    {
+        get
+        {
+            var list = new List<string>();
+            if (ArchitectureCount > 0) list.Add("Review architecture findings");
+            if (TechnicalDebtCount > 0) list.Add("Resolve technical debt");
+            if (DependencyCount > 0) list.Add("Validate dependencies");
+            if (RiskCount > 0) list.Add("Review implementation risks");
+            if (!list.Any()) list.Add("No development concerns identified.");
+            return list;
+        }
+    }
+
+    private List<string> GuidanceMessages
+    {
+        get
+        {
+            var messages = new List<string>();
+            if (TechnicalDebtCount > 0) messages.Add("Existing technical debt should be addressed during implementation planning.");
+            if (DependencyCount > 0) messages.Add("External dependencies should be validated before implementation begins.");
+            if (RiskCount > 0) messages.Add("Review identified risks before starting development.");
+            if (!messages.Any()) messages.Add("No development concerns identified.");
+            return messages;
+        }
+    }
+}
 
 <section class="workspace workspace--developer">
     <h3>Developer Workspace</h3>
-    <p>The Developer focuses on code-level investigation, reproductions, and quick fixes.</p>
+
+    <InvestigationSummary Investigation="@Investigation" />
 
     <section class="workspace__section">
-        <h4>Code Links</h4>
-        <p>Placeholder for file references, code snippets, and jump-to-source links.</p>
+        <h4>Development Dashboard</h4>
+
+        @foreach (var type in new[] { FindingType.TechnicalDebt, FindingType.Dependency, FindingType.Architecture, FindingType.Risk })
+        {
+            var group = FindingsByType[type];
+            if (!group.Any()) continue;
+
+            <h5>@type</h5>
+            <ul>
+                @foreach (var f in group)
+                {
+                    <li>@f.Description</li>
+                }
+            </ul>
+        }
     </section>
 
     <section class="workspace__section">
-        <h4>Reproductions</h4>
-        <p>Placeholder for steps to reproduce, sample inputs, and scripts.</p>
+        <h4>Development Readiness</h4>
+        <p>Architecture Findings: @ArchitectureCount</p>
+        <p>Technical Debt Items: @TechnicalDebtCount</p>
+        <p>Dependencies: @DependencyCount</p>
+        <p>Risks: @RiskCount</p>
+
+        <h5>Developer Guidance</h5>
+        @foreach (var m in GuidanceMessages)
+        {
+            <p>@m</p>
+        }
     </section>
 
     <section class="workspace__section">
-        <h4>Quick Actions</h4>
-        <p>Placeholder for quick fixes, suggested patches, and diffs.</p>
+        <h4>Development Focus</h4>
+        <ol>
+            @foreach (var item in DevelopmentFocus)
+            {
+                <li>@item</li>
+            }
+        </ol>
     </section>
 </section>
