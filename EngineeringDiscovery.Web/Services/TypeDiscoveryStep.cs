@@ -95,7 +95,7 @@ namespace EngineeringDiscovery.Web.Services
                                         Description = desc
                                     });
 
-                                    // Member detection is intentionally left in SolutionDiscoveryEngine for now per ED-135 scope
+                                    // Member detection is intentionally left in InvestigationEngine for now per ED-135 scope
                                     try
                                     {
                                         var typeBody = ExtractBalancedBlock(text, m.Index);
