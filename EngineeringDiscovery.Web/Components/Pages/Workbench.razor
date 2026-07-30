@@ -1,0 +1,123 @@
+@using Microsoft.AspNetCore.Components
+@namespace EngineeringDiscovery.Web.Components.Pages
+
+<div class="ss-workbench">
+    <header class="ss-header">
+        <h2>SimplyScalable Workbench</h2>
+        <div class="ss-header-actions">
+            <button class="btn" disabled>⚙ Settings</button>
+        </div>
+    </header>
+
+    <section class="ss-current-project card">
+        <h3>Current Project</h3>
+        <div class="muted">@(SummaryProject ?? "(none)")</div>
+    </section>
+
+    <section class="ss-top-row">
+        <div class="ss-goal card">
+            <h4>Current Goal</h4>
+            <textarea @bind="State.Goal" @oninput="OnInput" rows="4" placeholder="Describe the current engineering objective..."></textarea>
+            <div class="save-indicator">@SaveMessage</div>
+        </div>
+
+        <div class="ss-summary card">
+            <h4>Workspace Summary</h4>
+            <dl>
+                <dt>Git Branch</dt>
+                <dd>@GitBranch</dd>
+                <dt>Last Commit</dt>
+                <dd>@LastCommit</dd>
+                <dt>Last Opened</dt>
+                <dd>@LastOpened</dd>
+                <dt>Investigation Status</dt>
+                <dd>@InvestigationStatus</dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="ss-middle-row">
+        <div class="ss-task card">
+            <h4>Current Task</h4>
+            <input @bind="State.Task" @oninput="OnInput" placeholder="What are you working on?" />
+        </div>
+
+        <div class="ss-next card">
+            <h4>Next Step</h4>
+            <input @bind="State.NextStep" @oninput="OnInput" placeholder="What should be done next?" />
+        </div>
+    </section>
+
+    <section class="ss-actions card">
+        <div class="toolbar">
+            <button class="btn" disabled>Continue Working</button>
+            <button class="btn" @onclick="OpenCurrentState">Open CURRENT_STATE</button>
+            <button class="btn" disabled>Start Discovery</button>
+            <button class="btn" @onclick="OpenArchitect">Open Architect</button>
+            <button class="btn" @onclick="OpenPlanner">Open Planner</button>
+        </div>
+    </section>
+
+</div>
+
+@code {
+    [Parameter]
+    public string? SummaryProject { get; set; }
+
+    private class WorkbenchState
+    {
+        public string Goal { get; set; } = string.Empty;
+        public string Task { get; set; } = string.Empty;
+        public string NextStep { get; set; } = string.Empty;
+    }
+
+    private WorkbenchState State { get; } = new WorkbenchState();
+    private string SaveMessage { get; set; } = "Saved";
+
+    // Placeholder readonly fields for workspace summary
+    private string GitBranch { get; set; } = "main";
+    private string LastCommit { get; set; } = "abcdef0";
+    private string LastOpened { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm");
+    private string InvestigationStatus { get; set; } = "Idle";
+
+    private System.Threading.CancellationTokenSource? _saveCts;
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        // Auto-save after brief debounce
+        _saveCts?.Cancel();
+        _saveCts = new System.Threading.CancellationTokenSource();
+        var ct = _saveCts.Token;
+        _ = System.Threading.Tasks.Task.Delay(600, ct).ContinueWith(t =>
+        {
+            if (t.IsCanceled) return;
+            // simulate save
+            SaveMessage = "Saved";
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void OpenCurrentState()
+    {
+        // Open CURRENT_STATE.md if exists
+        var path = System.IO.Path.Combine(System.AppContext.BaseDirectory, "CURRENT_STATE.md");
+        if (System.IO.File.Exists(path))
+        {
+            // In Blazor Server we cannot open editor; show indicator
+            SaveMessage = "Opened CURRENT_STATE.md";
+            StateHasChanged();
+        }
+        else
+        {
+            SaveMessage = "CURRENT_STATE.md not found";
+            StateHasChanged();
+        }
+    }
+
+    private void OpenArchitect() => NavigationManager.NavigateTo("/");
+    private void OpenPlanner() => NavigationManager.NavigateTo("/");
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
+}
+

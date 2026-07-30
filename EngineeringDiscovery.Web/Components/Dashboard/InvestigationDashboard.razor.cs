@@ -55,21 +55,21 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                 if (f.Type != FindingType.Observation) findings.Add(f);
                 var desc = f.Description ?? string.Empty;
 
-                foreach (Match m in Regex.Matches(desc, "Project '\\\\s*(?<p>[^']+)'", RegexOptions.IgnoreCase))
+                foreach (Match m in Regex.Matches(desc, "Project '(?<p>[^']+)'", RegexOptions.IgnoreCase))
                 {
                     var pname = m.Groups["p"].Value.Trim();
                     if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
                     projects[pname].Observations.Add(desc);
                 }
 
-                foreach (Match m in Regex.Matches(desc, "Project (?<p>[A-Za-z0-9_.-]+) ", RegexOptions.IgnoreCase))
+                foreach (Match m in Regex.Matches(desc, "Project (?<p>[A-Za-z0-9_.-]+)", RegexOptions.IgnoreCase))
                 {
                     var pname = m.Groups["p"].Value.Trim();
                     if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
                     projects[pname].Observations.Add(desc);
                 }
 
-                var nsMatches = Regex.Matches(desc, "defines namespace '\\\\s*(?<ns>[^']+)'", RegexOptions.IgnoreCase);
+                var nsMatches = Regex.Matches(desc, "defines namespace '(?<ns>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match nm in nsMatches)
                 {
                     var ns = nm.Groups["ns"].Value.Trim();
@@ -80,7 +80,7 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                     proj.Namespaces[ns].Observations.Add(desc);
                 }
 
-                var typeRegex = new Regex("defines (?:class|interface|record|struct|enum|delegate) '\\\\s*(?<type>[^']+)' in namespace '\\\\s*(?<ns>[^']+)'", RegexOptions.IgnoreCase);
+                var typeRegex = new Regex("defines (?:class|interface|record|struct|enum|delegate) '(?<type>[^']+)' in namespace '(?<ns>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match tm in typeRegex.Matches(desc))
                 {
                     var typeName = tm.Groups["type"].Value.Trim();
@@ -94,7 +94,7 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                     nsModel.Types[typeName].Observations.Add(desc);
                 }
 
-                var memberRegex = new Regex("defines (?<kind>constructor|method|property|field|event) '\\\\s*(?<member>[^']+)' in type '\\\\s*(?<type>[^']+)'", RegexOptions.IgnoreCase);
+                var memberRegex = new Regex("defines (?<kind>constructor|method|property|field|event) '(?<member>[^']+)' in type '(?<type>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match mm in memberRegex.Matches(desc))
                 {
                     var kind = mm.Groups["kind"].Value.Trim();
@@ -144,7 +144,68 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
             ViewModel.Summary.TypeCount = projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Keys).Distinct().Count();
             ViewModel.Summary.MemberCount = projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Values).SelectMany(t => t.Members).Count();
             ViewModel.Summary.TechnologyCount = technologies.Count;
+
+            // Reset selection on rebuild
+            SelectedNodeType = NodeType.None;
+            SelectedDetails.Clear();
+            SelectedObservations = new List<string>();
         }
+
+        // Selection model for details panel
+        protected enum NodeType { None, Project, Namespace, Type, Member }
+        protected NodeType SelectedNodeType { get; set; } = NodeType.None;
+        protected string SelectedDetailsTitle { get; set; } = string.Empty;
+        protected Dictionary<string, object> SelectedDetails { get; } = new();
+        protected List<string>? SelectedObservations { get; set; }
+
+        protected void SelectProject(string project)
+        {
+            SelectedNodeType = NodeType.Project;
+            SelectedDetailsTitle = project;
+            SelectedDetails.Clear();
+            var p = ViewModel!.Projects[project];
+            SelectedDetails["Name"] = p.Name;
+            SelectedDetails["Project"] = project;
+            SelectedDetails["Type"] = "Project";
+            SelectedObservations = p.Observations.ToList();
+        }
+
+        protected void SelectNamespace(string project, string ns)
+        {
+            SelectedNodeType = NodeType.Namespace;
+            SelectedDetailsTitle = ns;
+            SelectedDetails.Clear();
+            var n = ViewModel!.Projects[project].Namespaces[ns];
+            SelectedDetails["Name"] = n.Name;
+            SelectedDetails["Project"] = project;
+            SelectedObservations = n.Observations.ToList();
+        }
+
+        protected void SelectType(string project, string ns, string type)
+        {
+            SelectedNodeType = NodeType.Type;
+            SelectedDetailsTitle = type;
+            SelectedDetails.Clear();
+            var t = ViewModel!.Projects[project].Namespaces[ns].Types[type];
+            SelectedDetails["Name"] = t.Name;
+            SelectedDetails["Namespace"] = ns;
+            SelectedDetails["Kind"] = t.Kind;
+            SelectedObservations = t.Observations.ToList();
+        }
+
+        protected void SelectMember(string project, string ns, string type, string member)
+        {
+            SelectedNodeType = NodeType.Member;
+            SelectedDetailsTitle = member;
+            SelectedDetails.Clear();
+            SelectedDetails["Name"] = member;
+            SelectedDetails["MemberType"] = "Member";
+            SelectedObservations = new List<string>();
+        }
+
+        protected bool ProjectMatches(KeyValuePair<string, ProjectNodeViewModel> p) => MatchesFilter(p.Key) || p.Value.Namespaces.Values.Any(n => NamespaceMatches(n));
+        protected bool NamespaceMatches(NamespaceNodeViewModel n) => MatchesFilter(n.Name) || n.Types.Values.Any(t => TypeMatches(t));
+        protected bool TypeMatches(TypeNodeViewModel t) => MatchesFilter(t.Name) || t.Members.Any(m => MatchesFilter(m));
 
         protected string? ExtractProjectFromDesc(string desc)
         {

@@ -5,10 +5,12 @@
 
 
 
-<div class="investigation-dashboard">
-    <h3>Investigation: @(ViewModel?.Summary.Target ?? "(unknown)")</h3>
+<div class="investigation-workbench">
+    <header class="workbench-header">
+        <h3>Investigation: @(ViewModel?.Summary.Target ?? "(unknown)")</h3>
+    </header>
 
-    <div class="summary-cards" style="display:flex; gap:12px; margin-bottom:12px;">
+    <section class="summary-cards">
         <div class="card">Repository<br/><strong>@(ViewModel?.Summary.Repository ?? "")</strong></div>
         <div class="card">Solution<br/><strong>@(ViewModel?.Summary.Solution ?? "")</strong></div>
         <div class="card">Projects<br/><strong>@(ViewModel?.Summary.ProjectCount.ToString() ?? "0")</strong></div>
@@ -17,52 +19,60 @@
         <div class="card">Members<br/><strong>@(ViewModel?.Summary.MemberCount.ToString() ?? "0")</strong></div>
         <div class="card">Technologies<br/><strong>@(ViewModel?.Summary.TechnologyCount.ToString() ?? "0")</strong></div>
         <div class="card">Findings<br/><strong>@(ViewModel?.Summary.FindingCount.ToString() ?? "0")</strong></div>
-    </div>
+    </section>
 
-    <div style="margin-bottom:8px;">
-        <input placeholder="Search discovery..." @bind="SearchTerm" style="width:100%; padding:6px;" />
-    </div>
+    <section class="workbench-toolbar">
+        <input class="search-input" placeholder="Search discovery..." @bind="SearchTerm" />
+    </section>
 
-    <div style="display:flex; gap:16px;">
-        <div style="width:320px; border-right:1px solid #ddd; padding-right:12px;">
-            <h4>Project Explorer</h4>
+    <section class="workbench-panels">
+        <aside class="panel panel-explorer">
+            <h4>Explorer</h4>
             @if (!(ViewModel?.Projects?.Any() ?? false))
             {
                 <p class="muted">No projects discovered.</p>
             }
             else
             {
-                <ul>
+                <ul class="tree-root">
                     @foreach (var p in (ViewModel?.Projects?.OrderBy(p => p.Key) ?? Enumerable.Empty<KeyValuePair<string, EngineeringDiscovery.Web.Components.Dashboard.ViewModels.ProjectNodeViewModel>>()))
                     {
-                        <li>
-                            <button class="link" @onclick="() => ToggleProject(p.Key)">@((ExpandedProjects.Contains(p.Key) ? "▼" : "▶"))</button>
-                            <strong>@p.Key</strong>
+                        <li class="tree-node project-node">
+                            <div class="node-row">
+                                <button class="link tree-toggle" @onclick="() => ToggleProject(p.Key)">@((ExpandedProjects.Contains(p.Key) ? "▼" : "▶"))</button>
+                                <button class="link node-select" @onclick="() => SelectProject(p.Key)"><strong>@p.Key</strong></button>
+                            </div>
                             @if (ExpandedProjects.Contains(p.Key))
                             {
                                 <ul>
                                     @foreach (var ns in p.Value.Namespaces.OrderBy(n => n.Key))
                                     {
                                         if (!MatchesFilter(ns.Key)) continue;
-                                        <li>
-                                            <button class="link" @onclick="() => ToggleNamespace(p.Key, ns.Key)">@((ExpandedNamespaces.Contains(GetNamespaceIdPublic(p.Key, ns.Key)) ? "▼" : "▶"))</button>
-                                            @ns.Key
+                                        <li class="tree-node namespace-node">
+                                            <div class="node-row">
+                                                <button class="link tree-toggle" @onclick="() => ToggleNamespace(p.Key, ns.Key)">@((ExpandedNamespaces.Contains(GetNamespaceIdPublic(p.Key, ns.Key)) ? "▼" : "▶"))</button>
+                                                <button class="link node-select" @onclick="() => SelectNamespace(p.Key, ns.Key)">@ns.Key</button>
+                                            </div>
                                             @if (ExpandedNamespaces.Contains(GetNamespaceIdPublic(p.Key, ns.Key)))
                                             {
                                                 <ul>
                                                     @foreach (var t in ns.Value.Types.OrderBy(t => t.Key))
                                                     {
                                                         if (!MatchesFilter(t.Key)) continue;
-                                                        <li>
-                                                            <button class="link" @onclick="() => ToggleType(p.Key, ns.Key, t.Key)">@((ExpandedTypes.Contains(GetTypeIdPublic(p.Key, ns.Key, t.Key)) ? "▼" : "▶"))</button>
-                                                            @t.Key (@t.Value.Kind)
+                                                        <li class="tree-node type-node">
+                                                            <div class="node-row">
+                                                                <button class="link tree-toggle" @onclick="() => ToggleType(p.Key, ns.Key, t.Key)">@((ExpandedTypes.Contains(GetTypeIdPublic(p.Key, ns.Key, t.Key)) ? "▼" : "▶"))</button>
+                                                                <button class="link node-select" @onclick="() => SelectType(p.Key, ns.Key, t.Key)">@t.Key (@t.Value.Kind)</button>
+                                                            </div>
                                                             @if (ExpandedTypes.Contains(GetTypeIdPublic(p.Key, ns.Key, t.Key)))
                                                             {
                                                                 <ul>
                                                                     @foreach (var m in t.Value.Members)
                                                                     {
                                                                         if (!MatchesFilter(m)) continue;
-                                                                        <li>@m</li>
+                                                                        <li class="tree-node member-node">
+                                                                            <button class="link node-select" @onclick="() => SelectMember(p.Key, ns.Key, t.Key, m)">@m</button>
+                                                                        </li>
                                                                     }
                                                                 </ul>
                                                             }
@@ -78,115 +88,62 @@
                     }
                 </ul>
             }
-        </div>
+        </aside>
 
-        <div style="flex:1; padding-left:12px;">
-            <h4>Discovery Tree</h4>
-
-            @if (!(ViewModel?.Projects?.Any() ?? false))
+        <section class="panel panel-details">
+            <h4>Details</h4>
+            @if (SelectedNodeType == NodeType.None)
             {
-                <p class="muted">No discovery observations available.</p>
+                <p class="muted">Select a node in the explorer to view details.</p>
             }
             else
             {
-                <div>
-                    @foreach (var p in ViewModel.Projects.OrderBy(kv => kv.Key))
+                <div class="details-card">
+                    <h5>@SelectedDetailsTitle</h5>
+                    <dl>
+                        @foreach (var item in SelectedDetails)
+                        {
+                            <dt>@item.Key</dt>
+                            <dd>@item.Value</dd>
+                        }
+                    </dl>
+                    @if (SelectedObservations?.Any() ?? false)
                     {
-                        <div style="margin-bottom:8px;">
-                            <div>
-                                <button class="link" @onclick="() => ToggleProject(p.Key)">@((ExpandedProjects.Contains(p.Key) ? "▼" : "▶"))</button>
-                                <strong>@p.Key</strong>
-                            </div>
-                            @if (ExpandedProjects.Contains(p.Key))
+                        <h6>Observations</h6>
+                        <ul>
+                            @foreach (var observation in SelectedObservations)
                             {
-                                <div style="margin-left:16px; margin-top:6px;">
-                                    @if (p.Value.Observations.Any())
-                                    {
-                                        <details>
-                                            <summary>Project Observations (@p.Value.Observations.Count)</summary>
-                                            <ul>
-                                                @foreach (var o in p.Value.Observations)
-                                                {
-                                                    if (!MatchesFilter(o)) continue;
-                                                    <li>@o</li>
-                                                }
-                                            </ul>
-                                        </details>
-                                    }
-
-                                    @foreach (var ns in p.Value.Namespaces.OrderBy(n => n.Key))
-                                    {
-                                        <div style="margin-top:6px;">
-                                            <button class="link" @onclick="() => ToggleNamespace(p.Key, ns.Key)">@((ExpandedNamespaces.Contains(GetNamespaceIdPublic(p.Key, ns.Key)) ? "▼" : "▶"))</button>
-                                            <em>@ns.Key</em>
-                                            @if (ExpandedNamespaces.Contains(GetNamespaceIdPublic(p.Key, ns.Key)))
-                                            {
-                                                <div style="margin-left:16px; margin-top:6px;">
-                                                    @if (ns.Value.Observations.Any())
-                                                    {
-                                                        <details>
-                                                            <summary>Namespace Observations (@ns.Value.Observations.Count)</summary>
-                                                            <ul>
-                                                                @foreach (var o in ns.Value.Observations)
-                                                                {
-                                                                    if (!MatchesFilter(o)) continue;
-                                                                    <li>@o</li>
-                                                                }
-                                                            </ul>
-                                                        </details>
-                                                    }
-
-                                                    @foreach (var t in ns.Value.Types.OrderBy(t => t.Key))
-                                                    {
-                                                        <div style="margin-top:4px;">
-                                                            <button class="link" @onclick="() => ToggleType(p.Key, ns.Key, t.Key)">@((ExpandedTypes.Contains(GetTypeIdPublic(p.Key, ns.Key, t.Key)) ? "▼" : "▶"))</button>
-                                                            <span>@t.Key (@t.Value.Kind)</span>
-                                                            @if (ExpandedTypes.Contains(GetTypeIdPublic(p.Key, ns.Key, t.Key)))
-                                                            {
-                                                                <div style="margin-left:12px; margin-top:4px;">
-                                                                    @if (t.Value.Observations.Any())
-                                                                    {
-                                                                        <details>
-                                                                            <summary>Type Observations (@t.Value.Observations.Count)</summary>
-                                                                            <ul>
-                                                                                @foreach (var o in t.Value.Observations)
-                                                                                {
-                                                                                    if (!MatchesFilter(o)) continue;
-                                                                                    <li>@o</li>
-                                                                                }
-                                                                            </ul>
-                                                                        </details>
-                                                                    }
-
-                                                                    @if (t.Value.Members.Any())
-                                                                    {
-                                                                        <div>
-                                                                            <strong>Members</strong>
-                                                                            <ul>
-                                                                                @foreach (var m in t.Value.Members)
-                                                                                {
-                                                                                    if (!MatchesFilter(m)) continue;
-                                                                                    <li>@m</li>
-                                                                                }
-                                                                            </ul>
-                                                                        </div>
-                                                                    }
-                                                                </div>
-                                                            }
-                                                        </div>
-                                                    }
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
+                                <li>@observation</li>
                             }
-                        </div>
+                        </ul>
                     }
                 </div>
             }
-        </div>
-    </div>
+        </section>
+
+        <aside class="panel panel-findings">
+            <h4>Findings</h4>
+            @if (!(ViewModel?.Findings?.Any() ?? false))
+            {
+                <p class="muted">No findings categorized beyond observations.</p>
+            }
+            else
+            {
+                @foreach (var group in ViewModel!.Findings.GroupBy(f => f.Type))
+                {
+                    <div class="finding-group">
+                        <h5>@group.Key (@group.Count())</h5>
+                        <ul>
+                            @foreach (var finding in group)
+                            {
+                                <li>@finding.Description</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
+        </aside>
+    </section>
 </div>
 
 @code {

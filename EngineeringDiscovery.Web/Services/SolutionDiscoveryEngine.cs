@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Xml.Linq;
 using EngineeringDiscovery.Core.Domain;
+using EngineeringDiscovery.Core.Models;
 using System.Text.RegularExpressions;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using System.Diagnostics;
@@ -232,6 +233,12 @@ namespace EngineeringDiscovery.Web.Services
             if (projectCount > 0)
             {
                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Solution contains {projectCount} projects."));
+                inv.AddObservation(new DiscoveryObservation
+                {
+                    Kind = ObservationKind.Solution,
+                    Project = string.Empty,
+                    Description = $"Solution contains {projectCount} projects."
+                });
             }
 
             // Infer project types using simple filename/name conventions and add observations
@@ -250,6 +257,12 @@ namespace EngineeringDiscovery.Web.Services
                     else projType = "Unknown";
 
                     inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} (Project Type: {projType})"));
+                    inv.AddObservation(new DiscoveryObservation
+                    {
+                        Kind = ObservationKind.Project,
+                        Project = name,
+                        Description = $"{name} (Project Type: {projType})"
+                    });
                 }
                 catch
                 {
@@ -294,6 +307,13 @@ namespace EngineeringDiscovery.Web.Services
                             if (!string.IsNullOrEmpty(referencedName) && !string.Equals(sourceName, referencedName, StringComparison.OrdinalIgnoreCase))
                             {
                                 inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{sourceName} references {referencedName}."));
+                                inv.AddObservation(new DiscoveryObservation
+                                {
+                                    Kind = ObservationKind.Dependency,
+                                    Project = sourceName,
+                                    Description = $"{sourceName} references {referencedName}.",
+                                    // referencedName is available in description; Namespace/Type/Member not applicable
+                                });
                             }
                         }
                         catch

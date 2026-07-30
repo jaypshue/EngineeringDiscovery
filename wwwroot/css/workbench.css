@@ -1,0 +1,10 @@
+/* SimplyScalable Workbench styles */
+.ss-workbench { padding:16px; display:flex; flex-direction:column; gap:12px; }
+.ss-header { display:flex; justify-content:space-between; align-items:center; }
+.card { background:#1e1e1e; color:#fff; padding:12px; border-radius:6px; }
+.ss-top-row { display:flex; gap:12px; }
+.ss-middle-row { display:flex; gap:12px; }
+.ss-goal textarea { width:100%; background:#111; color:#fff; border:1px solid #333; padding:8px; border-radius:4px; }
+.ss-task input, .ss-next input { width:100%; background:#111; color:#fff; border:1px solid #333; padding:8px; border-radius:4px; }
+.save-indicator { font-size:0.8rem; color:#9acd32; }
+.toolbar { display:flex; gap:8px; }

@@ -1,0 +1,46 @@
+/* Investigation Workbench styles */
+.investigation-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.workbench-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--divider, #e6e6e6);
+  padding-bottom: 8px;
+}
+
+.brand { font-size: 1.25rem; margin: 0; }
+.status-beacon { font-size: 0.9rem; color: var(--muted, #666); }
+
+.summary-row .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+.card { background: var(--card-bg, #fff); border-radius: 6px; padding: 12px; min-width: 120px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.card-value { font-size: 1.25rem; font-weight: 600; }
+.card-label { font-size: 0.8rem; color: var(--muted, #666); }
+
+.workbench-body { display: grid; grid-template-columns: 320px 1fr 320px; gap: 16px; align-items: start; }
+.explorer { background: var(--panel-bg, #fff); padding: 12px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.details { background: var(--panel-bg, #fff); padding: 12px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.findings { background: var(--panel-bg, #fff); padding: 12px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+
+.explorer-header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.explorer .search { flex: 1; padding: 6px; border: 1px solid var(--divider, #e6e6e6); border-radius: 4px; }
+
+.tree-root { list-style: none; padding-left: 0; margin: 0; }
+.tree-node { margin: 4px 0; }
+.node-label { display: flex; gap: 8px; align-items: center; }
+.toggle { background: transparent; border: none; font-weight: bold; cursor: pointer; }
+.select { background: transparent; border: none; cursor: pointer; text-align: left; padding: 2px 6px; }
+
+.details-card dl { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; }
+.details-card dt { font-weight: 600; }
+.muted { color: var(--muted, #888); }
+
+@media (max-width: 900px) {
+  .workbench-body { grid-template-columns: 1fr; }
+}

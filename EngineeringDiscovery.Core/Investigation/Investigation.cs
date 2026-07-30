@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EngineeringDiscovery.Core.Models;
+using System;
 using System.Collections.Generic;
 
 namespace EngineeringDiscovery.Core.Domain.Investigation
@@ -46,6 +47,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         public EngineeringStageStatus DevelopmentStatus { get; private set; }
 
         public EngineeringStageStatus VerificationStatus { get; private set; }
+
+        // Observations (structured discovery facts) are owned by the Investigation aggregate.
+        // Exposed as IReadOnlyList and mutable only via AddObservation to preserve encapsulation.
+        private readonly List<DiscoveryObservation> _observations = new();
+        public IReadOnlyList<DiscoveryObservation> Observations => _observations.AsReadOnly();
 
         public static Investigation Create(Guid id, string repositoryPath)
             => Create(id, repositoryPath, goal: string.Empty, owner: string.Empty, target: string.Empty);
@@ -106,6 +112,15 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Findings can only be added while the investigation is Started.");
 
             Findings.Add(finding);
+        }
+
+        // Add a DiscoveryObservation to the Investigation.
+        public void AddObservation(DiscoveryObservation observation)
+        {
+            if (observation is null) throw new ArgumentNullException(nameof(observation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Observations can only be added while the investigation is Started.");
+
+            _observations.Add(observation);
         }
 
         // Allow updating stage statuses in a controlled way
