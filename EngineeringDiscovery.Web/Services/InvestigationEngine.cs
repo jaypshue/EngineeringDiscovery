@@ -153,34 +153,7 @@ namespace EngineeringDiscovery.Web.Services
                 });
             }
 
-            // Infer project types using simple filename/name conventions and add observations
-            foreach (var proj in discoveredProjects)
-            {
-                try
-                {
-                    var name = proj.Name ?? Path.GetFileNameWithoutExtension(proj.Path) ?? "Unnamed";
-                    var lowered = name.ToLowerInvariant();
-                    string projType;
-
-                    if (lowered.Contains("test") || lowered.Contains("tests")) projType = "Test Project";
-                    else if (lowered.Contains("web") || lowered.Contains("api")) projType = "Web";
-                    else if (lowered.Contains("console") || lowered.Contains("app")) projType = "Console";
-                    else if (lowered.Contains("core") || lowered.Contains("lib") || lowered.Contains("common") || lowered.Contains("shared")) projType = "Class Library";
-                    else projType = "Unknown";
-
-                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{name} (Project Type: {projType})"));
-                    inv.AddObservation(new DiscoveryObservation
-                    {
-                        Kind = ObservationKind.Project,
-                        Project = name,
-                        Description = $"{name} (Project Type: {projType})"
-                    });
-                }
-                catch
-                {
-                    // ignore per-project errors
-                }
-            }
+            // Project classification moved into ProjectClassificationStep (registered in pipeline)
 
             // Project reference discovery: inspect each discovered .csproj for ProjectReference elements
             foreach (var proj in discoveredProjects)
