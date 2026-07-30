@@ -95,11 +95,9 @@ namespace EngineeringDiscovery.Web.Services
                     // set solution path on context so steps can access it
                     context = new InvestigationContext(effectiveSolutionPath);
 
-                    // run project discovery
+                    // run project discovery (only project discovery at this stage)
                     var projectStep = new ProjectDiscoveryStep();
                     projectStep.Execute(context);
-
-                    // namespace discovery will be invoked after Investigation is created
 
                     // copy discovered projects into local list for backward compatibility
                     discoveredProjects.AddRange(context.DiscoveredProjects);
@@ -361,64 +359,7 @@ namespace EngineeringDiscovery.Web.Services
             }
             catch { }
 
-            // Dependency graph discovery: build project dependency graph using ProjectReference elements
-            try
-            {
-                // Map project full path -> name for quick lookup
-                var pathToName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var p in discoveredProjects)
-                {
-                    try
-                    {
-                        var full = Path.GetFullPath(p.Path ?? string.Empty);
-                        if (!string.IsNullOrWhiteSpace(full) && !pathToName.ContainsKey(full)) pathToName[full] = p.Name ?? Path.GetFileNameWithoutExtension(p.Path) ?? full;
-                    }
-                    catch { }
-                }
-
-                // Build adjacency list (source -> list of referenced project names)
-                var adjacency = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                foreach (var p in discoveredProjects)
-                {
-                    var sourceName = p.Name ?? Path.GetFileNameWithoutExtension(p.Path) ?? "Unnamed";
-                    if (!adjacency.ContainsKey(sourceName)) adjacency[sourceName] = new List<string>();
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(p.Path) || !File.Exists(p.Path)) continue;
-                        var doc = XDocument.Load(p.Path);
-                        var projectReferences = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "ProjectReference", StringComparison.OrdinalIgnoreCase));
-                        var sourceDir = Path.GetDirectoryName(p.Path) ?? Directory.GetCurrentDirectory();
-                        foreach (var pr in projectReferences)
-                        {
-                            try
-                            {
-                                var includeAttr = pr.Attribute("Include")?.Value;
-                                if (string.IsNullOrWhiteSpace(includeAttr)) continue;
-                                var referencedPath = includeAttr;
-                                if (!Path.IsPathRooted(referencedPath)) referencedPath = Path.GetFullPath(Path.Combine(sourceDir, referencedPath));
-                                else referencedPath = Path.GetFullPath(referencedPath);
-
-                                if (pathToName.TryGetValue(referencedPath, out var rn))
-                                {
-                                    adjacency[sourceName].Add(rn);
-                                }
-                            }
-                            catch { }
-                        }
-                    }
-                    catch { }
-                }
-
-            }
-            catch { }
-
-            // Layer analysis moved into LayerAnalysisStep and is executed after dependency analysis
-            try
-            {
-                var layerStep = new LayerAnalysisStep(inv);
-                layerStep.Execute(context);
-            }
-            catch { }
+            // DependencyAnalysisStep and LayerAnalysisStep will run later in the pipeline after Investigation is created
 
             return inv;
         }
