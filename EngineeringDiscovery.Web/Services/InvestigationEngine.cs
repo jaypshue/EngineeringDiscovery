@@ -409,15 +409,14 @@ namespace EngineeringDiscovery.Web.Services
                     catch { }
                 }
 
-                // Optionally emit adjacency summary
-                foreach (var kv in adjacency)
-                {
-                    if (kv.Value.Count > 0)
-                    {
-                        var rel = $"Project '{kv.Key}' depends on {string.Join(", ", kv.Value.Distinct())}.";
-                        inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, rel));
-                    }
-                }
+            }
+            catch { }
+
+            // Dependency analysis moved into DependencyAnalysisStep
+            try
+            {
+                var depStep = new DependencyAnalysisStep(inv);
+                depStep.Execute(context);
             }
             catch { }
 
