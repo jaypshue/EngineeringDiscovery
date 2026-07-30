@@ -412,11 +412,11 @@ namespace EngineeringDiscovery.Web.Services
             }
             catch { }
 
-            // Dependency analysis moved into DependencyAnalysisStep
+            // Layer analysis moved into LayerAnalysisStep and is executed after dependency analysis
             try
             {
-                var depStep = new DependencyAnalysisStep(inv);
-                depStep.Execute(context);
+                var layerStep = new LayerAnalysisStep(inv);
+                layerStep.Execute(context);
             }
             catch { }
 
