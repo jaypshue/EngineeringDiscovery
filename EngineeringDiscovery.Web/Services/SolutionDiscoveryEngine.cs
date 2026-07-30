@@ -192,6 +192,10 @@ namespace EngineeringDiscovery.Web.Services
             var typeStep = new TypeDiscoveryStep(inv);
             typeStep.Execute(context);
 
+            // Invoke member discovery (extracted step)
+            var memberStep = new MemberDiscoveryStep(inv);
+            memberStep.Execute(context);
+
             // Project reference discovery: inspect each discovered .csproj for ProjectReference elements
             foreach (var proj in discoveredProjects)
             {
