@@ -188,6 +188,10 @@ namespace EngineeringDiscovery.Web.Services
             var nsStep = new NamespaceDiscoveryStep(inv);
             nsStep.Execute(context);
 
+            // Invoke type discovery (extracted step)
+            var typeStep = new TypeDiscoveryStep(inv);
+            typeStep.Execute(context);
+
             // Project reference discovery: inspect each discovered .csproj for ProjectReference elements
             foreach (var proj in discoveredProjects)
             {
