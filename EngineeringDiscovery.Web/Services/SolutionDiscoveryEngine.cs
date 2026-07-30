@@ -99,6 +99,8 @@ namespace EngineeringDiscovery.Web.Services
                     var projectStep = new ProjectDiscoveryStep();
                     projectStep.Execute(context);
 
+                    // namespace discovery will be invoked after Investigation is created
+
                     // copy discovered projects into local list for backward compatibility
                     discoveredProjects.AddRange(context.DiscoveredProjects);
 
@@ -181,6 +183,10 @@ namespace EngineeringDiscovery.Web.Services
                     // ignore per-project errors
                 }
             }
+
+            // Invoke namespace discovery now that Investigation (inv) exists
+            var nsStep = new NamespaceDiscoveryStep(inv);
+            nsStep.Execute(context);
 
             // Project reference discovery: inspect each discovered .csproj for ProjectReference elements
             foreach (var proj in discoveredProjects)
@@ -415,60 +421,9 @@ namespace EngineeringDiscovery.Web.Services
                             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has root namespace '{rootNamespace}'."));
                         }
 
-                        // Namespace discovery: scan .cs files for namespace declarations (lightweight, no Roslyn)
-                        try
-                        {
-                            var namespaces = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            if (!string.IsNullOrWhiteSpace(projectFolder) && Directory.Exists(projectFolder))
-                            {
-                                var csFiles = Directory.GetFiles(projectFolder, "*.cs", SearchOption.AllDirectories);
-                                var nsRegex = new Regex("\\bnamespace\\s+([A-Za-z_][A-Za-z0-9_.]*)", RegexOptions.Compiled);
-                                foreach (var csf in csFiles)
-                                {
-                                    try
-                                    {
-                                        var text = File.ReadAllText(csf);
-                                        var matches = nsRegex.Matches(text);
-                                        foreach (Match m in matches)
-                                        {
-                                            var ns = m.Groups[1].Value?.Trim();
-                                            if (!string.IsNullOrWhiteSpace(ns)) namespaces.Add(ns);
-                                        }
-                                    }
-                                    catch { }
-                                }
-                            }
-
-                            if (namespaces.Count > 0)
-                            {
-                                foreach (var ns in namespaces.OrderBy(x => x))
-                                {
-                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' defines namespace '{ns}'."));
-                                }
-
-                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {namespaces.Count} namespaces."));
-
-                                // Determine root namespace: prefer RootNamespace from csproj when present, otherwise pick the least-nested namespace
-                                var rootNs = rootNamespace;
-                                if (string.IsNullOrWhiteSpace(rootNs))
-                                {
-                                    rootNs = namespaces.OrderBy(s => s.Count(c => c == '.')).FirstOrDefault();
-                                }
-
-                                if (!string.IsNullOrWhiteSpace(rootNs))
-                                {
-                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' root namespace is '{rootNs}'."));
-                                }
-
-                                // Nested namespaces count
-                                var nestedCount = namespaces.Count(s => s.Contains('.'));
-                                if (nestedCount > 0)
-                                {
-                                    inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' contains {nestedCount} nested namespaces."));
-                                }
-                            }
-                        }
-                        catch { }
+                        // Namespace discovery extracted to NamespaceDiscoveryStep (ED-134)
+                        // The NamespaceDiscoveryStep will be invoked after project discovery and will emit the same findings.
+                        try { } catch { }
 
                         if (!string.IsNullOrWhiteSpace(outputType))
                         {
