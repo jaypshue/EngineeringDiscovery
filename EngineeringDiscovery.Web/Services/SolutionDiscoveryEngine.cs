@@ -87,119 +87,31 @@ namespace EngineeringDiscovery.Web.Services
             var totalFields = 0;
             var totalEvents = 0;
 
+            // Delegate project discovery to the pipeline step
             if (!string.IsNullOrEmpty(effectiveSolutionPath) && File.Exists(effectiveSolutionPath))
             {
                 try
                 {
+                    // set solution path on context so steps can access it
+                    context = new DiscoveryContext(effectiveSolutionPath);
+
+                    // run project discovery
+                    var projectStep = new ProjectDiscoveryStep();
+                    projectStep.Execute(context);
+
+                    // copy discovered projects into local list for backward compatibility
+                    discoveredProjects.AddRange(context.DiscoveredProjects);
+
+                    // determine target from solution filename as before
                     var fileName = Path.GetFileNameWithoutExtension(effectiveSolutionPath) ?? defaultTarget;
                     target = fileName;
-
-                    var lines = File.ReadAllLines(effectiveSolutionPath);
-
-                    //debug
-                    Debug.WriteLine($"Solution: {effectiveSolutionPath}");
-                    Debug.WriteLine($"Extension: {Path.GetExtension(effectiveSolutionPath)}");
-                    Debug.WriteLine($"Line Count: {lines.Length}");
-                    //end debug
-
-                    // Look for lines that reference project files and try to extract the project name and path
-                    var solutionDir = Path.GetDirectoryName(effectiveSolutionPath) ?? throw new InvalidOperationException("Solution path must have a directory when provided.");
-                    var solutionExtension = Path.GetExtension(effectiveSolutionPath);
-
-                    if (string.Equals(solutionExtension, ".slnx", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Dedicated .slnx parser: parse XML and extract project paths from Project/@Path
-                        try
-                        {
-                            var slnxDoc = XDocument.Load(effectiveSolutionPath);
-                            var projectElements = slnxDoc
-                                .Descendants()
-                                .Where(x => string.Equals(x.Name.LocalName, "Project", StringComparison.OrdinalIgnoreCase));
-
-                            foreach (var pe in projectElements)
-                            {
-                                try
-                                {
-                                    var pathAttr = pe.Attribute("Path")?.Value;
-                                    if (string.IsNullOrWhiteSpace(pathAttr)) continue;
-                                    if (pathAttr.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) < 0) continue;
-
-                                    var projectPath = pathAttr;
-                                    if (!Path.IsPathRooted(projectPath))
-                                    {
-                                        projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
-                                    }
-
-                                    var nameAttr = pe.Attribute("Name")?.Value;
-                                    var projectName = !string.IsNullOrWhiteSpace(nameAttr)
-                                        ? nameAttr
-                                        : (Path.GetFileNameWithoutExtension(projectPath) ?? "Unnamed");
-
-                                    discoveredProjects.Add((Name: projectName, Path: projectPath));
-                                    context.DiscoveredProjects.Add((Name: projectName, Path: projectPath));
-                                }
-                                catch (Exception ex)
-                                {
-                                    context.AddDiagnostic($"Failed to parse project entry in .slnx: {ex.Message}");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            context.AddDiagnostic($"Failed parsing .slnx for projects: {ex.Message}");
-                        }
-                    }
-                    else
-                    {
-                        var projectLines = lines.Where(l => l.IndexOf(".csproj", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-
-                        //debug
-                        Debug.WriteLine($"Project Lines: {projectLines.Count}");
-                        foreach (var line in projectLines)
-                        {
-                            Debug.WriteLine(line);
-                        }
-                        //end debug
-
-                        foreach (var pl in projectLines)
-                        {
-                            try
-                            {
-                                // Typical .sln project line: Project("{...}") = "Name", "path\to\project.csproj", "{GUID}"
-                                var parts = pl.Split('=');
-                                if (parts.Length < 2) continue;
-                                var rhs = parts[1];
-                                var segments = rhs.Split(',').Select(p => p.Trim()).ToArray();
-                                if (segments.Length < 2) continue;
-                                var namePart = segments[0].Trim();
-                                var pathPart = segments[1].Trim();
-                                if (namePart.StartsWith("\"")) namePart = namePart.Trim('"');
-                                if (pathPart.StartsWith("\"")) pathPart = pathPart.Trim('"');
-
-                                // Resolve relative project path against the solution directory
-                                var projectPath = pathPart;
-                                if (!Path.IsPathRooted(projectPath))
-                                {
-                                    // Resolve relative project path against the discovered solution directory
-                                    projectPath = Path.GetFullPath(Path.Combine(solutionDir, projectPath));
-                                }
-
-                                discoveredProjects.Add((Name: namePart, Path: projectPath));
-                                context.DiscoveredProjects.Add((Name: namePart, Path: projectPath));
-                            }
-                            catch
-                            {
-                                context.AddDiagnostic($"Failed to parse project line: {pl}");
-                            }
-                        }
-                    }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Fall back to defaults on any IO error
                     target = defaultTarget;
                     discoveredProjects.Clear();
-                    context.AddDiagnostic("Failed to read solution file during project enumeration.");
+                    context.AddDiagnostic($"Failed during project discovery: {ex.Message}");
                 }
             }
 
