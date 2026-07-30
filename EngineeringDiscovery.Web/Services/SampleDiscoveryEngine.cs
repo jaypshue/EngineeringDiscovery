@@ -4,7 +4,7 @@ using EngineeringDiscovery.Core.Domain.Investigation;
 
 namespace EngineeringDiscovery.Web.Services
 {
-    public class SampleDiscoveryEngine : IDiscoveryEngine
+    public class SampleDiscoveryEngine : IInvestigationEngine
     {
         public Investigation CreateInvestigation(string? repositoryRoot = null, string? targetOverride = null)
         {

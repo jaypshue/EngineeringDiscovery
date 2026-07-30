@@ -5,9 +5,9 @@ using System.Xml.Linq;
 
 namespace EngineeringDiscovery.Web.Services
 {
-    internal class ProjectDiscoveryStep : IDiscoveryStep
+    internal class ProjectDiscoveryStep : IInvestigationStep
     {
-        public void Execute(DiscoveryContext context)
+        public void Execute(InvestigationContext context)
         {
             if (context == null) return;
 

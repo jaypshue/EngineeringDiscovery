@@ -5,9 +5,9 @@ using System.Linq;
 
 namespace EngineeringDiscovery.Web.Services
 {
-    internal class DiscoveryContext
+    internal class InvestigationContext
     {
-        public DiscoveryContext(string? solutionPath)
+        public InvestigationContext(string? solutionPath)
         {
             SolutionPath = solutionPath;
             Diagnostics = new List<string>();

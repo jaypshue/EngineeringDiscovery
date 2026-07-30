@@ -7,7 +7,7 @@ using EngineeringDiscovery.Core.Domain.Investigation;
 
 namespace EngineeringDiscovery.Web.Services
 {
-    internal class MemberDiscoveryStep : IDiscoveryStep
+    internal class MemberDiscoveryStep : IInvestigationStep
     {
         private readonly Investigation _investigation;
 
@@ -16,7 +16,7 @@ namespace EngineeringDiscovery.Web.Services
             _investigation = investigation ?? throw new ArgumentNullException(nameof(investigation));
         }
 
-        public void Execute(DiscoveryContext context)
+        public void Execute(InvestigationContext context)
         {
             if (context == null) return;
 

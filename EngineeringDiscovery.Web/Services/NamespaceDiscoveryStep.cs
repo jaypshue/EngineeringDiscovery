@@ -14,7 +14,7 @@ using EngineeringDiscovery.Core.Domain.Investigation;
 
 namespace EngineeringDiscovery.Web.Services
 {
-    internal class NamespaceDiscoveryStep : IDiscoveryStep
+    internal class NamespaceDiscoveryStep : IInvestigationStep
     {
         private readonly EngineeringDiscovery.Core.Domain.Investigation.Investigation? _investigation;
 
@@ -23,7 +23,7 @@ namespace EngineeringDiscovery.Web.Services
             _investigation = investigation;
         }
 
-        public void Execute(DiscoveryContext context)
+        public void Execute(InvestigationContext context)
         {
             if (context == null) return;
             if (_investigation == null) return;

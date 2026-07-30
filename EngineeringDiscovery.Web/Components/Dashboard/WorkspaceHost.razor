@@ -86,7 +86,7 @@
             return;
         }
 
-        var engine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine();
+        var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
         Solutions = engine.FindSolutionsInRepository(SelectedRepositoryPath);
         if (Solutions.Length == 1)
         {
@@ -104,7 +104,7 @@
     {
         DiscoveryStatus = "Running";
 
-        var engine = new EngineeringDiscovery.Web.Services.SolutionDiscoveryEngine();
+        var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
 
         // Use SelectedRepositoryPath as the repository root; engine will locate the solution automatically.
         SampleInvestigation = engine.CreateInvestigation(string.IsNullOrWhiteSpace(SelectedRepositoryPath) ? null : SelectedRepositoryPath, string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
