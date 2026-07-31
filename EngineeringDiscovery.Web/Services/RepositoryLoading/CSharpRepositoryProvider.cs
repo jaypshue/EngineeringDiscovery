@@ -233,6 +233,74 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 SourceFilePath = tree.FilePath
                             };
 
+                            // Capture implemented interface names
+                            try
+                            {
+                                foreach (var iface in symbol.Interfaces)
+                                {
+                                    try { td.ImplementedInterfaces.Add(iface.ToDisplayString()); } catch { }
+                                }
+                            }
+                            catch { }
+
+                            // Capture constructor parameter types
+                            try
+                            {
+                                foreach (var ctor in symbol.InstanceConstructors)
+                                {
+                                    foreach (var p in ctor.Parameters)
+                                    {
+                                        try { td.ConstructorParameterTypes.Add(p.Type.ToDisplayString()); } catch { }
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            // Capture method parameter types and generic argument types
+                            try
+                            {
+                                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary))
+                                {
+                                    foreach (var p in method.Parameters)
+                                    {
+                                        try { td.MethodParameterTypes.Add(p.Type.ToDisplayString()); } catch { }
+                                    }
+
+                                    // Generic type arguments from method return type or parameters
+                                    try
+                                    {
+                                        var returnType = method.ReturnType as INamedTypeSymbol;
+                                        if (returnType != null && returnType.IsGenericType)
+                                        {
+                                            foreach (var ta in returnType.TypeArguments)
+                                            {
+                                                try { td.GenericArgumentTypes.Add(ta.ToDisplayString()); } catch { }
+                                            }
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+                            catch { }
+
+                            // Capture field, property, and event types
+                            try
+                            {
+                                foreach (var f in symbol.GetMembers().OfType<IFieldSymbol>())
+                                {
+                                    try { td.FieldTypes.Add(f.Type.ToDisplayString()); } catch { }
+                                }
+                                foreach (var p in symbol.GetMembers().OfType<IPropertySymbol>())
+                                {
+                                    try { td.PropertyTypes.Add(p.Type.ToDisplayString()); } catch { }
+                                }
+                                foreach (var ev in symbol.GetMembers().OfType<IEventSymbol>())
+                                {
+                                    try { td.EventTypes.Add(ev.Type.ToDisplayString()); } catch { }
+                                }
+                            }
+                            catch { }
+
                             ctx.Types.Add(td);
                         }
                         catch { }
