@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using EngineeringDiscovery.Core.Domain.Investigation;
+using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Services
 {
@@ -106,6 +107,19 @@ namespace EngineeringDiscovery.Web.Services
                                     {
                                         relationshipSet.Add(rel);
                                         _inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, rel));
+
+                                        // ED-148: produce first engineering artifact when Presentation/Web layer depends on Infrastructure
+                                        try
+                                        {
+                                            if ((sourceLayer.IndexOf("web", StringComparison.OrdinalIgnoreCase) >= 0 || sourceLayer.IndexOf("presentation", StringComparison.OrdinalIgnoreCase) >= 0)
+                                                && referencedLayer.IndexOf("infrastructure", StringComparison.OrdinalIgnoreCase) >= 0)
+                                            {
+                                                var title = "Presentation layer depends on Infrastructure";
+                                                var description = rel;
+                                                _inv.Artifacts.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
+                                            }
+                                        }
+                                        catch { }
                                     }
                                 }
                             }
