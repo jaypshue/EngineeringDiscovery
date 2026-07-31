@@ -34,7 +34,7 @@ namespace EngineeringDiscovery.Web.Services
                         {
                             var title = "Empty controller detected";
                             var description = $"Project: {proj}\nController: {typeName}\n\nNo public endpoints were discovered.";
-                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
+                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, EngineeringDiscovery.Core.Models.ArtifactType.EmptyController));
                         }
                     }
                     catch { }

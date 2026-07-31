@@ -10,11 +10,12 @@ namespace EngineeringDiscovery.Core.Models
     /// </summary>
     public sealed class InvestigationArtifact
     {
-        public InvestigationArtifact(Guid id, string title, string description)
+        public InvestigationArtifact(Guid id, string title, string description, ArtifactType type)
         {
             Id = id == Guid.Empty ? throw new ArgumentException("id must be provided", nameof(id)) : id;
             Title = title ?? throw new ArgumentNullException(nameof(title));
             Description = description ?? string.Empty;
+            Type = type;
             CreatedOn = DateTime.UtcNow;
         }
 
@@ -23,6 +24,8 @@ namespace EngineeringDiscovery.Core.Models
         public string Title { get; }
 
         public string Description { get; }
+
+        public ArtifactType Type { get; }
 
         public DateTime CreatedOn { get; }
     }

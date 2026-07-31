@@ -60,10 +60,10 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             var memberCount = obs.Count(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Member);
 
             var totalArtifacts = investigation.Artifacts?.Count ?? 0;
-            var layerViolations = investigation.Artifacts?.Count(a => string.Equals(a.Title, "Presentation layer depends on Infrastructure", StringComparison.OrdinalIgnoreCase)) ?? 0;
-            var circular = investigation.Artifacts?.Count(a => string.Equals(a.Title, "Circular project reference detected", StringComparison.OrdinalIgnoreCase)) ?? 0;
-            var emptyControllers = investigation.Artifacts?.Count(a => string.Equals(a.Title, "Empty controller detected", StringComparison.OrdinalIgnoreCase)) ?? 0;
-            var longMethods = investigation.Artifacts?.Count(a => string.Equals(a.Title, "Long method detected", StringComparison.OrdinalIgnoreCase)) ?? 0;
+            var layerViolations = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LayerViolation) ?? 0;
+            var circular = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.CircularProjectReference) ?? 0;
+            var emptyControllers = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.EmptyController) ?? 0;
+            var longMethods = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LongMethod) ?? 0;
 
             return new InvestigationSummary
             {

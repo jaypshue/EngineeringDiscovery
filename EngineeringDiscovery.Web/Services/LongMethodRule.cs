@@ -33,7 +33,7 @@ namespace EngineeringDiscovery.Web.Services
 
                         var title = "Long method detected";
                         var description = $"Project: {proj}\nType: {typeName}\nMethod: {methodName}\n\nThe method contains approximately {lines} source lines.";
-                        results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
+                        results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, ArtifactType.LongMethod));
                     }
                     catch { }
                 }

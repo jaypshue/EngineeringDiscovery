@@ -19,7 +19,7 @@ namespace EngineeringDiscovery.Web.Services
                 {
                     var title = "Presentation layer depends on Infrastructure";
                     var description = relationshipDescription ?? $"{sourceLayer} depends on {referencedLayer}.";
-                    results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
+                    results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, EngineeringDiscovery.Core.Models.ArtifactType.LayerViolation));
                 }
             }
             catch { }

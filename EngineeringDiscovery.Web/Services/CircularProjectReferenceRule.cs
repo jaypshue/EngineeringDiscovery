@@ -34,7 +34,7 @@ namespace EngineeringDiscovery.Web.Services
                             seenCycles.Add(canonical);
                             var title = "Circular project reference detected";
                             var description = $"Cycle:\n{string.Join(" -> ", cycle)}";
-                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
+                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, EngineeringDiscovery.Core.Models.ArtifactType.CircularProjectReference));
                         }
                         return;
                     }
