@@ -9,37 +9,28 @@
     <h2>@Title</h2>
 
     <section class="discovery">
-        <h4>Investigation Dashboard</h4>
+        <h4>Repository Dashboard</h4>
         <p><strong>Repository:</strong></p>
         <div class="target-selector">
-            <input @bind="SelectedRepositoryPath" placeholder="Enter repository root path (required)" />
-            <button class="btn" @onclick="DiscoverSolutions" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath))">Discover Solutions</button>
-        </div>
-        <p><strong>Discovery Status:</strong> @DiscoveryStatus</p>
-        <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
-        @if (Solutions is null)
-        {
-            <p class="muted">No solution selection performed yet.</p>
-        }
-        else if (Solutions.Length == 0)
-        {
-            <p class="muted">No solutions found under the selected repository.</p>
-        }
-        else if (Solutions.Length == 1)
-        {
-            <p class="muted">Found solution: @Path.GetFileName(Solutions[0])</p>
-        }
-        else
-        {
-            <p class="muted">Multiple solutions found — select one:</p>
-            <select @bind="SelectedSolutionPath">
-                @foreach (var s in Solutions)
+            <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Enter repository root path (required)" tabindex="0" aria-disabled="false" />
+            <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
+                @if (IsBuilding)
                 {
-                    <option value="@s">@Path.GetFileName(s)</option>
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span>Building Engineering Model...</span>
                 }
-            </select>
+                else
+                {
+                    <span>Build Engineering Model</span>
+                }
+            </button>
+        </div>
+        <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <p class="error">Error: @ErrorMessage</p>
         }
-        <button class="btn" @onclick="StartDiscovery" disabled="@(DiscoveryStatus != "Idle")">Start Discovery</button>
+        <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
     </section>
 
     <div class="workspace-placeholder">
@@ -64,55 +55,62 @@
     // WorkspaceHost manages the selected repository for discovery.
     private string CurrentTarget { get; set; } = string.Empty;
 
-    private string DiscoveryStatus { get; set; } = "Idle";
+    private string DiscoveryStatus { get; set; } = "Repository Loaded";
 
-    // Selected repository and solutions
+    // Selected repository
     private string? SelectedRepositoryPath { get; set; }
-    private string[]? Solutions { get; set; }
-    private string? SelectedSolutionPath { get; set; }
 
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation { get; set; }
 
     private void UseCurrentRepository()
     {
-        SelectedRepositoryPath = SelectedRepositoryPath; // placeholder - disabled
+        SelectedRepositoryPath = SelectedRepositoryPath; // placeholder - input must remain editable
     }
 
-    private void DiscoverSolutions()
+    private bool IsBuilding { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    private async Task BuildEngineeringModelAsync()
     {
+        if (IsBuilding)
+            return; // prevent concurrent invocations
+
+        ErrorMessage = null;
+
         if (string.IsNullOrWhiteSpace(SelectedRepositoryPath) || !Directory.Exists(SelectedRepositoryPath))
         {
-            Solutions = Array.Empty<string>();
+            DiscoveryStatus = "Discovery Failed";
             return;
         }
 
-        var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
-        Solutions = engine.FindSolutionsInRepository(SelectedRepositoryPath);
-        if (Solutions.Length == 1)
+        IsBuilding = true;
+        DiscoveryStatus = "Building Engineering Model...";
+        StateHasChanged();
+
+        try
         {
-            SelectedSolutionPath = Solutions[0];
-            // default target to solution filename
-            CurrentTarget = Path.GetFileNameWithoutExtension(Solutions[0]) ?? string.Empty;
+            var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
+
+            // Run the potentially long-running work off the UI thread.
+            SampleInvestigation = await Task.Run(() => engine.CreateInvestigation(SelectedRepositoryPath, null));
+
+            DiscoveryStatus = SampleInvestigation is null ? "Discovery Failed" : "Engineering Model Complete";
         }
-        else
+        catch (Exception ex)
         {
-            SelectedSolutionPath = null;
+            // Restore button state before showing the error.
+            IsBuilding = false;
+            DiscoveryStatus = "Discovery Failed";
+            ErrorMessage = ex.Message;
+            StateHasChanged();
+            return;
         }
-    }
+        finally
+        {
+            IsBuilding = false;
+        }
 
-    private void StartDiscovery()
-    {
-        DiscoveryStatus = "Running";
-
-        var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
-
-        // Use SelectedRepositoryPath as the repository root; engine will locate the solution automatically.
-        SampleInvestigation = engine.CreateInvestigation(string.IsNullOrWhiteSpace(SelectedRepositoryPath) ? null : SelectedRepositoryPath, string.IsNullOrWhiteSpace(CurrentTarget) ? null : CurrentTarget);
-
-        // The Discovery Engine is responsible for starting the Investigation (if appropriate).
-        // Do not call Start() here to avoid duplicate starts.
-
-        DiscoveryStatus = "Complete";
+        StateHasChanged();
     }
 
     private RenderFragment RenderWorkspace()
