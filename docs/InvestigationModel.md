@@ -313,6 +313,24 @@ Examples include:
 - How is the solution organized?
 - What code exists?
 
+## Engineering Knowledge
+
+Engineering knowledge is represented by Investigation Artifacts.
+
+Artifacts are the persistent outputs produced throughout an Investigation.
+
+Examples include:
+
+- Findings
+- Decisions
+- Questions
+- Risks
+- Technical Debt
+- Recommendations
+- Constraints
+
+Every artifact contributes to the evolving engineering understanding captured by the Investigation.
+
 ### Analysis
 
 - How do the components depend upon one another?

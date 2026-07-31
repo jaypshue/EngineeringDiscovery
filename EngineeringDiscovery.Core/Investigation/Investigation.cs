@@ -12,6 +12,7 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             RepositoryPath = repositoryPath ?? throw new ArgumentNullException(nameof(repositoryPath));
             Status = InvestigationStatus.Created;
             Findings = new List<Finding>();
+            Artifacts = new List<EngineeringDiscovery.Core.Models.InvestigationArtifact>();
 
             // Default engineering stage statuses
             ArchitectureStatus = EngineeringStageStatus.NotStarted;
@@ -27,6 +28,9 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         public InvestigationStatus Status { get; private set; }
 
         public List<Finding> Findings { get; }
+
+        // Owned artifacts: canonical collection for engineering knowledge artifacts
+        public List<EngineeringDiscovery.Core.Models.InvestigationArtifact> Artifacts { get; }
 
         public DateTime? StartedAt { get; private set; }
 
