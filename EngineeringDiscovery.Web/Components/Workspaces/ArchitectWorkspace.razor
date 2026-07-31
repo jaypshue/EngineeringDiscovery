@@ -9,6 +9,9 @@
     [Parameter]
     public EngInv.Investigation? Investigation { get; set; }
 
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
     private string? ErrorMessage { get; set; }
 
     private string NewFindingDescription { get; set; } = string.Empty;
@@ -27,7 +30,7 @@
     {
         try
         {
-            Investigation!.Complete();
+            (Investigation ?? InvestigationState.Investigation)!.Complete();
             ClearError();
         }
         catch (InvalidOperationException ex)
@@ -40,7 +43,7 @@
     {
         try
         {
-            Investigation!.Reopen();
+            (Investigation ?? InvestigationState.Investigation)!.Reopen();
             ClearError();
         }
         catch (InvalidOperationException ex)
@@ -70,7 +73,7 @@
             var desc = NewFindingDescription?.Trim();
             if (string.IsNullOrEmpty(desc)) return; // nothing to add
             var f = new EngInv.Finding(Guid.NewGuid(), NewFindingType, desc);
-            Investigation!.AddFinding(f);
+            (Investigation ?? InvestigationState.Investigation)!.AddFinding(f);
             NewFindingDescription = string.Empty;
             ClearError();
         }

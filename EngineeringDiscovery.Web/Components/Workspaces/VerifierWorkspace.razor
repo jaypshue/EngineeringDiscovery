@@ -6,11 +6,14 @@
 @using System.Collections.Generic
 
 @code {
-    [Parameter, EditorRequired]
-    public Investigation Investigation { get; set; } = default!;
+    [Parameter]
+    public Investigation? Investigation { get; set; }
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
 
     private IReadOnlyList<object> Findings =>
-        Investigation.Findings?.Cast<object>().ToList() ?? new List<object>();
+        (Investigation ?? InvestigationState.Investigation)?.Findings?.Cast<object>().ToList() ?? new List<object>();
 
     private int FindingCount => Findings.Count;
 

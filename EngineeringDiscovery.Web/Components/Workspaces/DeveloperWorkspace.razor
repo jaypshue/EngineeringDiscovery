@@ -7,7 +7,10 @@
     [Parameter]
     public EngInv.Investigation? Investigation { get; set; }
 
-    private IEnumerable<Finding> Findings => Investigation?.Findings ?? Enumerable.Empty<Finding>();
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
+    private IEnumerable<Finding> Findings => (Investigation ?? InvestigationState.Investigation)?.Findings ?? Enumerable.Empty<Finding>();
 
     private ILookup<FindingType, Finding> FindingsByType => Findings.ToLookup(f => f.Type);
 

@@ -13,6 +13,9 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
         [Parameter]
         public Investigation? Investigation { get; set; }
 
+        [Inject]
+        private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
         protected EngineeringDiscovery.Web.Components.Dashboard.ViewModels.InvestigationDashboardViewModel? ViewModel { get; set; }
 
         protected string SearchTerm { get; set; } = string.Empty;
@@ -24,6 +27,11 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
         protected override void OnParametersSet()
         {
             base.OnParametersSet();
+            // If parent did not supply an Investigation parameter, use the shared InvestigationState.
+            if (Investigation is null)
+            {
+                Investigation = InvestigationState.Investigation;
+            }
             BuildViewModel();
         }
 

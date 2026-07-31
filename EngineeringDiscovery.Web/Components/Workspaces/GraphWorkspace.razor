@@ -46,6 +46,9 @@
     [Parameter]
     public Investigation? Investigation { get; set; }
 
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
     private ElementReference SvgRef;
 
     private record NodeInfo(string Id, string Label, double X, double Y);
@@ -71,6 +74,11 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
+        // If no investigation parameter provided, try shared state
+        if (Investigation is null)
+        {
+            Investigation = InvestigationState.Investigation;
+        }
         BuildGraphFromInvestigation();
     }
 

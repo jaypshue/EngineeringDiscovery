@@ -10,6 +10,9 @@
     [Parameter]
     public EngInv.Investigation? Investigation { get; set; }
 
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
     private string? ErrorMessage { get; set; }
 
     private string NewFindingDescription { get; set; } = string.Empty;
@@ -18,9 +21,15 @@
     // Fail fast: Investigation is required. Do not silently create placeholder data.
     protected override void OnParametersSet()
     {
+        // If parent provided an Investigation parameter, prefer it. Otherwise fall back to shared InvestigationState.
         if (Investigation is null)
         {
-            throw new InvalidOperationException("InvestigationWorkspace requires an Investigation parameter to be provided by the parent component.");
+            Investigation = InvestigationState.Investigation;
+        }
+
+        if (Investigation is null)
+        {
+            throw new InvalidOperationException("InvestigationWorkspace requires an Investigation parameter to be provided by the parent component or available in InvestigationState.");
         }
     }
 

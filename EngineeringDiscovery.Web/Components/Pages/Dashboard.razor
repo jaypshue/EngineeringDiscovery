@@ -38,15 +38,18 @@
     private EngineeringRole SelectedRole { get; set; } = EngineeringRole.Architect;
     private string? ViewModelProject { get; set; } = "(none)";
 
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation { get; set; }
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
 
     private List<(string Name, bool IsComplete)> PipelineStatuses => new()
     {
-        ("Repository Loaded", !string.IsNullOrWhiteSpace(SampleInvestigation?.RepositoryPath)),
-        ("Engineering Model Built", SampleInvestigation != null),
-        ("Relationship Graph Built", SampleInvestigation?.RelationshipGraph != null),
-        ("Repository Metrics Calculated", SampleInvestigation?.RepositoryMetrics != null),
-        ("Engineering Rules Evaluated", SampleInvestigation?.Artifacts?.Count > 0),
+        ("Repository Loaded", !string.IsNullOrWhiteSpace(InvestigationState.Investigation?.RepositoryPath)),
+        ("Engineering Model Built", InvestigationState.Investigation != null),
+        ("Relationship Graph Built", InvestigationState.Investigation?.RelationshipGraph != null),
+        ("Repository Metrics Calculated", InvestigationState.Investigation?.RepositoryMetrics != null),
+        ("Engineering Rules Evaluated", InvestigationState.Investigation?.Artifacts?.Count > 0),
         ("Roadmap Generated", false)
     };
 }
