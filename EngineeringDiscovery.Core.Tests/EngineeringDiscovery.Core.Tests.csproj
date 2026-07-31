@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../EngineeringDiscovery.Core/EngineeringDiscovery.Core.csproj" />
+    <ProjectReference Include="../EngineeringDiscovery.Web/EngineeringDiscovery.Web.csproj" />
   </ItemGroup>
 
 </Project>

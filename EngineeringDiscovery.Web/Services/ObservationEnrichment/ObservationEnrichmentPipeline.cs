@@ -15,11 +15,11 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             yield return new ProjectMetricsEnrichmentPass();
             // Build the inheritance relationship graph first
             yield return new TypeRelationshipEnricher();
-            yield return new RelationshipGraphEnricher();
-            yield return new RepositoryMetricsEnricher();
+            yield return new RelationshipGraphEnricher();            
 
             // Dependency enrichment relies on relationship graph being available
             yield return new TypeDependencyEnricher();
+            yield return new RepositoryMetricsEnricher();
         }
     }
 }

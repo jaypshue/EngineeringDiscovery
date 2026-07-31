@@ -10,7 +10,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
     /// Computes deterministic, objective repository-wide metrics from normalized observations
     /// and the repository relationship graph. No engineering judgment or recommendations.
     /// </summary>
-    internal class RepositoryMetricsEnricher : IObservationEnrichmentPass
+    public class RepositoryMetricsEnricher : IObservationEnrichmentPass
     {
         public void Enrich(Investigation investigation)
         {
@@ -44,9 +44,10 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                             FanOut = t.OutgoingDependencyCount,
                             DirectDependencyCount = t.OutgoingDependencyCount,
                             DirectDependentCount = t.IncomingDependencyCount,
-                            DerivedTypeCount = t.DerivedTypeCount,
-                            IsRoot = t.IsRootType,
-                            IsLeaf = t.IsLeafType
+                            // Use relationship graph when available to derive derived type count and root/leaf status
+                            DerivedTypeCount = (graph != null) ? (graph.DerivedMap.TryGetValue(qn, out var dset) ? dset.Count : 0) : t.DerivedTypeCount,
+                            IsRoot = (graph != null) ? !graph.TryGetParent(qn, out _) : t.IsRootType,
+                            IsLeaf = (graph != null) ? (graph.DerivedMap.TryGetValue(qn, out var set) ? set.Count == 0 : true) : t.IsLeafType
                         };
 
                         // Inheritance depth: walk parents until none (use graph.ParentMap)
