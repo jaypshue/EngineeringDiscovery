@@ -20,16 +20,7 @@ namespace EngineeringDiscovery.Web.Services
 
             try
             {
-                var rules = new IEngineeringRule[]
-                {
-                    new LongMethodRule(),
-                    new ExcessiveParameterRule(),
-                    new LargeConstructorRule(),
-                    new AsyncNamingRule(),
-                    new LargePublicSurfaceAreaRule()
-                };
-
-                foreach (var r in rules)
+                foreach (var r in EngineeringRuleCatalog.MemberRules())
                 {
                     try
                     {
