@@ -29,36 +29,15 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     return;
                 }
 
-                // Build lookup: display string -> list of QualifiedName candidates
+                // Build resolution maps used to translate discovery display names to repository QualifiedName.
+                // TRANSITIONAL: this identity-resolution logic exists only because Discovery currently emits
+                // display names for some references. Long-term goal: Discovery should emit QualifiedName for
+                // all references and this helper can be removed.
                 var displayToQualified = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 var typeByQualified = new Dictionary<string, TypeObservation>(StringComparer.OrdinalIgnoreCase);
                 var qualifiedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                foreach (var t in types)
-                {
-                    try
-                    {
-                        var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
-                        if (string.IsNullOrWhiteSpace(qn)) continue;
-                        qualifiedSet.Add(qn);
-                        typeByQualified[qn] = t;
-                        graph.AddNode(qn);
-
-                        if (!string.IsNullOrWhiteSpace(t.TypeName))
-                        {
-                            if (!displayToQualified.TryGetValue(t.TypeName!, out var l)) { l = new List<string>(); displayToQualified[t.TypeName!] = l; }
-                            if (!l.Contains(qn, StringComparer.OrdinalIgnoreCase)) l.Add(qn);
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(t.Namespace))
-                        {
-                            var nsKey = $"{t.Namespace}.{t.TypeName}";
-                            if (!displayToQualified.TryGetValue(nsKey, out var l2)) { l2 = new List<string>(); displayToQualified[nsKey] = l2; }
-                            if (!l2.Contains(qn, StringComparer.OrdinalIgnoreCase)) l2.Add(qn);
-                        }
-                    }
-                    catch { }
-                }
+                BuildResolutionMaps(types, displayToQualified, qualifiedSet, typeByQualified, graph);
 
                 // Inheritance edges
                 foreach (var t in types)
@@ -69,14 +48,8 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         var parentDisplay = t.BaseType;
                         if (string.IsNullOrWhiteSpace(childQualified) || string.IsNullOrWhiteSpace(parentDisplay)) continue;
 
-                        // Resolve parentDisplay to a unique QualifiedName within the investigation
-                        string? parentQualified = null;
-                        if (qualifiedSet.Contains(parentDisplay)) parentQualified = parentDisplay;
-                        else if (displayToQualified.TryGetValue(parentDisplay!, out var candidates))
-                        {
-                            var distinct = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                            if (distinct.Count == 1) parentQualified = distinct[0];
-                        }
+                        // Resolve parentDisplay to a unique QualifiedName within the investigation (transitional)
+                        if (!TryResolveToQualified(parentDisplay, qualifiedSet, displayToQualified, out var parentQualified)) continue;
 
                         if (string.IsNullOrWhiteSpace(parentQualified)) continue; // unresolved or ambiguous
 
@@ -85,7 +58,11 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     catch { }
                 }
 
-                // Dependency edges (conservative: use BaseType as a recorded reference if available)
+                // Dependency edges: derive from discovery artifacts (members) and TypeObservation fields.
+                // Candidate sources: BaseType, Implemented interfaces, Member return/parameter/field/property types.
+                // Only add dependency edges between repository types (qualified names present in this investigation).
+                var memberObservations = investigation.MemberObservations ?? System.Array.Empty<EngineeringDiscovery.Core.Models.MemberObservation>();
+
                 foreach (var t in types)
                 {
                     try
@@ -93,20 +70,31 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         var from = t.QualifiedName ?? t.TypeName ?? string.Empty;
                         if (string.IsNullOrWhiteSpace(from)) continue;
 
+                        // BaseType
                         if (!string.IsNullOrWhiteSpace(t.BaseType))
                         {
-                            string? resolved = null;
-                            if (qualifiedSet.Contains(t.BaseType!)) resolved = t.BaseType!;
-                            else if (displayToQualified.TryGetValue(t.BaseType!, out var candidates))
-                            {
-                                var distinct = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                                if (distinct.Count == 1) resolved = distinct[0];
-                            }
-
-                            if (!string.IsNullOrWhiteSpace(resolved))
+                            if (TryResolveToQualified(t.BaseType, qualifiedSet, displayToQualified, out var resolved) && !string.Equals(from, resolved, StringComparison.OrdinalIgnoreCase))
                             {
                                 graph.AddRelationship(from, resolved, RelationshipType.Dependency);
                             }
+                        }
+
+                        // Member-based dependencies (return types and parameter types are stored as strings in MemberObservation)
+                        var membersOfType = memberObservations.Where(m => string.Equals(m.Type ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                        foreach (var m in membersOfType)
+                        {
+                            try
+                            {
+                                // Return type
+                                if (!string.IsNullOrWhiteSpace(m.ReturnType) && TryResolveToQualified(m.ReturnType, qualifiedSet, displayToQualified, out var target) && !string.Equals(from, target, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    graph.AddRelationship(from, target, RelationshipType.Dependency);
+                                }
+
+                                // Parameters: stored only as counts in MemberObservation; parameter types are not available here.
+                                // Future work: extend MemberObservation to include parameter type names so we can add edges from parameters.
+                            }
+                            catch { }
                         }
                     }
                     catch { }
@@ -130,6 +118,66 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                 investigation.SetRelationshipGraph(graph);
             }
             catch { }
+        }
+
+        private static void BuildResolutionMaps(
+            List<TypeObservation> types,
+            Dictionary<string, List<string>> displayToQualified,
+            HashSet<string> qualifiedSet,
+            Dictionary<string, TypeObservation> typeByQualified,
+            RepositoryRelationshipGraph graph)
+        {
+            foreach (var t in types)
+            {
+                try
+                {
+                    var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(qn)) continue;
+                    qualifiedSet.Add(qn);
+                    typeByQualified[qn] = t;
+                    graph.AddNode(qn);
+
+                    if (!string.IsNullOrWhiteSpace(t.TypeName))
+                    {
+                        if (!displayToQualified.TryGetValue(t.TypeName!, out var l)) { l = new List<string>(); displayToQualified[t.TypeName!] = l; }
+                        if (!l.Contains(qn, StringComparer.OrdinalIgnoreCase)) l.Add(qn);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(t.Namespace))
+                    {
+                        var nsKey = $"{t.Namespace}.{t.TypeName}";
+                        if (!displayToQualified.TryGetValue(nsKey, out var l2)) { l2 = new List<string>(); displayToQualified[nsKey] = l2; }
+                        if (!l2.Contains(qn, StringComparer.OrdinalIgnoreCase)) l2.Add(qn);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        // Transitional helper: resolve a display name to a unique QualifiedName within the investigation when possible.
+        // Once discovery emits canonical QualifiedName for all references this helper can be removed.
+        private static bool TryResolveToQualified(string? display, HashSet<string> qualifiedSet, Dictionary<string, List<string>> displayToQualified, out string? qualified)
+        {
+            qualified = null;
+            if (string.IsNullOrWhiteSpace(display)) return false;
+
+            if (qualifiedSet.Contains(display))
+            {
+                qualified = display;
+                return true;
+            }
+
+            if (displayToQualified.TryGetValue(display!, out var candidates))
+            {
+                var distinct = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (distinct.Count == 1)
+                {
+                    qualified = distinct[0];
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

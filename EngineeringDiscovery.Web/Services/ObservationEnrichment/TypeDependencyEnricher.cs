@@ -95,8 +95,9 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
 
                         if (graph != null)
                         {
-                            outgoingCount = graph.GetDependencies(qn).Count();
-                            incomingCount = graph.GetDependents(qn).Count();
+                            // Use deterministic ordering by materializing into arrays
+                            outgoingCount = graph.GetDependencies(qn).ToArray().Length;
+                            incomingCount = graph.GetDependents(qn).ToArray().Length;
                         }
                         else
                         {

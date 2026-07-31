@@ -26,6 +26,8 @@ namespace EngineeringDiscovery.Core.Tests
 
             var graph = new RepositoryRelationshipGraph();
             graph.AddInheritance("P:N.Child", "P:N.Base");
+            // Add a simple dependency: Child -> Base
+            graph.AddRelationship("P:N.Child", "P:N.Base", RelationshipType.Dependency);
             inv.SetRelationshipGraph(graph);
 
             var enricher = new RepositoryMetricsEnricher();
@@ -40,6 +42,9 @@ namespace EngineeringDiscovery.Core.Tests
             Assert.True(metrics.PerTypeMetrics.ContainsKey("P:N.Child"));
             Assert.Equal(1, metrics.PerTypeMetrics["P:N.Base"].DerivedTypeCount);
             Assert.Equal(0, metrics.PerTypeMetrics["P:N.Child"].DerivedTypeCount);
+            // Dependency metrics
+            Assert.Equal(1, metrics.PerTypeMetrics["P:N.Base"].FanIn);
+            Assert.Equal(1, metrics.PerTypeMetrics["P:N.Child"].FanOut);
         }
     }
 }
