@@ -103,6 +103,7 @@ namespace EngineeringDiscovery.Web.Services
                     discoveredProjects.AddRange(context.DiscoveredProjects);
 
                     // determine target from solution filename as before
+
                     var fileName = Path.GetFileNameWithoutExtension(effectiveSolutionPath) ?? defaultTarget;
                     target = fileName;
                 }
@@ -143,63 +144,22 @@ namespace EngineeringDiscovery.Web.Services
 
             // Project classification moved into ProjectClassificationStep (registered in pipeline)
 
-            // Project reference discovery: inspect each discovered .csproj for ProjectReference elements
-            foreach (var proj in discoveredProjects)
+            // Register and execute pipeline steps: classification, reference discovery, discovery steps and analysis
+            try
             {
-                try
-                {
-                    if (string.IsNullOrWhiteSpace(proj.Path)) continue;
-                    var projFile = proj.Path;
-                    if (!File.Exists(projFile)) continue;
+                var pipeline = new InvestigationPipeline()
+                    .Add(new ProjectClassificationStep(inv))
+                    .Add(new ProjectReferenceDiscoveryStep(inv))
+                    .Add(new NamespaceDiscoveryStep(inv))
+                    .Add(new TypeDiscoveryStep(inv))
+                    .Add(new MemberDiscoveryStep(inv))
+                    .Add(new TechnologyAnalysisStep(inv))
+                    .Add(new DependencyAnalysisStep(inv))
+                    .Add(new LayerAnalysisStep(inv));
 
-                    var doc = XDocument.Load(projFile);
-                    // Find ProjectReference elements in the XML namespace-agnostic way
-                    var projectReferences = doc.Descendants().Where(x => string.Equals(x.Name.LocalName, "ProjectReference", StringComparison.OrdinalIgnoreCase));
-                    foreach (var pr in projectReferences)
-                    {
-                        try
-                        {
-                            var includeAttr = pr.Attribute("Include")?.Value;
-                            if (string.IsNullOrWhiteSpace(includeAttr)) continue;
-
-                            // Resolve referenced project path relative to the source project's directory
-                            var sourceDir = Path.GetDirectoryName(projFile) ?? throw new InvalidOperationException("Project file path must be rooted or within a discovered solution directory.");
-                            var referencedPath = includeAttr;
-                            if (!Path.IsPathRooted(referencedPath)) referencedPath = Path.GetFullPath(Path.Combine(sourceDir, referencedPath));
-                            else referencedPath = Path.GetFullPath(referencedPath);
-
-                            // Try to find a discovered project that matches the referenced path
-                            var referencedProject = discoveredProjects.FirstOrDefault(d =>
-                                !string.IsNullOrEmpty(d.Path) &&
-                                string.Equals(Path.GetFullPath(d.Path), referencedPath, StringComparison.OrdinalIgnoreCase));
-
-                            var sourceName = proj.Name ?? Path.GetFileNameWithoutExtension(proj.Path) ?? "Unnamed";
-                            var referencedName = referencedProject.Name ?? Path.GetFileNameWithoutExtension(referencedPath) ?? "Unnamed";
-
-                            // Only add a finding if the referenced project is different from the source
-                            if (!string.IsNullOrEmpty(referencedName) && !string.Equals(sourceName, referencedName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"{sourceName} references {referencedName}."));
-                                inv.AddObservation(new DiscoveryObservation
-                                {
-                                    Kind = ObservationKind.Dependency,
-                                    Project = sourceName,
-                                    Description = $"{sourceName} references {referencedName}.",
-                                    // referencedName is available in description; Namespace/Type/Member not applicable
-                                });
-                            }
-                        }
-                        catch
-                        {
-                            // ignore individual project reference parse errors
-                        }
-                    }
-                }
-                catch
-                {
-                    // ignore per-project inspection errors
-                }
+                pipeline.Execute(context);
             }
+            catch { }
 
             // Technology discovery: inspect each project for SDK, TargetFramework(s), and PackageReferences
             var packageIndicators = new[]
