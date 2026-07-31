@@ -80,6 +80,9 @@ Graph.
 Find all root projects.
 Graph.
 
+### ED-166
+Replace namespace-prefix framework detection with a richer reference/classification model when a concrete capability requires it.
+
 ## various Notes
 
 - richer ProjectModel that contains them as strongly typed properties instead of emitting everything as standalone findings. The findings remain the communication mechanism, but the underlying model can become richer over time. That's an internal evolution and doesn't need to change ED-121.

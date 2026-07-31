@@ -54,5 +54,21 @@ namespace EngineeringDiscovery.Core.Models
         public int PrivateMemberCount { get; set; }
 
         public int MemberCount { get; set; }
+
+        // Relationship metadata (populated by enrichment passes)
+        public bool IsRootType { get; set; }
+
+        public bool IsLeafType { get; set; }
+
+        public int DerivedTypeCount { get; set; }
+
+        // Number of interfaces implemented by this type (discovery may populate this when available)
+        // Discovery currently may not populate this; enrichment should avoid speculating.
+        public int ImplementsInterfaceCount { get; set; }
+
+        // High-level classification hints; enrichment may set if derivable from observations.
+        public bool IsFrameworkType { get; set; }
+
+        public bool IsApplicationType { get; set; }
     }
 }
