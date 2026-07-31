@@ -7,6 +7,9 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
     {
         public static IEnumerable<IObservationEnrichmentPass> Passes()
         {
+            // Normalization must run first to ensure deterministic inputs for subsequent enrichers
+            yield return new ObservationNormalizationPass();
+
             // Deterministic, static registration for now
             yield return new NamespaceMetricsEnrichmentPass();
             yield return new ProjectMetricsEnrichmentPass();
