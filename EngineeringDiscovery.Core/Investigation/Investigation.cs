@@ -70,6 +70,18 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<EngineeringDiscovery.Core.Models.NamespaceObservation> _namespaceObservations = new();
         public IReadOnlyList<EngineeringDiscovery.Core.Models.NamespaceObservation> NamespaceObservations => _namespaceObservations.AsReadOnly();
 
+        // Structured project observation: canonical project-level metrics populated by enrichment passes
+        private EngineeringDiscovery.Core.Models.ProjectObservation? _projectObservation;
+        public EngineeringDiscovery.Core.Models.ProjectObservation? ProjectObservation => _projectObservation;
+
+        // Set or update the ProjectObservation. Enrichment passes should call this to publish derived metrics.
+        public void SetProjectObservation(EngineeringDiscovery.Core.Models.ProjectObservation projectObservation)
+        {
+            if (projectObservation is null) throw new ArgumentNullException(nameof(projectObservation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("ProjectObservation can only be set while the investigation is Started.");
+            _projectObservation = projectObservation;
+        }
+
         // Add a structured MemberObservation to the investigation.
         public void AddMemberObservation(EngineeringDiscovery.Core.Models.MemberObservation observation)
         {

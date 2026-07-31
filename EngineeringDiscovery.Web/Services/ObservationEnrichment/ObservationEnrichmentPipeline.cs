@@ -9,6 +9,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
         {
             // Deterministic, static registration for now
             yield return new NamespaceMetricsEnrichmentPass();
+            yield return new ProjectMetricsEnrichmentPass();
         }
     }
 }
