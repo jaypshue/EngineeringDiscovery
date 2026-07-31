@@ -1,35 +1,86 @@
-Engineering Discovery
-Overview
+# EngineeringDiscovery
 
-Engineering Discovery is an experimental engineering workflow platform that models how experienced software teams understand, plan, implement, review, and verify software systems.
+## Overview
 
-Rather than beginning with AI or code generation, Engineering Discovery begins with understanding.
+EngineeringDiscovery is an experimental engineering workflow platform for conducting structured investigations of software systems.
 
-The application captures engineering knowledge inside a shared domain model and allows multiple engineering roles to collaborate through that model without directly depending on one another.
+An Investigation is the persistent engineering knowledge model of a software system.
 
-The long-term goal is to transform engineering knowledge into high-quality implementation guidance and AI-assisted production while preserving engineering discipline and architectural integrity.
+It is progressively enriched as engineers and automated workflows discover, analyze, interpret, design, implement, and review software.
 
-Design Philosophy
+An Investigation preserves both factual observations and engineering reasoning, allowing every phase of the software lifecycle to build upon a shared understanding rather than creating isolated documents or disconnected analyses.
 
-Engineering Discovery follows several guiding principles:
+The Investigation is the single source of truth for the engineering workflow.
 
-Domain-first architecture
-Workflow drives architecture
-Shared domain model
-Role-specific workspaces
-Business rules belong in the domain
-Infrastructure introduced only when earned
+Rather than beginning with AI or code generation, EngineeringDiscovery begins with understanding.
+
+The platform captures engineering knowledge within a shared domain model and enables multiple engineering roles to collaborate through that model without directly depending on one another.
+
+The long-term goal is to transform engineering knowledge into high-quality implementation guidance and AI-assisted software production while preserving engineering discipline and architectural integrity.
+
+---
+
+## Design Philosophy
+
+EngineeringDiscovery is guided by several core principles:
+
+- Domain-first architecture
+- Workflow drives architecture
+- Shared domain model
+- Role-specific workspaces
+- Business rules belong in the domain
+- Infrastructure is introduced only when earned
 
 The application intentionally delays persistence, AI integration, and infrastructure until the workflow demonstrates a genuine need for them.
 
-Engineering Principle
-Each workspace presents a role-specific representation of the shared Investigation.
+---
 
+## Engineering Principle
 
-Engineering Discovery is not a .NET analysis tool.
+Each workspace presents a role-specific view of the shared Investigation.
 
-Engineering Discovery is a language-agnostic engineering reasoning platform.
+The Investigation serves as the single source of truth for every engineering role. Each role contributes additional knowledge while building upon the understanding established by previous phases.
 
-Language providers extract facts.
+---
+
+## The Investigation
+
+An Investigation is the persistent knowledge model of a software system.
+
+It is progressively enriched as EngineeringDiscovery discovers, analyzes, interprets, and reasons about source code. Every phase contributes additional understanding without replacing earlier findings, allowing the Investigation to evolve from simple discovery into architectural insight, implementation planning, development guidance, and review.
+
+The Investigation is a living model, not a static report. It can be revisited, extended, validated, and refined as new evidence becomes available. Every phase contributes to the same evolving body of engineering knowledge.
+
+---
+
+## Investigation Lifecycle
+
+```text
+Discovery
+    ↓
+Analysis
+    ↓
+Architecture
+    ↓
+Planning
+    ↓
+Development
+    ↓
+Review
+```
+
+Each phase enriches the same Investigation.
+
+---
+
+## Summary
+
+EngineeringDiscovery is not a .NET analysis tool.
+
+EngineeringDiscovery is a language-agnostic engineering reasoning platform.
+
+Language providers discover facts.
 
 Engineering workspaces reason over those facts.
+
+The Investigation is the central artifact that connects every phase of the engineering process.
