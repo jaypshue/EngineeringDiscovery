@@ -26,36 +26,88 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         {
             var result = new List<CompilationContext>();
 
+            void Log(string repoRoot, string msg)
+            {
+                try
+                {
+                    var dir = System.IO.Path.Combine(repoRoot ?? string.Empty, ".ed-logs");
+                    System.IO.Directory.CreateDirectory(dir);
+                    var file = System.IO.Path.Combine(dir, "provider-load.log");
+                    var line = $"[{DateTime.UtcNow:O}] {msg}\n";
+                    System.IO.File.AppendAllText(file, line);
+                }
+                catch { }
+            }
+
             try
             {
-                try { if (!MSBuildLocator.IsRegistered) MSBuildLocator.RegisterDefaults(); } catch { }
+                try
+                {
+                    if (!MSBuildLocator.IsRegistered)
+                    {
+                        // If any Microsoft.Build assemblies are already loaded into the AppDomain
+                        // RegisterDefaults will throw InvalidOperationException. Detect loaded
+                        // assemblies and skip registration when that is the case to avoid the
+                        // runtime error while preserving registration when possible.
+                        var anyMsbuildLoaded = AppDomain.CurrentDomain.GetAssemblies()
+                            .Any(a => {
+                                try { return a.GetName().Name.StartsWith("Microsoft.Build", StringComparison.OrdinalIgnoreCase); } catch { return false; }
+                            });
+
+                        if (!anyMsbuildLoaded)
+                        {
+                            try { MSBuildLocator.RegisterDefaults(); } catch (InvalidOperationException) { /* already loaded; continue */ }
+                        }
+                        else
+                        {
+                            try { System.Diagnostics.Debug.WriteLine("MSBuild assemblies already loaded; skipping MSBuildLocator registration."); } catch { }
+                        }
+                    }
+                }
+                catch { }
 
                 using var workspace = MSBuildWorkspace.Create();
-
-                // Strategy: try .sln, then .slnx, then csproj files, then loose cs files (handled as single-context)
-                var sln = Directory.GetFiles(repositoryRoot, "*.sln", SearchOption.AllDirectories).FirstOrDefault();
-                if (sln == null)
+                // Capture workspace diagnostics so provider can continue when some projects fail to load.
+                try
                 {
-                    sln = Directory.GetFiles(repositoryRoot, "*.slnx", SearchOption.AllDirectories).FirstOrDefault();
-                }
-
-                if (!string.IsNullOrWhiteSpace(sln) && File.Exists(sln))
-                {
-                    var solution = workspace.OpenSolutionAsync(sln).GetAwaiter().GetResult();
-                    foreach (var proj in solution.Projects)
+                    workspace.WorkspaceFailed += (s, e) =>
                     {
-                        try
-                        {
-                            var compilation = proj.GetCompilationAsync().GetAwaiter().GetResult();
-                            if (compilation == null) continue;
-                            var ctx = CreateContextFromCompilation(proj.Name ?? string.Empty, proj.FilePath, compilation);
-                            result.Add(ctx);
-                        }
-                        catch { }
-                    }
-
-                    if (result.Count > 0) return result;
+                        try { Log(repositoryRoot, $"MSBuild WorkspaceFailed: {e.Diagnostic.Message}"); } catch { }
+                    };
                 }
+                catch { }
+
+                // Repository-first loading: discover all csproj files beneath repositoryRoot and open each project independently.
+                // A solution file is optional and not required for repository ingestion.
+                try
+                {
+                    var csprojFiles = Directory.GetFiles(repositoryRoot ?? string.Empty, "*.csproj", SearchOption.AllDirectories);
+                    if (csprojFiles != null && csprojFiles.Length > 0)
+                    {
+                        foreach (var csprojPath in csprojFiles)
+                        {
+                            try
+                            {
+                                var proj = workspace.OpenProjectAsync(csprojPath).GetAwaiter().GetResult();
+                                var compilation = proj.GetCompilationAsync().GetAwaiter().GetResult();
+                                if (compilation == null) continue;
+                                var ctx = CreateContextFromCompilation(proj.Name ?? string.Empty, proj.FilePath, compilation);
+                                result.Add(ctx);
+                            }
+                            catch (Microsoft.Build.Exceptions.InvalidProjectFileException ex)
+                            {
+                                try { Log(repositoryRoot, $"Invalid project file '{csprojPath}': {ex.Message}"); } catch { }
+                            }
+                            catch (Exception ex)
+                            {
+                                try { Log(repositoryRoot, $"Failed to load project '{csprojPath}': {ex.Message}"); } catch { }
+                            }
+                        }
+
+                        if (result.Count > 0) return result;
+                    }
+                }
+                catch { }
 
                 // Try individual csproj files
                 var csproj = Directory.GetFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories).FirstOrDefault();

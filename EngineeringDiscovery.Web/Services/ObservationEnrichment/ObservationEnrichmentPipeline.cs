@@ -16,6 +16,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             // Build the inheritance relationship graph first
             yield return new TypeRelationshipEnricher();
             yield return new RelationshipGraphEnricher();
+            yield return new RepositoryMetricsEnricher();
 
             // Dependency enrichment relies on relationship graph being available
             yield return new TypeDependencyEnricher();

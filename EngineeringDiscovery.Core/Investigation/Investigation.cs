@@ -78,6 +78,17 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph? _relationshipGraph;
         public EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph? RelationshipGraph => _relationshipGraph;
 
+        // Repository-wide computed metrics populated by RepositoryMetricsEnricher
+        private EngineeringDiscovery.Core.Models.RepositoryMetrics? _repositoryMetrics;
+        public EngineeringDiscovery.Core.Models.RepositoryMetrics? RepositoryMetrics => _repositoryMetrics;
+
+        public void SetRepositoryMetrics(EngineeringDiscovery.Core.Models.RepositoryMetrics metrics)
+        {
+            if (metrics is null) throw new ArgumentNullException(nameof(metrics));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("RepositoryMetrics can only be set while the investigation is Started.");
+            _repositoryMetrics = metrics;
+        }
+
         public void SetRelationshipGraph(EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph graph)
         {
             if (graph is null) throw new ArgumentNullException(nameof(graph));
