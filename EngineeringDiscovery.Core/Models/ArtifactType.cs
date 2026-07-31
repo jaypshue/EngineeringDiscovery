@@ -5,6 +5,10 @@ namespace EngineeringDiscovery.Core.Models
         LayerViolation,
         CircularProjectReference,
         EmptyController,
-        LongMethod
+        LongMethod,
+        ExcessiveParameterCount,
+        LargeConstructor,
+        AsyncNamingConvention,
+        LargePublicSurfaceArea
     }
 }

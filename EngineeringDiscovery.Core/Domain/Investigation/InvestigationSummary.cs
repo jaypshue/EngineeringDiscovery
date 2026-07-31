@@ -21,6 +21,10 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         public int CircularProjectReferences { get; init; }
         public int EmptyControllers { get; init; }
         public int LongMethods { get; init; }
+        public int ExcessiveParameterCount { get; init; }
+        public int LargeConstructors { get; init; }
+        public int AsyncNamingIssues { get; init; }
+        public int LargePublicSurfaceAreas { get; init; }
 
         public static InvestigationSummary CreateFrom(Investigation investigation)
         {
@@ -64,6 +68,10 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             var circular = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.CircularProjectReference) ?? 0;
             var emptyControllers = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.EmptyController) ?? 0;
             var longMethods = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LongMethod) ?? 0;
+            var excessiveParams = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.ExcessiveParameterCount) ?? 0;
+            var largeCtors = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargeConstructor) ?? 0;
+            var asyncNaming = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.AsyncNamingConvention) ?? 0;
+            var largeSurface = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargePublicSurfaceArea) ?? 0;
 
             return new InvestigationSummary
             {
@@ -76,7 +84,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
                 LayerViolations = layerViolations,
                 CircularProjectReferences = circular,
                 EmptyControllers = emptyControllers,
-                LongMethods = longMethods
+                LongMethods = longMethods,
+                ExcessiveParameterCount = excessiveParams,
+                LargeConstructors = largeCtors,
+                AsyncNamingIssues = asyncNaming,
+                LargePublicSurfaceAreas = largeSurface
             };
         }
     }
