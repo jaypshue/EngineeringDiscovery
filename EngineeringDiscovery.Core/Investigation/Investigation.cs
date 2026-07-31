@@ -66,6 +66,10 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<EngineeringDiscovery.Core.Models.TypeObservation> _typeObservations = new();
         public IReadOnlyList<EngineeringDiscovery.Core.Models.TypeObservation> TypeObservations => _typeObservations.AsReadOnly();
 
+        // Structured namespace observations collected during discovery. Mutable only via discovery step.
+        private readonly List<EngineeringDiscovery.Core.Models.NamespaceObservation> _namespaceObservations = new();
+        public IReadOnlyList<EngineeringDiscovery.Core.Models.NamespaceObservation> NamespaceObservations => _namespaceObservations.AsReadOnly();
+
         // Add a structured MemberObservation to the investigation.
         public void AddMemberObservation(EngineeringDiscovery.Core.Models.MemberObservation observation)
         {

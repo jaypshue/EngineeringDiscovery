@@ -74,6 +74,30 @@ namespace EngineeringDiscovery.Web.Services
                                 Namespace = ns,
                                 Description = desc
                             });
+                            // Create a structured NamespaceObservation for future rules
+                            try
+                            {
+                                var nsObs = new EngineeringDiscovery.Core.Models.NamespaceObservation
+                                {
+                                    Project = name,
+                                    NamespaceName = ns,
+                                    TypeCount = 0,
+                                    ClassCount = 0,
+                                    InterfaceCount = 0,
+                                    RecordCount = 0,
+                                    StructCount = 0,
+                                    EnumCount = 0,
+                                    DelegateCount = 0,
+                                    PublicTypeCount = 0,
+                                    InternalTypeCount = 0,
+                                    AbstractTypeCount = 0,
+                                    StaticTypeCount = 0
+                                };
+
+                                try { context.NamespaceObservations.Add(nsObs); } catch { }
+                                try { _investigation.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Namespace, Project = name, Namespace = ns, Description = desc }); } catch { }
+                            }
+                            catch { }
                         }
 
                         var countDesc = $"Project '{name}' contains {namespaces.Count} namespaces.";
