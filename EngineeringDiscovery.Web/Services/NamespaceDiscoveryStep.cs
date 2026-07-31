@@ -16,6 +16,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class NamespaceDiscoveryStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Discovery;
         private readonly EngineeringDiscovery.Core.Domain.Investigation.Investigation? _investigation;
 
         public NamespaceDiscoveryStep(EngineeringDiscovery.Core.Domain.Investigation.Investigation? investigation)

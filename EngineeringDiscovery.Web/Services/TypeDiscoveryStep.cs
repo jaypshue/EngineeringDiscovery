@@ -10,6 +10,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class TypeDiscoveryStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Discovery;
         private readonly Investigation _investigation;
 
         public TypeDiscoveryStep(Investigation investigation)

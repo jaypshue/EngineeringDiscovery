@@ -10,6 +10,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class ProjectReferenceDiscoveryStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Discovery;
         private readonly Investigation _inv;
 
         public ProjectReferenceDiscoveryStep(Investigation inv)

@@ -7,6 +7,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class ProjectDiscoveryStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Discovery;
         public void Execute(InvestigationContext context)
         {
             if (context == null) return;

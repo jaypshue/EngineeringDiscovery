@@ -9,6 +9,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class MemberDiscoveryStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Discovery;
         private readonly Investigation _investigation;
 
         public MemberDiscoveryStep(Investigation investigation)

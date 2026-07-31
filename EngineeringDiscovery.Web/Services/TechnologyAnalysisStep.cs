@@ -11,6 +11,7 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class TechnologyAnalysisStep : IInvestigationStep
     {
+        public InvestigationPhase Phase => InvestigationPhase.Analysis;
         private readonly Investigation _inv;
 
         public TechnologyAnalysisStep(Investigation inv)
