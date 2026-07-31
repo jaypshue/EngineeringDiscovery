@@ -33,7 +33,7 @@ namespace EngineeringDiscovery.Web.Services
                         if (methods.Count == 0)
                         {
                             var title = "Empty controller detected";
-                            var description = $"{typeName} does not expose any public endpoints.";
+                            var description = $"Project: {proj}\nController: {typeName}\n\nNo public endpoints were discovered.";
                             results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
                         }
                     }
