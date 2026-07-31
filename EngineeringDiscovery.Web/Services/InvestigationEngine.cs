@@ -153,6 +153,7 @@ namespace EngineeringDiscovery.Web.Services
                     .Add(new NamespaceDiscoveryStep(inv))
                     .Add(new TypeDiscoveryStep(inv))
                     .Add(new MemberDiscoveryStep(inv))
+                    .Add(new MemberAnalysisStep(inv))
                     .Add(new TechnologyAnalysisStep(inv))
                     .Add(new DependencyAnalysisStep(inv))
                     .Add(new LayerAnalysisStep(inv));
