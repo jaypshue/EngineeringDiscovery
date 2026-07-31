@@ -62,6 +62,14 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<EngineeringDiscovery.Core.Models.MemberObservation> _memberObservations = new();
         public IReadOnlyList<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations => _memberObservations.AsReadOnly();
 
+        // Add a structured MemberObservation to the investigation.
+        public void AddMemberObservation(EngineeringDiscovery.Core.Models.MemberObservation observation)
+        {
+            if (observation is null) throw new ArgumentNullException(nameof(observation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Member observations can only be added while the investigation is Started.");
+            _memberObservations.Add(observation);
+        }
+
         public static Investigation Create(Guid id, string repositoryPath)
             => Create(id, repositoryPath, goal: string.Empty, owner: string.Empty, target: string.Empty);
 

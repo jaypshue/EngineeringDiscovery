@@ -145,15 +145,7 @@ namespace EngineeringDiscovery.Web.Services
 
                                                     try { _investigation.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Member, Project = memberObs.Project, Type = memberObs.Type, Member = memberObs.MemberName, Description = memberObs.ToString() }); } catch { }
                                                     try { context.MemberObservations.Add(memberObs); } catch { }
-                                                    try { /* also populate investigation's member collection when available */
-                                                        var invType = _investigation.GetType();
-                                                        var mi = invType.GetProperty("MemberObservations", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-                                                        if (mi != null)
-                                                        {
-                                                            var list = mi.GetValue(_investigation) as System.Collections.IList;
-                                                            list?.Add(memberObs);
-                                                        }
-                                                    } catch { }
+                                                    try { _investigation.AddMemberObservation(memberObs); } catch { }
                                                 }
                                                 catch { }
                                             }
