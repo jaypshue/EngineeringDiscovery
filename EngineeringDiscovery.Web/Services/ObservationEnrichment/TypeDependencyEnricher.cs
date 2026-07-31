@@ -81,14 +81,32 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     catch { }
                 }
 
-                // Populate counts
+                // Populate counts from the canonical graph if available; otherwise fall back to previously computed maps
+                var graph = investigation.RelationshipGraph;
                 foreach (var t in types)
                 {
                     try
                     {
-                        var name = t.TypeName ?? string.Empty;
-                        t.OutgoingDependencyCount = outgoing.TryGetValue(name, out var oset) ? oset.Count : 0;
-                        t.IncomingDependencyCount = incoming.TryGetValue(name, out var iset) ? iset.Count : 0;
+                        var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(qn)) continue;
+
+                        int outgoingCount = 0;
+                        int incomingCount = 0;
+
+                        if (graph != null)
+                        {
+                            outgoingCount = graph.GetDependencies(qn).Count();
+                            incomingCount = graph.GetDependents(qn).Count();
+                        }
+                        else
+                        {
+                            // fallback to the maps we built earlier (keyed by QualifiedName)
+                            outgoingCount = outgoing.TryGetValue(qn, out var oset) ? oset.Count : 0;
+                            incomingCount = incoming.TryGetValue(qn, out var iset) ? iset.Count : 0;
+                        }
+
+                        t.OutgoingDependencyCount = outgoingCount;
+                        t.IncomingDependencyCount = incomingCount;
                         t.IsDependencyHub = t.IncomingDependencyCount > 10 || t.OutgoingDependencyCount > 10; // conservative
                         t.IsDependencyLeaf = t.OutgoingDependencyCount == 0;
                     }
