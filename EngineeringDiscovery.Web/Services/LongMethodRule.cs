@@ -15,27 +15,44 @@ namespace EngineeringDiscovery.Web.Services
             var results = new List<InvestigationArtifact>();
             try
             {
-                if (methodLineCounts == null) return results;
-
-                foreach (var kv in methodLineCounts)
+                // Prefer structured MemberObservation if available
+                if (investigation?.MemberObservations != null && investigation.MemberObservations.Any())
                 {
-                    try
+                    foreach (var m in investigation.MemberObservations)
                     {
-                        var key = kv.Key ?? string.Empty; // format: Project||Type||Method
-                        var parts = key.Split(new[] {"||"}, StringSplitOptions.None);
-                        if (parts.Length < 3) continue;
-                        var proj = parts[0];
-                        var typeName = parts[1];
-                        var methodName = parts[2];
-                        var v = kv.Value?.FirstOrDefault();
-                        if (!int.TryParse(v, out var lines)) continue;
-                        if (lines <= ThresholdLines) continue;
-
-                        var title = "Long method detected";
-                        var description = $"Project: {proj}\nType: {typeName}\nMethod: {methodName}\n\nThe method contains approximately {lines} source lines.";
-                        results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, ArtifactType.LongMethod));
+                        try
+                        {
+                            var lines = m.ApproximateSourceLines;
+                            if (lines <= ThresholdLines) continue;
+                            var title = "Long method detected";
+                            var description = $"Project: {m.Project}\nType: {m.Type}\nMethod: {m.MemberName}\n\nThe method contains approximately {lines} source lines.";
+                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, ArtifactType.LongMethod));
+                        }
+                        catch { }
                     }
-                    catch { }
+                }
+                else if (methodLineCounts != null)
+                {
+                    foreach (var kv in methodLineCounts)
+                    {
+                        try
+                        {
+                            var key = kv.Key ?? string.Empty; // format: Project||Type||Method
+                            var parts = key.Split(new[] {"||"}, StringSplitOptions.None);
+                            if (parts.Length < 3) continue;
+                            var proj = parts[0];
+                            var typeName = parts[1];
+                            var methodName = parts[2];
+                            var v = kv.Value?.FirstOrDefault();
+                            if (!int.TryParse(v, out var lines)) continue;
+                            if (lines <= ThresholdLines) continue;
+
+                            var title = "Long method detected";
+                            var description = $"Project: {proj}\nType: {typeName}\nMethod: {methodName}\n\nThe method contains approximately {lines} source lines.";
+                            results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, ArtifactType.LongMethod));
+                        }
+                        catch { }
+                    }
                 }
             }
             catch { }

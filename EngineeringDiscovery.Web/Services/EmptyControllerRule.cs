@@ -11,29 +11,28 @@ namespace EngineeringDiscovery.Web.Services
         public IEnumerable<InvestigationArtifact> Evaluate(Investigation investigation, IDictionary<string, List<string>>? typePublicMethods = null, string? sourceLayer = null, string? referencedLayer = null, string? relationshipDescription = null)
         {
             var results = new List<InvestigationArtifact>();
+            _ = typePublicMethods;
+            _ = sourceLayer;
+            _ = referencedLayer;
+            _ = relationshipDescription;
             try
             {
-                if (typePublicMethods == null) return results;
+                // Use MemberObservations from the Investigation to determine controller emptiness
+                if (investigation?.MemberObservations == null) return results;
 
-                // Keys are in format "{project}||{typeName}". Detect types ending with Controller and no public methods.
-                foreach (var kv in typePublicMethods)
+                var grouped = investigation.MemberObservations.GroupBy(m => (Project: m.Project, Type: m.Type ?? string.Empty));
+                var candidates = grouped.Select(g => new { g.Key.Project, Type = g.Key.Type, PublicCount = g.Count(m => m.Visibility == Visibility.Public) });
+
+                foreach (var c in candidates)
                 {
                     try
                     {
-                        var key = kv.Key ?? string.Empty;
-                        var parts = key.Split(new[] {"||"}, StringSplitOptions.None);
-                        if (parts.Length < 2) continue;
-                        var proj = parts[0];
-                        var typeName = parts[1];
-
-                        if (string.IsNullOrWhiteSpace(typeName)) continue;
-                        if (!typeName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase)) continue;
-
-                        var methods = kv.Value ?? new List<string>();
-                        if (methods.Count == 0)
+                        if (string.IsNullOrWhiteSpace(c.Type)) continue;
+                        if (!c.Type.EndsWith("Controller", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (c.PublicCount == 0)
                         {
                             var title = "Empty controller detected";
-                            var description = $"Project: {proj}\nController: {typeName}\n\nNo public endpoints were discovered.";
+                            var description = $"Project: {c.Project}\nController: {c.Type}\n\nNo public endpoints were discovered.";
                             results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description, EngineeringDiscovery.Core.Models.ArtifactType.EmptyController));
                         }
                     }

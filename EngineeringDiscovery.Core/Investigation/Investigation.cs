@@ -57,6 +57,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<DiscoveryObservation> _observations = new();
         public IReadOnlyList<DiscoveryObservation> Observations => _observations.AsReadOnly();
 
+        // Structured member observations collected during discovery. These are mutable only by discovery code
+        // and are exposed here for engineering rules to consume without string parsing.
+        private readonly List<EngineeringDiscovery.Core.Models.MemberObservation> _memberObservations = new();
+        public IReadOnlyList<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations => _memberObservations.AsReadOnly();
+
         public static Investigation Create(Guid id, string repositoryPath)
             => Create(id, repositoryPath, goal: string.Empty, owner: string.Empty, target: string.Empty);
 

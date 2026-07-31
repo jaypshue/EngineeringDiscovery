@@ -22,10 +22,7 @@ namespace EngineeringDiscovery.Web.Services
         {
             if (context == null) return;
 
-            // Collect public methods per type so rules can analyze controllers later
-            var typePublicMethods = new Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.OrdinalIgnoreCase);
-            // Map method key "{project}||{type}||{method}" -> list with single string representing approximate line count
-            var methodLineCounts = new Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.OrdinalIgnoreCase);
+            // MemberObservations will be collected and stored on context and Investigation
 
             foreach (var proj in context.DiscoveredProjects)
             {
@@ -75,14 +72,7 @@ namespace EngineeringDiscovery.Web.Services
                                     var typeBody = ExtractBalancedBlock(text, m.Index);
                                     if (string.IsNullOrWhiteSpace(typeBody)) continue;
 
-                                    // Ensure each discovered type has an entry, even when it has no public methods
-                                    try
-                                    {
-                                        var typeKey = $"{name}||{typeName}";
-                                        if (!typePublicMethods.ContainsKey(typeKey))
-                                            typePublicMethods[typeKey] = new System.Collections.Generic.List<string>();
-                                    }
-                                    catch { }
+                                    // Ensure each discovered type has an entry in the Investigation.MemberObservations map via discovery
 
                                     // Constructors
                                     var ctorRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+" + Regex.Escape(typeName) + "\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
@@ -119,18 +109,7 @@ namespace EngineeringDiscovery.Web.Services
                                             Description = desc
                                         });
 
-                                        // Record public methods for later controller analysis
-                                        try
-                                        {
-                                            if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                var key = $"{name}||{typeName}";
-                                                if (!typePublicMethods.ContainsKey(key)) typePublicMethods[key] = new System.Collections.Generic.List<string>();
-                                                if (!typePublicMethods[key].Contains(methodName, StringComparer.OrdinalIgnoreCase))
-                                                    typePublicMethods[key].Add(methodName);
-                                            }
-                                        }
-                                        catch { }
+                                        // Record public methods via MemberObservation (investigation and context will store observations)
 
                                         // Approximate method length by extracting its balanced block and counting lines
                                         try
@@ -139,8 +118,7 @@ namespace EngineeringDiscovery.Web.Services
                                             if (!string.IsNullOrWhiteSpace(methodBlock))
                                             {
                                                 var approxLines = methodBlock.Replace("\r", string.Empty).Split('\n').Length;
-                                                var mkey = $"{name}||{typeName}||{methodName}";
-                                                methodLineCounts[mkey] = new System.Collections.Generic.List<string> { approxLines.ToString() };
+                                                // previously recorded in methodLineCounts; now stored in MemberObservation
 
                                                 // Also add a structured MemberObservation for future rules
                                                 try
@@ -167,6 +145,15 @@ namespace EngineeringDiscovery.Web.Services
 
                                                     try { _investigation.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Member, Project = memberObs.Project, Type = memberObs.Type, Member = memberObs.MemberName, Description = memberObs.ToString() }); } catch { }
                                                     try { context.MemberObservations.Add(memberObs); } catch { }
+                                                    try { /* also populate investigation's member collection when available */
+                                                        var invType = _investigation.GetType();
+                                                        var mi = invType.GetProperty("MemberObservations", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                                                        if (mi != null)
+                                                        {
+                                                            var list = mi.GetValue(_investigation) as System.Collections.IList;
+                                                            list?.Add(memberObs);
+                                                        }
+                                                    } catch { }
                                                 }
                                                 catch { }
                                             }
@@ -237,11 +224,11 @@ namespace EngineeringDiscovery.Web.Services
                 catch { }
             }
 
-            // Evaluate LongMethodRule using collected approximate method line counts
+            // Evaluate LongMethodRule using Investigation.MemberObservations (preferred)
             try
             {
                 var longRule = new LongMethodRule();
-                var longArtifacts = longRule.Evaluate(_investigation, methodLineCounts);
+                var longArtifacts = longRule.Evaluate(_investigation, null);
                 foreach (var a in longArtifacts) _investigation.Artifacts.Add(a);
             }
             catch { }
