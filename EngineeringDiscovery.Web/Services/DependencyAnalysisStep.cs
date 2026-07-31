@@ -79,6 +79,15 @@ namespace EngineeringDiscovery.Web.Services
                         _inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, rel));
                     }
                 }
+
+                // Evaluate engineering rules that analyze the dependency graph
+                try
+                {
+                    var cycleRule = new CircularProjectReferenceRule();
+                    var artifacts = cycleRule.Evaluate(_inv, adjacency);
+                    foreach (var a in artifacts) _inv.Artifacts.Add(a);
+                }
+                catch { }
             }
             catch { }
         }

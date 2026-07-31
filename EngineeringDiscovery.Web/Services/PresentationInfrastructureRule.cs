@@ -7,11 +7,13 @@ namespace EngineeringDiscovery.Web.Services
 {
     internal class PresentationInfrastructureRule : IEngineeringRule
     {
-        public IEnumerable<InvestigationArtifact> Evaluate(Investigation investigation, string sourceLayer, string referencedLayer, string relationshipDescription)
+        public IEnumerable<InvestigationArtifact> Evaluate(Investigation investigation, IDictionary<string, List<string>>? adjacency = null, string? sourceLayer = null, string? referencedLayer = null, string? relationshipDescription = null)
         {
             var results = new List<InvestigationArtifact>();
             try
             {
+                if (string.IsNullOrWhiteSpace(sourceLayer) || string.IsNullOrWhiteSpace(referencedLayer)) return results;
+
                 if ((sourceLayer.IndexOf("web", StringComparison.OrdinalIgnoreCase) >= 0 || sourceLayer.IndexOf("presentation", StringComparison.OrdinalIgnoreCase) >= 0)
                     && referencedLayer.IndexOf("infrastructure", StringComparison.OrdinalIgnoreCase) >= 0)
                 {

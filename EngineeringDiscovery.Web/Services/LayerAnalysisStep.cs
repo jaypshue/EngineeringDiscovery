@@ -112,7 +112,7 @@ namespace EngineeringDiscovery.Web.Services
                                         try
                                         {
                                             var rule = new PresentationInfrastructureRule();
-                                            var artifacts = rule.Evaluate(_inv, sourceLayer, referencedLayer, rel);
+                                            var artifacts = rule.Evaluate(_inv, null, sourceLayer, referencedLayer, rel);
                                             foreach (var a in artifacts) _inv.Artifacts.Add(a);
                                         }
                                         catch { }
