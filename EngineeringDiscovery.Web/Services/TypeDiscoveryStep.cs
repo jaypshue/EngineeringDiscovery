@@ -96,6 +96,106 @@ namespace EngineeringDiscovery.Web.Services
                                         Description = desc
                                     });
 
+                                    try
+                                    {
+                                        var typeBody = ExtractBalancedBlock(text, m.Index);
+                                        var declEnd = text.IndexOf('{', m.Index);
+                                        var declSnippet = declEnd > m.Index ? text.Substring(m.Index, declEnd - m.Index) : string.Empty;
+
+                                        var kindValue = EngineeringDiscovery.Core.Models.TypeKind.Class;
+                                        switch (kind)
+                                        {
+                                            case "class": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Class; break;
+                                            case "interface": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Interface; break;
+                                            case "record": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Record; break;
+                                            case "struct": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Struct; break;
+                                            case "enum": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Enum; break;
+                                            case "delegate": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Delegate; break;
+                                        }
+
+                                        var typeObs = new EngineeringDiscovery.Core.Models.TypeObservation
+                                        {
+                                            Project = name,
+                                            Namespace = fileNs ?? string.Empty,
+                                            TypeName = typeName,
+                                            Kind = kindValue,
+                                            Accessibility = string.Empty,
+                                            IsAbstract = declSnippet.IndexOf("abstract", StringComparison.OrdinalIgnoreCase) >= 0,
+                                            IsStatic = declSnippet.IndexOf("static", StringComparison.OrdinalIgnoreCase) >= 0,
+                                            IsPartial = declSnippet.IndexOf("partial", StringComparison.OrdinalIgnoreCase) >= 0,
+                                            IsGeneric = false,
+                                            GenericParameterCount = 0,
+                                            BaseType = null,
+                                            ImplementedInterfaceCount = 0,
+                                            MethodCount = 0,
+                                            ConstructorCount = 0,
+                                            PropertyCount = 0,
+                                            FieldCount = 0,
+                                            EventCount = 0,
+                                            PublicMemberCount = 0,
+                                            PrivateMemberCount = 0,
+                                            MemberCount = 0
+                                        };
+
+                                        if (!string.IsNullOrWhiteSpace(typeBody))
+                                        {
+                                            try
+                                            {
+                                                var ctorRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+" + Regex.Escape(typeName) + "\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                foreach (Match cm in ctorRegex.Matches(typeBody))
+                                                {
+                                                    typeObs.ConstructorCount++;
+                                                    var access = cm.Groups[2].Value.Trim();
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) typeObs.PublicMemberCount++;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) typeObs.PrivateMemberCount++;
+                                                }
+
+                                                var methodRegexLocal = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|async\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                foreach (Match mm in methodRegexLocal.Matches(typeBody))
+                                                {
+                                                    typeObs.MethodCount++;
+                                                    var access = mm.Groups[2].Value.Trim();
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) typeObs.PublicMemberCount++;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) typeObs.PrivateMemberCount++;
+                                                }
+
+                                                var propertyRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{\\s*(get\\s*;|set\\s*;|init\\s*;|get\\s*\\{|set\\s*\\{|init\\s*\\{)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                foreach (Match pm in propertyRegex.Matches(typeBody))
+                                                {
+                                                    typeObs.PropertyCount++;
+                                                    var access = pm.Groups[2].Value.Trim();
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) typeObs.PublicMemberCount++;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) typeObs.PrivateMemberCount++;
+                                                }
+
+                                                var fieldRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|readonly\\s+|const\\s+|volatile\\s+|new\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=|;)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                foreach (Match fm in fieldRegex.Matches(typeBody))
+                                                {
+                                                    typeObs.FieldCount++;
+                                                    var access = fm.Groups[2].Value.Trim();
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) typeObs.PublicMemberCount++;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) typeObs.PrivateMemberCount++;
+                                                }
+
+                                                var eventRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+event\\s+[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled | RegexOptions.Multiline);
+                                                foreach (Match em in eventRegex.Matches(typeBody))
+                                                {
+                                                    typeObs.EventCount++;
+                                                    var access = em.Groups[2].Value.Trim();
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) typeObs.PublicMemberCount++;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) typeObs.PrivateMemberCount++;
+                                                }
+
+                                                typeObs.MemberCount = typeObs.ConstructorCount + typeObs.MethodCount + typeObs.PropertyCount + typeObs.FieldCount + typeObs.EventCount;
+                                            }
+                                            catch { }
+                                        }
+
+                                        try { context.TypeObservations.Add(typeObs); } catch { }
+                                        try { _investigation.AddTypeObservation(typeObs); } catch { }
+                                    }
+                                    catch { }
+
                                     // Member detection is intentionally left in InvestigationEngine for now per ED-135 scope
                                     try
                                     {

@@ -24,6 +24,9 @@ namespace EngineeringDiscovery.Web.Services
         // Structured collection of member observations populated during MemberDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations { get; } = new();
 
+        // Structured collection of type observations populated during TypeDiscoveryStep
+        public List<EngineeringDiscovery.Core.Models.TypeObservation> TypeObservations { get; } = new();
+
         public List<string> Diagnostics { get; }
 
         public string[] Exclusions { get; }

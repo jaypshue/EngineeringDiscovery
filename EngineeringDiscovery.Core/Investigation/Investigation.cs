@@ -62,12 +62,24 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<EngineeringDiscovery.Core.Models.MemberObservation> _memberObservations = new();
         public IReadOnlyList<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations => _memberObservations.AsReadOnly();
 
+        // Structured type observations collected during discovery. Mutable only via discovery step.
+        private readonly List<EngineeringDiscovery.Core.Models.TypeObservation> _typeObservations = new();
+        public IReadOnlyList<EngineeringDiscovery.Core.Models.TypeObservation> TypeObservations => _typeObservations.AsReadOnly();
+
         // Add a structured MemberObservation to the investigation.
         public void AddMemberObservation(EngineeringDiscovery.Core.Models.MemberObservation observation)
         {
             if (observation is null) throw new ArgumentNullException(nameof(observation));
             if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Member observations can only be added while the investigation is Started.");
             _memberObservations.Add(observation);
+        }
+
+        // Add a structured TypeObservation to the investigation.
+        public void AddTypeObservation(EngineeringDiscovery.Core.Models.TypeObservation observation)
+        {
+            if (observation is null) throw new ArgumentNullException(nameof(observation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Type observations can only be added while the investigation is Started.");
+            _typeObservations.Add(observation);
         }
 
         public static Investigation Create(Guid id, string repositoryPath)

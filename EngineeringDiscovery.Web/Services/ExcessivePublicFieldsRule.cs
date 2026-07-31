@@ -15,17 +15,16 @@ namespace EngineeringDiscovery.Web.Services
             var results = new List<InvestigationArtifact>();
             try
             {
-                if (investigation?.Observations == null) return results;
+                if (investigation?.TypeObservations == null) return results;
 
-                // Public fields are represented as Member observations and MemberObservation entries capture visibility.
-                if (investigation.MemberObservations == null) return results;
-                var publicFields = investigation.MemberObservations.Where(m => m.Visibility == EngineeringDiscovery.Core.Models.Visibility.Public && !string.IsNullOrWhiteSpace(m.MemberName) /* field name */);
-                var grouped = publicFields.GroupBy(o => (Project: o.Project, Type: o.Type ?? string.Empty));
+                // Prefer structured TypeObservations field counts when available
+                var grouped = investigation.TypeObservations.GroupBy(t => (Project: t.Project, Type: t.TypeName ?? string.Empty));
                 foreach (var g in grouped)
                 {
                     try
                     {
-                        var fieldCount = g.Count();
+                        var type = g.First();
+                        var fieldCount = type.FieldCount;
                         if (fieldCount > Threshold)
                         {
                             var title = "Excessive public fields";

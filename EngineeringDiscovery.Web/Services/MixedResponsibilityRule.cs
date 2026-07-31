@@ -18,18 +18,17 @@ namespace EngineeringDiscovery.Web.Services
             var results = new List<InvestigationArtifact>();
             try
             {
-                if (investigation?.Observations == null) return results;
+                if (investigation?.TypeObservations == null) return results;
 
-                if (investigation.MemberObservations == null) return results;
-                var members = investigation.MemberObservations;
-                var grouped = members.GroupBy(o => (Project: o.Project, Type: o.Type ?? string.Empty));
+                var grouped = investigation.TypeObservations.GroupBy(t => (Project: t.Project, Type: t.TypeName ?? string.Empty));
                 foreach (var g in grouped)
                 {
                     try
                     {
-                        var publicMethods = g.Count(o => o.Visibility == EngineeringDiscovery.Core.Models.Visibility.Public);
-                        var privateHelpers = g.Count(o => o.Visibility == EngineeringDiscovery.Core.Models.Visibility.Private);
-                        var totalMembers = g.Count();
+                        var type = g.First();
+                        var publicMethods = type.MethodCount; // conservative: treat method count as proxy for public API size when visibility is unknown
+                        var privateHelpers = 0; // visibility of helpers is not populated at type granularity; remain conservative
+                        var totalMembers = type.MemberCount;
 
                         if (publicMethods >= PublicMethodThreshold && privateHelpers >= PrivateHelperThreshold && totalMembers >= MemberCountThreshold)
                         {

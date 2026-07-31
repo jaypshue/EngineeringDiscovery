@@ -15,16 +15,16 @@ namespace EngineeringDiscovery.Web.Services
             var results = new List<InvestigationArtifact>();
             try
             {
-                if (investigation?.Observations == null) return results;
+                if (investigation?.TypeObservations == null) return results;
 
-                // Interface types identified by ObservationKind.Type where description contains 'interface'
-                var typeObs = investigation.Observations.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Type && (o.Description?.IndexOf("interface", StringComparison.OrdinalIgnoreCase) >= 0));
-                var grouped = typeObs.GroupBy(o => (o.Project, Type: o.Type ?? string.Empty));
+                var interfaces = investigation.TypeObservations.Where(t => t.Kind == TypeKind.Interface);
+                var grouped = interfaces.GroupBy(t => (Project: t.Project, Type: t.TypeName ?? string.Empty));
                 foreach (var g in grouped)
                 {
                     try
                     {
-                        var memberCount = investigation.Observations.Count(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Member && string.Equals(o.Type, g.Key.Type, StringComparison.OrdinalIgnoreCase) && string.Equals(o.Project, g.Key.Project, StringComparison.OrdinalIgnoreCase));
+                        var type = g.First();
+                        var memberCount = type.MemberCount;
                         if (memberCount > Threshold)
                         {
                             var title = "Large interface detected";

@@ -15,17 +15,15 @@ namespace EngineeringDiscovery.Web.Services
             var results = new List<InvestigationArtifact>();
             try
             {
-                if (investigation?.Observations == null) return results;
-
-                // Prefer structured MemberObservations for accurate member counts
-                if (investigation.MemberObservations == null) return results;
-                var memberObs = investigation.MemberObservations.Where(m => !string.IsNullOrWhiteSpace(m.Type));
-                var grouped = memberObs.GroupBy(m => (Project: m.Project, Type: m.Type ?? string.Empty));
+                // Prefer structured TypeObservations for accurate member counts
+                if (investigation.TypeObservations == null) return results;
+                var grouped = investigation.TypeObservations.GroupBy(t => (Project: t.Project, Type: t.TypeName ?? string.Empty));
                 foreach (var g in grouped)
                 {
                     try
                     {
-                        var count = g.Count();
+                        var type = g.First();
+                        var count = type.MemberCount;
                         if (count > Threshold)
                         {
                             var title = "Large type detected";
