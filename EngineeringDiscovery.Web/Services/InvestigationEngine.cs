@@ -121,24 +121,12 @@ namespace EngineeringDiscovery.Web.Services
             // Solution directory (if available) for solution-level discovery
             var solutionDirLocal = !string.IsNullOrWhiteSpace(effectiveSolutionPath) ? Path.GetDirectoryName(effectiveSolutionPath) : null;
 
-            var inv = Investigation.Create(
-                Guid.NewGuid(),
-                repositoryPath: effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? "/",
-                goal: defaultGoal,
-                owner: defaultOwner,
-                target: target,
-                architectureStatus: EngineeringStageStatus.NotStarted,
-                planningStatus: EngineeringStageStatus.NotStarted,
-                developmentStatus: EngineeringStageStatus.NotStarted,
-                verificationStatus: EngineeringStageStatus.NotStarted);
-
-            // Preserve previous behavior: start investigation and seed sample findings
-            inv.Start();
-            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Architecture, "API follows layered architecture."));
-            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Risk, "Authentication library is deprecated."));
-            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Decision, "WorkspaceHost owns the Investigation aggregate."));
-            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Question, "Which authentication provider should we adopt?"));
-            inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.TechnicalDebt, "Legacy authentication module requires refactoring."));
+            // Create and initialize the Investigation via the factory
+            var inv = InvestigationFactory.Create(
+                effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? "/",
+                target,
+                defaultGoal,
+                defaultOwner);
 
             // Add observation about solution/project count when discovered
             var projectCount = context.DiscoveredProjects.Count;
