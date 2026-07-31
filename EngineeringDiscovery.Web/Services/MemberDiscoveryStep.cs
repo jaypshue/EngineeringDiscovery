@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using EngineeringDiscovery.Core.Models;
 using EngineeringDiscovery.Core.Domain.Investigation;
 
@@ -20,6 +21,9 @@ namespace EngineeringDiscovery.Web.Services
         public void Execute(InvestigationContext context)
         {
             if (context == null) return;
+
+            // Collect public methods per type so rules can analyze controllers later
+            var typePublicMethods = new Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var proj in context.DiscoveredProjects)
             {
@@ -69,6 +73,15 @@ namespace EngineeringDiscovery.Web.Services
                                     var typeBody = ExtractBalancedBlock(text, m.Index);
                                     if (string.IsNullOrWhiteSpace(typeBody)) continue;
 
+                                    // Ensure each discovered type has an entry, even when it has no public methods
+                                    try
+                                    {
+                                        var typeKey = $"{name}||{typeName}";
+                                        if (!typePublicMethods.ContainsKey(typeKey))
+                                            typePublicMethods[typeKey] = new System.Collections.Generic.List<string>();
+                                    }
+                                    catch { }
+
                                     // Constructors
                                     var ctorRegex = new Regex("(^|\\s)(public|private|protected|internal)\\s+" + Regex.Escape(typeName) + "\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
                                     foreach (Match cm in ctorRegex.Matches(typeBody))
@@ -89,6 +102,7 @@ namespace EngineeringDiscovery.Web.Services
                                     var methodRegexLocal = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|async\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
                                     foreach (Match mm in methodRegexLocal.Matches(typeBody))
                                     {
+                                        var access = mm.Groups[2].Value.Trim();
                                         var methodName = mm.Groups[4].Value.Trim();
                                         if (string.IsNullOrWhiteSpace(methodName)) continue;
                                         if (string.Equals(methodName, typeName, StringComparison.OrdinalIgnoreCase)) continue;
@@ -102,6 +116,19 @@ namespace EngineeringDiscovery.Web.Services
                                             Member = methodName,
                                             Description = desc
                                         });
+
+                                        // Record public methods for later controller analysis
+                                        try
+                                        {
+                                            if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                var key = $"{name}||{typeName}";
+                                                if (!typePublicMethods.ContainsKey(key)) typePublicMethods[key] = new System.Collections.Generic.List<string>();
+                                                if (!typePublicMethods[key].Contains(methodName, StringComparer.OrdinalIgnoreCase))
+                                                    typePublicMethods[key].Add(methodName);
+                                            }
+                                        }
+                                        catch { }
                                     }
 
                                     // Properties
