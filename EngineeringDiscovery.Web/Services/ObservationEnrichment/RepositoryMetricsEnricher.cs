@@ -27,8 +27,8 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                 var totalTypes = types.Count();
                 var totalRelationships = graph != null ? graph.DerivedMap.Sum(kv => kv.Value.Count) : 0;
 
-                // Per-type computed metrics: Fan-In (incoming deps), Fan-Out (outgoing deps), InheritanceDepth, DirectDependencyCount, DirectDependentCount
-                // For dependency counts we conservatively use existing fields if available (IncomingDependencyCount/OutgoingDependencyCount) otherwise 0
+                // Per-type computed metrics derived from the RepositoryRelationshipGraph.
+                // Do NOT read mutable dependency counts from TypeObservation; compute graph-derived metrics only from the graph.
                 var perTypeMetrics = new Dictionary<string, EngineeringDiscovery.Core.Models.TypeMetrics>(StringComparer.OrdinalIgnoreCase);
                 foreach (var t in types)
                 {
@@ -37,18 +37,31 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
                         if (string.IsNullOrWhiteSpace(qn)) continue;
 
+                        // Default metrics
                         var metrics = new EngineeringDiscovery.Core.Models.TypeMetrics
                         {
                             QualifiedName = qn,
-                            FanIn = t.IncomingDependencyCount,
-                            FanOut = t.OutgoingDependencyCount,
-                            DirectDependencyCount = t.OutgoingDependencyCount,
-                            DirectDependentCount = t.IncomingDependencyCount,
-                            // Use relationship graph when available to derive derived type count and root/leaf status
-                            DerivedTypeCount = (graph != null) ? (graph.DerivedMap.TryGetValue(qn, out var dset) ? dset.Count : 0) : t.DerivedTypeCount,
-                            IsRoot = (graph != null) ? !graph.TryGetParent(qn, out _) : t.IsRootType,
-                            IsLeaf = (graph != null) ? (graph.DerivedMap.TryGetValue(qn, out var set) ? set.Count == 0 : true) : t.IsLeafType
+                            // FanIn/FanOut/DirectDependency counts are dependency-graph derived. If no dependency graph
+                            // exists on RepositoryRelationshipGraph, keep them as 0 to avoid reading mutable observation state.
+                            FanIn = 0,
+                            FanOut = 0,
+                            DirectDependencyCount = 0,
+                            DirectDependentCount = 0,
+                            DerivedTypeCount = 0,
+                            IsRoot = true,
+                            IsLeaf = true
                         };
+
+                        // If a relationship graph is available, derive metrics from it exclusively.
+                        if (graph != null)
+                        {
+                            metrics.DerivedTypeCount = graph.DerivedMap.TryGetValue(qn, out var dset) ? dset.Count : 0;
+                            metrics.IsRoot = !graph.TryGetParent(qn, out _);
+                            metrics.IsLeaf = !(graph.DerivedMap.TryGetValue(qn, out var children) && children.Count > 0);
+                            // In this version RepositoryRelationshipGraph contains only inheritance edges. Dependency edges
+                            // are not part of the graph yet, so FanIn/FanOut remain 0. When a dependency graph is added to
+                            // RepositoryRelationshipGraph, compute FanIn/FanOut from that graph here.
+                        }
 
                         // Inheritance depth: walk parents until none (use graph.ParentMap)
                         if (graph != null)
