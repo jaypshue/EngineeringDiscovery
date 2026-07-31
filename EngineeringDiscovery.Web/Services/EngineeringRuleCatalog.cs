@@ -16,5 +16,18 @@ namespace EngineeringDiscovery.Web.Services
                 new LargePublicSurfaceAreaRule()
             };
         }
+
+    // Return type-focused engineering rules. Keep deterministic order.
+    public static IEnumerable<IEngineeringRule> TypeRules()
+    {
+        return new IEngineeringRule[]
+        {
+            new LargeTypeRule(),
+            new LargeInterfaceRule(),
+            new DeepInheritanceRule(),
+            new ExcessivePublicFieldsRule(),
+            new MixedResponsibilityRule()
+        };
+    }
     }
 }

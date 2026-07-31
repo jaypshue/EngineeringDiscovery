@@ -10,5 +10,11 @@ namespace EngineeringDiscovery.Core.Models
         LargeConstructor,
         AsyncNamingConvention,
         LargePublicSurfaceArea
+        ,
+        LargeType,
+        LargeInterface,
+        DeepInheritance,
+        ExcessivePublicFields,
+        MixedResponsibilities
     }
 }

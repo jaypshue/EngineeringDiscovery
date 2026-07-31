@@ -25,6 +25,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         public int LargeConstructors { get; init; }
         public int AsyncNamingIssues { get; init; }
         public int LargePublicSurfaceAreas { get; init; }
+        public int LargeTypes { get; init; }
+        public int LargeInterfaces { get; init; }
+        public int DeepInheritanceHierarchies { get; init; }
+        public int ExcessivePublicFields { get; init; }
+        public int MixedResponsibilities { get; init; }
 
         public static InvestigationSummary CreateFrom(Investigation investigation)
         {
@@ -72,6 +77,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             var largeCtors = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargeConstructor) ?? 0;
             var asyncNaming = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.AsyncNamingConvention) ?? 0;
             var largeSurface = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargePublicSurfaceArea) ?? 0;
+            var largeTypes = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargeType) ?? 0;
+            var largeIfaces = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LargeInterface) ?? 0;
+            var deepInheritance = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.DeepInheritance) ?? 0;
+            var excessiveFields = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.ExcessivePublicFields) ?? 0;
+            var mixedResp = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.MixedResponsibilities) ?? 0;
 
             return new InvestigationSummary
             {
@@ -89,6 +99,11 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
                 LargeConstructors = largeCtors,
                 AsyncNamingIssues = asyncNaming,
                 LargePublicSurfaceAreas = largeSurface
+                ,LargeTypes = largeTypes
+                ,LargeInterfaces = largeIfaces
+                ,DeepInheritanceHierarchies = deepInheritance
+                ,ExcessivePublicFields = excessiveFields
+                ,MixedResponsibilities = mixedResp
             };
         }
     }
