@@ -42,6 +42,9 @@
     [Parameter]
     public EngineeringRole Role { get; set; }
 
+    [Inject]
+    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+
     private string Title => Role switch
     {
         EngineeringRole.Architect => "Architect Workspace",
@@ -95,6 +98,9 @@
             SampleInvestigation = await Task.Run(() => engine.CreateInvestigation(SelectedRepositoryPath, null));
 
             DiscoveryStatus = SampleInvestigation is null ? "Discovery Failed" : "Engineering Model Complete";
+
+            // Publish the investigation to shared state so other components (Dashboard, Graph) can consume it.
+            InvestigationState.SetInvestigation(SampleInvestigation);
         }
         catch (Exception ex)
         {

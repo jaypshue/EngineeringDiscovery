@@ -1,0 +1,32 @@
+@page "/graph"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Web.Components.Workspaces
+
+<PageTitle>Engineering Graph</PageTitle>
+
+<h2>Engineering Graph</h2>
+
+<GraphWorkspace Investigation="SampleInvestigation" />
+
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+@code {
+    private Investigation? SampleInvestigation { get; set; }
+
+    protected override void OnInitialized()
+    {
+        SampleInvestigation = InvestigationState.Investigation;
+        InvestigationState.OnChange += OnInvestigationChanged;
+    }
+
+    private void OnInvestigationChanged()
+    {
+        SampleInvestigation = InvestigationState.Investigation;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        InvestigationState.OnChange -= OnInvestigationChanged;
+    }
+}

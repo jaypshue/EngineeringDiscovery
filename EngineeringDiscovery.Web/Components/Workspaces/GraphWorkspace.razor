@@ -1,0 +1,173 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Core.Models
+@using Microsoft.AspNetCore.Components.Web
+@namespace EngineeringDiscovery.Web.Components.Workspaces
+
+<section class="graph-workspace">
+    <div class="graph-container" @ondragstart:preventDefault>
+        <svg @ref="SvgRef" class="graph-svg" @onwheel="OnWheel" @onmousedown="OnMouseDown" @onmouseup="OnMouseUp" @onmousemove="OnMouseMove" viewBox="@ViewBoxAttr">
+            <g transform="@($"translate({PanX},{PanY}) scale({Scale})")">
+                @foreach (var node in Nodes)
+                {
+                    <g class="@($"graph-node {(SelectedNode == node.Id ? "selected" : "")}")" transform="@($"translate({node.X},{node.Y})")" @onclick="() => OnNodeClick(node.Id)">
+                        <circle r="20" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.5"></circle>
+                        <text x="0" y="5" text-anchor="middle" fill="var(--text)" font-size="10">@node.Label</text>
+                    </g>
+                }
+
+                @foreach (var edge in Edges)
+                {
+                    var cls = edge.Type == RelationshipType.Inheritance ? "edge-inheritance" : "edge-dependency";
+                    var highlighted = SelectedNode != null && (edge.Source == SelectedNode || edge.Target == SelectedNode);
+                    <line x1="@edge.SourceX" y1="@edge.SourceY" x2="@edge.TargetX" y2="@edge.TargetY" class="graph-edge @(highlighted ? "highlighted" : "") @(cls)" stroke-width="1.2" stroke="rgba(255,255,255,0.25)" />
+                }
+            </g>
+        </svg>
+    </div>
+
+    <aside class="graph-details">
+        @if (SelectedNode is null)
+        {
+            <p class="muted">Select a node to see details.</p>
+        }
+        else
+        {
+            <div>
+                <h4>@SelectedNode</h4>
+                <p>Qualified Name: @SelectedNode</p>
+                <p>Dependencies: @GetDependenciesCount(SelectedNode)</p>
+                <p>Dependents: @GetDependentsCount(SelectedNode)</p>
+            </div>
+        }
+    </aside>
+</section>
+
+@code {
+    [Parameter]
+    public Investigation? Investigation { get; set; }
+
+    private ElementReference SvgRef;
+
+    private record NodeInfo(string Id, string Label, double X, double Y);
+    private record EdgeInfo(string Source, string Target, RelationshipType Type, double SourceX, double SourceY, double TargetX, double TargetY);
+
+    private List<NodeInfo> Nodes = new();
+    private List<EdgeInfo> Edges = new();
+
+    private string? SelectedNode { get; set; }
+
+    // Simple pan/zoom state
+    private double Scale { get; set; } = 1.0;
+    private double PanX { get; set; } = 0;
+    private double PanY { get; set; } = 0;
+
+    // For mouse drag
+    private bool IsDragging { get; set; }
+    private double LastMouseX { get; set; }
+    private double LastMouseY { get; set; }
+
+    private string ViewBoxAttr => "0 0 1000 600";
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        BuildGraphFromInvestigation();
+    }
+
+    private void BuildGraphFromInvestigation()
+    {
+        Nodes.Clear();
+        Edges.Clear();
+        if (Investigation?.RelationshipGraph is null) return;
+
+        // Create nodes from RelationshipGraph outgoing keys
+        var qnames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var src in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance))
+        {
+            qnames.Add(src.Source);
+            qnames.Add(src.Target);
+        }
+        foreach (var src in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
+        {
+            qnames.Add(src.Source);
+            qnames.Add(src.Target);
+        }
+
+        // Simple placement: grid layout
+        var cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(qnames.Count)));
+        int i = 0;
+        foreach (var q in qnames)
+        {
+            var row = i / cols;
+            var col = i % cols;
+            var x = 80 + col * 120;
+            var y = 80 + row * 80;
+            Nodes.Add(new NodeInfo(q, ShortLabel(q), x, y));
+            i++;
+        }
+
+        // Build edges with coordinates
+        foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance))
+        {
+            var s = Nodes.FirstOrDefault(n => string.Equals(n.Id, rel.Source, StringComparison.OrdinalIgnoreCase));
+            var t = Nodes.FirstOrDefault(n => string.Equals(n.Id, rel.Target, StringComparison.OrdinalIgnoreCase));
+            if (s != null && t != null)
+            {
+                Edges.Add(new EdgeInfo(s.Id, t.Id, RelationshipType.Inheritance, s.X, s.Y, t.X, t.Y));
+            }
+        }
+        foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
+        {
+            var s = Nodes.FirstOrDefault(n => string.Equals(n.Id, rel.Source, StringComparison.OrdinalIgnoreCase));
+            var t = Nodes.FirstOrDefault(n => string.Equals(n.Id, rel.Target, StringComparison.OrdinalIgnoreCase));
+            if (s != null && t != null)
+            {
+                Edges.Add(new EdgeInfo(s.Id, t.Id, RelationshipType.Dependency, s.X, s.Y, t.X, t.Y));
+            }
+        }
+    }
+
+    private string ShortLabel(string qn)
+    {
+        if (string.IsNullOrWhiteSpace(qn)) return qn;
+        var parts = qn.Split('.', '+');
+        return parts.Length > 0 ? parts.Last() : qn;
+    }
+
+    private int GetDependenciesCount(string qn) => Investigation?.RelationshipGraph?.GetOutgoingRelationships(qn).Count(r => r.Type == RelationshipType.Dependency) ?? 0;
+    private int GetDependentsCount(string qn) => Investigation?.RelationshipGraph?.GetIncomingRelationships(qn).Count(r => r.Type == RelationshipType.Dependency) ?? 0;
+
+    private void OnNodeClick(string id)
+    {
+        SelectedNode = id;
+    }
+
+    private void OnWheel(WheelEventArgs e)
+    {
+        var delta = e.DeltaY > 0 ? 0.9 : 1.1;
+        Scale *= delta;
+    }
+
+    private void OnMouseDown(MouseEventArgs e)
+    {
+        IsDragging = true;
+        LastMouseX = e.ClientX;
+        LastMouseY = e.ClientY;
+    }
+
+    private void OnMouseUp(MouseEventArgs e)
+    {
+        IsDragging = false;
+    }
+
+    private void OnMouseMove(MouseEventArgs e)
+    {
+        if (!IsDragging) return;
+        var dx = e.ClientX - LastMouseX;
+        var dy = e.ClientY - LastMouseY;
+        PanX += dx;
+        PanY += dy;
+        LastMouseX = e.ClientX;
+        LastMouseY = e.ClientY;
+    }
+}
