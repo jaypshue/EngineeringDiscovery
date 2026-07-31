@@ -96,8 +96,15 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         if (graph != null)
                         {
                             // Use deterministic ordering by materializing into arrays
-                            outgoingCount = graph.GetDependencies(qn).ToArray().Length;
-                            incomingCount = graph.GetDependents(qn).ToArray().Length;
+                            var deps = graph.GetDependencies(qn).ToArray();
+                            var dents = graph.GetDependents(qn).ToArray();
+                            outgoingCount = deps.Length;
+                            incomingCount = dents.Length;
+
+                            // Also set the direct dependency/dependent counts for the richer metrics
+                            // DirectDependencyCount == FanOut; DirectDependentCount == FanIn
+                            // These are stored on RepositoryMetrics via RepositoryMetricsEnricher; here we only
+                            // populate TypeObservation read-only counts for legacy UI if needed.
                         }
                         else
                         {

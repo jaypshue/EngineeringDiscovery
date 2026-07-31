@@ -39,5 +39,17 @@ namespace EngineeringDiscovery.Core.Tests
             Assert.True(dict.ContainsKey(t1.QualifiedName));
             Assert.True(dict.ContainsKey(t2.QualifiedName));
         }
+
+        [Fact]
+        public void AddDependency_IsStoredAndDeduplicated()
+        {
+            var graph = new RepositoryRelationshipGraph();
+            graph.AddRelationship("A:Ns.A", "B:Ns.B", RelationshipType.Dependency);
+            graph.AddRelationship("A:Ns.A", "B:Ns.B", RelationshipType.Dependency); // duplicate
+
+            var deps = graph.GetDependencies("A:Ns.A").ToList();
+            Assert.Single(deps);
+            Assert.Contains("B:Ns.B", deps);
+        }
     }
 }

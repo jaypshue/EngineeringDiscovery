@@ -34,6 +34,15 @@ namespace EngineeringDiscovery.Core.Models
         {
         }
 
+        // Telemetry: counts of dependency candidates that were discarded because they appear to be
+        // external/framework types. Populated by GraphPopulationEnricher for diagnostic purposes.
+        public int ExternalDependencyCandidateDiscardCount { get; private set; }
+
+        public void IncrementExternalDependencyDiscardCount()
+        {
+            ExternalDependencyCandidateDiscardCount++;
+        }
+
         // Backwards-compatible accessors (inheritance-only)
         public IReadOnlyDictionary<string, string> ParentMap => _parentMap;
         public IReadOnlyDictionary<string, HashSet<string>> DerivedMap => _derivedMap;

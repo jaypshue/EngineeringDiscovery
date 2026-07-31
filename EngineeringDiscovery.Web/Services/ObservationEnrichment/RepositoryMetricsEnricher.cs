@@ -58,9 +58,13 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                             metrics.DerivedTypeCount = graph.DerivedMap.TryGetValue(qn, out var dset) ? dset.Count : 0;
                             metrics.IsRoot = !graph.TryGetParent(qn, out _);
                             metrics.IsLeaf = !(graph.DerivedMap.TryGetValue(qn, out var children) && children.Count > 0);
-                            // In this version RepositoryRelationshipGraph contains only inheritance edges. Dependency edges
-                            // are not part of the graph yet, so FanIn/FanOut remain 0. When a dependency graph is added to
-                            // RepositoryRelationshipGraph, compute FanIn/FanOut from that graph here.
+                            // Compute dependency metrics from the canonical graph.
+                            var deps = graph.GetDependencies(qn).ToArray();
+                            var dents = graph.GetDependents(qn).ToArray();
+                            metrics.FanOut = deps.Length;
+                            metrics.FanIn = dents.Length;
+                            metrics.DirectDependencyCount = deps.Length;
+                            metrics.DirectDependentCount = dents.Length;
                         }
 
                         // Inheritance depth: walk parents until none (use graph.ParentMap)

@@ -73,9 +73,17 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         // BaseType
                         if (!string.IsNullOrWhiteSpace(t.BaseType))
                         {
-                            if (TryResolveToQualified(t.BaseType, qualifiedSet, displayToQualified, out var resolved) && !string.Equals(from, resolved, StringComparison.OrdinalIgnoreCase))
+                            if (TryResolveToQualified(t.BaseType, qualifiedSet, displayToQualified, out var resolved))
                             {
-                                graph.AddRelationship(from, resolved, RelationshipType.Dependency);
+                                if (!string.Equals(from, resolved, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    graph.AddRelationship(from, resolved, RelationshipType.Dependency);
+                                }
+                            }
+                            else
+                            {
+                                // Candidate resolved to an external/framework type: record for telemetry and skip
+                                graph.IncrementExternalDependencyDiscardCount();
                             }
                         }
 
@@ -86,9 +94,19 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                             try
                             {
                                 // Return type
-                                if (!string.IsNullOrWhiteSpace(m.ReturnType) && TryResolveToQualified(m.ReturnType, qualifiedSet, displayToQualified, out var target) && !string.Equals(from, target, StringComparison.OrdinalIgnoreCase))
+                                if (!string.IsNullOrWhiteSpace(m.ReturnType))
                                 {
-                                    graph.AddRelationship(from, target, RelationshipType.Dependency);
+                                    if (TryResolveToQualified(m.ReturnType, qualifiedSet, displayToQualified, out var target))
+                                    {
+                                        if (!string.Equals(from, target, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            graph.AddRelationship(from, target, RelationshipType.Dependency);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        graph.IncrementExternalDependencyDiscardCount();
+                                    }
                                 }
 
                                 // Parameters: stored only as counts in MemberObservation; parameter types are not available here.
