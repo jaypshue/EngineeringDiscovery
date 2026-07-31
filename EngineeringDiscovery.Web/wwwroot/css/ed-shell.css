@@ -33,3 +33,16 @@ body{background:var(--bg);color:var(--text);font-family:Segoe UI,Segoe,Arial,san
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 @media (max-width:800px){.ed-nav{display:none}.ed-workspace{padding:12px}}
+
+/* Dashboard layout: ensure Roles panel and Dashboard render side-by-side */
+.dashboard-grid{display:flex;gap:12px;align-items:flex-start;min-height:0}
+.left-pane{width:250px;flex:0 0 250px;border-right:1px solid rgba(255,255,255,0.03);padding:15px;box-sizing:border-box}
+.main-pane{flex:1 1 auto;padding:15px;min-width:0}
+.cards-row{display:flex;gap:12px;align-items:flex-start}
+
+@media (max-width:800px){
+    /* small screens: hide the left roles column and stack content vertically */
+    .left-pane{display:none}
+    .dashboard-grid{flex-direction:column}
+    .main-pane{padding:12px}
+}

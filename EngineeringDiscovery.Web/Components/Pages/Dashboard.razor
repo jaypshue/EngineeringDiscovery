@@ -3,34 +3,50 @@
 <PageTitle>Engineering Discovery</PageTitle>
 
 @using EngineeringDiscovery.Core.Domain.Models
+@using EngineeringDiscovery.Core.Domain.Investigation
 
-<div style="display:flex;">
-
-    <div style="width:250px; border-right:1px solid lightgray; padding:15px;">
-
+<div class="dashboard-grid">
+    <aside class="left-pane">
         <RoleNavigation @bind-ActiveRole="SelectedRole" />
+    </aside>
 
-    </div>
-
-    <div style="flex:1; padding:15px;">
-
+    <main class="main-pane">
         <h1>Engineering Discovery</h1>
 
-        <div style="display:flex; gap:12px;">
-            <div style="flex:1;">
-                <WorkspaceHost Role="SelectedRole" />
-            </div>
+        <SectionHeader Title="Repository Summary" Subtitle="High level repository facts" />
+        <div class="cards-row">
+            <RepositoryCard Investigation="SampleInvestigation" />
+            <StatusCard Statuses="PipelineStatuses" />
         </div>
 
-    </div>
-
+        <SectionHeader Title="Current Investigation" Subtitle="Investigation metadata and status" />
+        <div class="cards-row">
+            <div style="flex:1">
+                <WorkspaceHost Role="SelectedRole" />
+            </div>
+            <ActionCard Title="Next Recommended Action">
+                <p>
+                    Roadmap generation will appear here. EngineeringDiscovery will recommend the next engineering
+                    milestone after repository analysis.
+                </p>
+            </ActionCard>
+        </div>
+    </main>
 </div>
-
-<hr />
-
-<p>Status: Ready</p>
 
 @code {
     private EngineeringRole SelectedRole { get; set; } = EngineeringRole.Architect;
     private string? ViewModelProject { get; set; } = "(none)";
+
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation { get; set; }
+
+    private List<(string Name, bool IsComplete)> PipelineStatuses => new()
+    {
+        ("Repository Loaded", !string.IsNullOrWhiteSpace(SampleInvestigation?.RepositoryPath)),
+        ("Engineering Model Built", SampleInvestigation != null),
+        ("Relationship Graph Built", SampleInvestigation?.RelationshipGraph != null),
+        ("Repository Metrics Calculated", SampleInvestigation?.RepositoryMetrics != null),
+        ("Engineering Rules Evaluated", SampleInvestigation?.Artifacts?.Count > 0),
+        ("Roadmap Generated", false)
+    };
 }

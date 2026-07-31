@@ -1,0 +1,17 @@
+@namespace EngineeringDiscovery.Web.Components.Dashboard.Cards
+
+<div class="section-header">
+    <h3>@Title</h3>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <div class="section-subtitle">@Subtitle</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+}

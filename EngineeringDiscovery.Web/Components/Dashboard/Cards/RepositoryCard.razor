@@ -1,0 +1,25 @@
+@using EngineeringDiscovery.Core.Domain.Investigation
+@namespace EngineeringDiscovery.Web.Components.Dashboard.Cards
+
+<div class="card repository-card">
+    <strong>@(RepositoryName ?? "(unknown)")</strong>
+    <div class="muted">@Summary</div>
+    <ul class="repo-facts">
+        <li>Projects: @Projects</li>
+        <li>Namespaces: @Namespaces</li>
+        <li>Types: @Types</li>
+        <li>Members: @Members</li>
+    </ul>
+</div>
+
+@code {
+    [Parameter]
+    public Investigation? Investigation { get; set; }
+
+    private string? RepositoryName => Investigation?.RepositoryPath is null ? null : System.IO.Path.GetFileName(Investigation.RepositoryPath);
+    private string Summary => "Engineering model summary";
+    private int Projects => Investigation?.ProjectObservation is null ? 0 : 1;
+    private int Namespaces => Investigation?.NamespaceObservations?.Count ?? 0;
+    private int Types => Investigation?.TypeObservations?.Count ?? 0;
+    private int Members => Investigation?.MemberObservations?.Count ?? 0;
+}

@@ -88,7 +88,11 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                         {
                             try
                             {
-                                var proj = workspace.OpenProjectAsync(csprojPath).GetAwaiter().GetResult();
+                                // Avoid opening the same project twice — MSBuildWorkspace will include opened projects in CurrentSolution.
+                                var existing = workspace.CurrentSolution.Projects.FirstOrDefault(p =>
+                                    string.Equals(p.FilePath, csprojPath, StringComparison.OrdinalIgnoreCase));
+
+                                var proj = existing ?? workspace.OpenProjectAsync(csprojPath).GetAwaiter().GetResult();
                                 var compilation = proj.GetCompilationAsync().GetAwaiter().GetResult();
                                 if (compilation == null) continue;
                                 var ctx = CreateContextFromCompilation(proj.Name ?? string.Empty, proj.FilePath, compilation);
@@ -97,6 +101,12 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                             catch (Microsoft.Build.Exceptions.InvalidProjectFileException ex)
                             {
                                 try { Log(repositoryRoot, $"Invalid project file '{csprojPath}': {ex.Message}"); } catch { }
+                            }
+                            catch (ArgumentException aex)
+                            {
+                                // MSBuildWorkspace may throw when a project is already part of the workspace; skip duplicates.
+                                try { Log(repositoryRoot, $"Skipped duplicate project '{csprojPath}': {aex.Message}"); } catch { }
+                                continue;
                             }
                             catch (Exception ex)
                             {

@@ -1,0 +1,15 @@
+@namespace EngineeringDiscovery.Web.Components.Dashboard.Cards
+
+<div class="card status-card">
+    <ul class="status-list">
+        @foreach (var s in Statuses)
+        {
+            <li class="status-item">@((s.IsComplete) ? "✓" : "○") @s.Name</li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter]
+    public List<(string Name, bool IsComplete)> Statuses { get; set; } = new();
+}
