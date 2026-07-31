@@ -24,6 +24,8 @@ namespace EngineeringDiscovery.Web.Services
 
             // Collect public methods per type so rules can analyze controllers later
             var typePublicMethods = new Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.OrdinalIgnoreCase);
+            // Map method key "{project}||{type}||{method}" -> list with single string representing approximate line count
+            var methodLineCounts = new Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var proj in context.DiscoveredProjects)
             {
@@ -129,6 +131,19 @@ namespace EngineeringDiscovery.Web.Services
                                             }
                                         }
                                         catch { }
+
+                                        // Approximate method length by extracting its balanced block and counting lines
+                                        try
+                                        {
+                                            var methodBlock = ExtractBalancedBlock(typeBody, mm.Index);
+                                            if (!string.IsNullOrWhiteSpace(methodBlock))
+                                            {
+                                                var approxLines = methodBlock.Replace("\r", string.Empty).Split('\n').Length;
+                                                var mkey = $"{name}||{typeName}||{methodName}";
+                                                methodLineCounts[mkey] = new System.Collections.Generic.List<string> { approxLines.ToString() };
+                                            }
+                                        }
+                                        catch { }
                                     }
 
                                     // Properties
@@ -193,6 +208,15 @@ namespace EngineeringDiscovery.Web.Services
                 }
                 catch { }
             }
+
+            // Evaluate LongMethodRule using collected approximate method line counts
+            try
+            {
+                var longRule = new LongMethodRule();
+                var longArtifacts = longRule.Evaluate(_investigation, methodLineCounts);
+                foreach (var a in longArtifacts) _investigation.Artifacts.Add(a);
+            }
+            catch { }
         }
     }
 }

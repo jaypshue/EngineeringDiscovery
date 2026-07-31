@@ -18,7 +18,7 @@ namespace EngineeringDiscovery.Web.Services
                     && referencedLayer.IndexOf("infrastructure", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     var title = "Presentation layer depends on Infrastructure";
-                    var description = $"Project: {investigation?.RepositoryPath ?? "<unknown>"}\n\n{relationshipDescription}";
+                    var description = relationshipDescription ?? $"{sourceLayer} depends on {referencedLayer}.";
                     results.Add(new InvestigationArtifact(Guid.NewGuid(), title, description));
                 }
             }
