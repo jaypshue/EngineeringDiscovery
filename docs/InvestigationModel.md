@@ -331,6 +331,10 @@ Examples include:
 
 Every artifact contributes to the evolving engineering understanding captured by the Investigation.
 
+## Observation Enrichment Principle
+
+An observation is enriched only when a downstream capability requires information that cannot be obtained efficiently from the existing observation model.
+
 ### Analysis
 
 - How do the components depend upon one another?
