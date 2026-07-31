@@ -29,35 +29,35 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                     {
                         foreach (var t in c.Types)
                         {
-                            try
+                        try
+                        {
+                            var typeObs = new EngineeringDiscovery.Core.Models.TypeObservation
                             {
-                                var typeObs = new EngineeringDiscovery.Core.Models.TypeObservation
-                                {
-                                    Project = t.ProjectName,
-                                    Namespace = t.Namespace ?? string.Empty,
-                                    TypeName = t.TypeName,
-                                    QualifiedName = t.QualifiedName,
-                                    Kind = MapKind(t.Kind),
-                                    Accessibility = t.Accessibility ?? string.Empty,
-                                    IsAbstract = t.IsAbstract,
-                                    IsStatic = t.IsStatic,
-                                    IsPartial = t.IsPartial,
-                                    IsGeneric = t.IsGeneric,
-                                    GenericParameterCount = t.GenericParameterCount,
-                                    BaseType = t.BaseType,
-                                    ImplementedInterfaceCount = 0,
-                                    MethodCount = t.MethodCount,
-                                    ConstructorCount = t.ConstructorCount,
-                                    PropertyCount = t.PropertyCount,
-                                    FieldCount = t.FieldCount,
-                                    EventCount = t.EventCount,
-                                    PublicMemberCount = 0,
-                                    PrivateMemberCount = 0,
-                                    MemberCount = t.MethodCount + t.PropertyCount + t.FieldCount + t.EventCount + t.ConstructorCount
-                                };
+                                Project = c.ProjectName,
+                                Namespace = t.Namespace ?? string.Empty,
+                                TypeName = t.TypeName,
+                                QualifiedName = t.QualifiedName,
+                                Kind = MapKind(t.Kind),
+                                Accessibility = t.Accessibility ?? string.Empty,
+                                IsAbstract = t.IsAbstract,
+                                IsStatic = t.IsStatic,
+                                IsPartial = false, // language-specific concept removed from contract; default conservative value
+                                IsGeneric = t.IsGeneric,
+                                GenericParameterCount = t.GenericParameterCount,
+                                BaseType = t.BaseType,
+                                ImplementedInterfaceCount = 0,
+                                MethodCount = t.MethodCount,
+                                ConstructorCount = t.ConstructorCount,
+                                PropertyCount = t.PropertyCount,
+                                FieldCount = t.FieldCount,
+                                EventCount = t.EventCount,
+                                PublicMemberCount = 0,
+                                PrivateMemberCount = 0,
+                                MemberCount = t.MethodCount + t.PropertyCount + t.FieldCount + t.EventCount + t.ConstructorCount
+                            };
 
-                                try { context.TypeObservations.Add(typeObs); } catch { }
-                            }
+                            try { context.TypeObservations.Add(typeObs); } catch { }
+                        }
                             catch { }
                         }
                     }

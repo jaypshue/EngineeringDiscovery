@@ -95,3 +95,8 @@ Replace namespace-prefix framework detection with a richer reference/classificat
 - Options pattern.
 
 
+### ED-171A
+Move TypeDescriptor into EngineeringDiscovery.Core.
+
+### ED-172
+Repository Symbol Vocabulary

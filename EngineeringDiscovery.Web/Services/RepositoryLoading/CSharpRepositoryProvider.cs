@@ -120,7 +120,6 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 
                             var td = new TypeDescriptor
                             {
-                                ProjectName = projectName ?? string.Empty,
                                 Namespace = ns,
                                 TypeName = typeName,
                                 QualifiedName = qn,
@@ -128,7 +127,6 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 Accessibility = symbol.DeclaredAccessibility.ToString(),
                                 IsAbstract = symbol.IsAbstract,
                                 IsStatic = symbol.IsStatic,
-                                IsPartial = symbol.DeclaringSyntaxReferences.Length > 1,
                                 IsGeneric = symbol.IsGenericType,
                                 GenericParameterCount = symbol.TypeParameters.Length,
                                 BaseType = symbol.BaseType?.ToDisplayString(),
