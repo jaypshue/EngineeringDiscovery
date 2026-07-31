@@ -70,5 +70,14 @@ namespace EngineeringDiscovery.Core.Models
         public bool IsFrameworkType { get; set; }
 
         public bool IsApplicationType { get; set; }
+
+        // Dependency metadata (populated by enrichment passes)
+        public int IncomingDependencyCount { get; set; }
+
+        public int OutgoingDependencyCount { get; set; }
+
+        public bool IsDependencyHub { get; set; }
+
+        public bool IsDependencyLeaf { get; set; }
     }
 }

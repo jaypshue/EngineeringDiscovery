@@ -11,6 +11,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             yield return new NamespaceMetricsEnrichmentPass();
             yield return new ProjectMetricsEnrichmentPass();
             yield return new TypeRelationshipEnricher();
+            yield return new TypeDependencyEnricher();
         }
     }
 }
