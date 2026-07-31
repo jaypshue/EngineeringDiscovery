@@ -27,6 +27,9 @@ namespace EngineeringDiscovery.Web.Services
         // Structured collection of type observations populated during TypeDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.TypeObservation> TypeObservations { get; } = new();
 
+        // Compilation contexts produced by repository providers (language-agnostic)
+        public List<EngineeringDiscovery.Web.Services.RepositoryLoading.CompilationContext> CompilationContexts { get; } = new();
+
         // Structured collection of namespace observations populated during NamespaceDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.NamespaceObservation> NamespaceObservations { get; } = new();
 

@@ -147,12 +147,19 @@ namespace EngineeringDiscovery.Web.Services
             // Register and execute pipeline steps: classification, reference discovery, discovery steps and analysis
             try
             {
+                var loader = new RepositoryLoading.RepositoryLoader();
+                try
+                {
+                    var repoRoot = effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? string.Empty;
+                    var contexts = loader.Load(repoRoot);
+                    foreach (var c in contexts) try { context.CompilationContexts.Add(c); } catch { }
+                }
+                catch { }
+
                 var pipeline = new InvestigationPipeline()
                     .Add(new ProjectClassificationStep(inv))
                     .Add(new ProjectReferenceDiscoveryStep(inv))
-                    .Add(new NamespaceDiscoveryStep(inv))
-                    .Add(new TypeDiscoveryStep(inv))
-                    .Add(new MemberDiscoveryStep(inv))
+                    .Add(new Discovery.CompilationContextDiscoveryStep(inv))
                     .Add(new ObservationEnrichment.ObservationEnrichmentStep(inv))
                     .Add(new TypeAnalysisStep(inv))
                     .Add(new MemberAnalysisStep(inv))
