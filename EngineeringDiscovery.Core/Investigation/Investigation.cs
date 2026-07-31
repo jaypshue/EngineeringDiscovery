@@ -74,6 +74,17 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private EngineeringDiscovery.Core.Models.ProjectObservation? _projectObservation;
         public EngineeringDiscovery.Core.Models.ProjectObservation? ProjectObservation => _projectObservation;
 
+        // Repository-wide relationship graph populated during enrichment
+        private EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph? _relationshipGraph;
+        public EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph? RelationshipGraph => _relationshipGraph;
+
+        public void SetRelationshipGraph(EngineeringDiscovery.Core.Models.RepositoryRelationshipGraph graph)
+        {
+            if (graph is null) throw new ArgumentNullException(nameof(graph));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("RelationshipGraph can only be set while the investigation is Started.");
+            _relationshipGraph = graph;
+        }
+
         // Set or update the ProjectObservation. Enrichment passes should call this to publish derived metrics.
         public void SetProjectObservation(EngineeringDiscovery.Core.Models.ProjectObservation projectObservation)
         {

@@ -21,6 +21,16 @@ namespace EngineeringDiscovery.Core.Models
 
         public string TypeName { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Repository-unique canonical identity for the observed type.
+        /// Populated during discovery. Examples:
+        /// - ProjectName:Namespace.TypeName
+        /// - Namespace.TypeName
+        /// This value is used by repository-wide graphs and enrichers when
+        /// a unique identifier is required. Do not use TypeName for uniqueness.
+        /// </summary>
+        public string? QualifiedName { get; set; }
+
         public TypeKind Kind { get; set; } = TypeKind.Unknown;
 
         public string Accessibility { get; set; } = string.Empty; // e.g., public, internal

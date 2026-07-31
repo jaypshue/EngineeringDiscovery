@@ -113,11 +113,24 @@ namespace EngineeringDiscovery.Web.Services
                                             case "delegate": kindValue = EngineeringDiscovery.Core.Models.TypeKind.Delegate; break;
                                         }
 
+                                        // Compute repository-unique QualifiedName for the discovered type.
+                                        // Preferred format: ProjectName:Namespace.TypeName
+                                        // Fallbacks: Namespace.TypeName or FilePath:TypeName
+                                        string qualifiedName;
+                                        if (!string.IsNullOrWhiteSpace(name))
+                                        {
+                                            if (!string.IsNullOrWhiteSpace(fileNs)) qualifiedName = $"{name}:{fileNs}.{typeName}";
+                                            else qualifiedName = $"{name}:{typeName}";
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(fileNs)) qualifiedName = $"{fileNs}.{typeName}";
+                                        else qualifiedName = $"{csf}:{typeName}";
+
                                         var typeObs = new EngineeringDiscovery.Core.Models.TypeObservation
                                         {
                                             Project = name,
                                             Namespace = fileNs ?? string.Empty,
                                             TypeName = typeName,
+                                            QualifiedName = qualifiedName,
                                             Kind = kindValue,
                                             Accessibility = string.Empty,
                                             IsAbstract = declSnippet.IndexOf("abstract", StringComparison.OrdinalIgnoreCase) >= 0,
