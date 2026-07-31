@@ -1,6 +1,7 @@
 using System;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using EngineeringDiscovery.Core.Models;
+using EngineeringDiscovery.Web.Services.RepositoryLoading;
 using System.Linq;
 
 namespace EngineeringDiscovery.Web.Services.Discovery
@@ -38,7 +39,7 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                                 TypeName = t.TypeName,
                                 QualifiedName = t.QualifiedName,
                                 Kind = MapKind(t.Kind),
-                                Accessibility = t.Accessibility ?? string.Empty,
+                                Accessibility = MapAccessibility(t.Accessibility),
                                 IsAbstract = t.IsAbstract,
                                 IsStatic = t.IsStatic,
                                 IsPartial = false, // language-specific concept removed from contract; default conservative value
@@ -67,14 +68,30 @@ namespace EngineeringDiscovery.Web.Services.Discovery
             catch { }
         }
 
-        private EngineeringDiscovery.Core.Models.TypeKind MapKind(string kind)
+        private EngineeringDiscovery.Core.Models.TypeKind MapKind(EngineeringTypeKind kind)
         {
-            if (string.Equals(kind, "Interface", StringComparison.OrdinalIgnoreCase)) return EngineeringDiscovery.Core.Models.TypeKind.Interface;
-            if (string.Equals(kind, "Struct", StringComparison.OrdinalIgnoreCase)) return EngineeringDiscovery.Core.Models.TypeKind.Struct;
-            if (string.Equals(kind, "Enum", StringComparison.OrdinalIgnoreCase)) return EngineeringDiscovery.Core.Models.TypeKind.Enum;
-            if (string.Equals(kind, "Delegate", StringComparison.OrdinalIgnoreCase)) return EngineeringDiscovery.Core.Models.TypeKind.Delegate;
-            if (string.Equals(kind, "Record", StringComparison.OrdinalIgnoreCase)) return EngineeringDiscovery.Core.Models.TypeKind.Record;
-            return EngineeringDiscovery.Core.Models.TypeKind.Class;
+            return kind switch
+            {
+                EngineeringTypeKind.Interface => EngineeringDiscovery.Core.Models.TypeKind.Interface,
+                EngineeringTypeKind.Struct => EngineeringDiscovery.Core.Models.TypeKind.Struct,
+                EngineeringTypeKind.Enum => EngineeringDiscovery.Core.Models.TypeKind.Enum,
+                EngineeringTypeKind.Delegate => EngineeringDiscovery.Core.Models.TypeKind.Delegate,
+                EngineeringTypeKind.Record => EngineeringDiscovery.Core.Models.TypeKind.Record,
+                _ => EngineeringDiscovery.Core.Models.TypeKind.Class,
+            };
+        }
+
+        private string MapAccessibility(EngineeringAccessibility a)
+        {
+            return a switch
+            {
+                EngineeringAccessibility.Public => "Public",
+                EngineeringAccessibility.Internal => "Internal",
+                EngineeringAccessibility.Protected => "Protected",
+                EngineeringAccessibility.Private => "Private",
+                EngineeringAccessibility.Package => "Package",
+                _ => "Unknown",
+            };
         }
     }
 }

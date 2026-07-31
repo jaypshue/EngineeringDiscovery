@@ -94,6 +94,32 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
             return result;
         }
 
+        // Removed string-based mappings. Discovery expects canonical engineering enums.
+
+        private static EngineeringTypeKind MapEngineeringTypeKind(TypeKind typeKind)
+        {
+            return typeKind switch
+            {
+                TypeKind.Interface => EngineeringTypeKind.Interface,
+                TypeKind.Struct => EngineeringTypeKind.Struct,
+                TypeKind.Enum => EngineeringTypeKind.Enum,
+                TypeKind.Delegate => EngineeringTypeKind.Delegate,
+                _ => EngineeringTypeKind.Class
+            };
+        }
+
+        private static EngineeringAccessibility MapEngineeringAccessibility(Accessibility accessibility)
+        {
+            return accessibility switch
+            {
+                Accessibility.Public => EngineeringAccessibility.Public,
+                Accessibility.Internal => EngineeringAccessibility.Internal,
+                Accessibility.Protected => EngineeringAccessibility.Protected,
+                Accessibility.Private => EngineeringAccessibility.Private,
+                _ => EngineeringAccessibility.Unknown
+            };
+        }
+
         private CompilationContext CreateContextFromCompilation(string projectName, string? projectFilePath, Compilation compilation)
         {
             var ctx = new CompilationContext { ProjectName = projectName ?? string.Empty, ProjectFilePath = projectFilePath };
@@ -123,8 +149,8 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 Namespace = ns,
                                 TypeName = typeName,
                                 QualifiedName = qn,
-                                Kind = symbol.TypeKind.ToString(),
-                                Accessibility = symbol.DeclaredAccessibility.ToString(),
+                                Kind = MapEngineeringTypeKind(symbol.TypeKind),
+                                Accessibility = MapEngineeringAccessibility(symbol.DeclaredAccessibility),
                                 IsAbstract = symbol.IsAbstract,
                                 IsStatic = symbol.IsStatic,
                                 IsGeneric = symbol.IsGenericType,

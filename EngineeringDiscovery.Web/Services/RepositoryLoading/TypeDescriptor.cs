@@ -8,8 +8,8 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public string TypeName { get; set; } = string.Empty;
         public string QualifiedName { get; set; } = string.Empty; // canonical repository-unique identity
         public string? BaseType { get; set; } // display form of base type
-        public string Kind { get; set; } = "class"; // e.g., class, interface, enum, struct, delegate
-        public string Accessibility { get; set; } = string.Empty; // e.g., public, internal
+        public EngineeringTypeKind Kind { get; set; } = EngineeringTypeKind.Class;
+        public EngineeringAccessibility Accessibility { get; set; } = EngineeringAccessibility.Unknown;
         public bool IsAbstract { get; set; }
         public bool IsStatic { get; set; }
         public bool IsGeneric { get; set; }
