@@ -141,6 +141,34 @@ namespace EngineeringDiscovery.Web.Services
                                                 var approxLines = methodBlock.Replace("\r", string.Empty).Split('\n').Length;
                                                 var mkey = $"{name}||{typeName}||{methodName}";
                                                 methodLineCounts[mkey] = new System.Collections.Generic.List<string> { approxLines.ToString() };
+
+                                                // Also add a structured MemberObservation for future rules
+                                                try
+                                                {
+                                                    var visibility = EngineeringDiscovery.Core.Models.Visibility.Unknown;
+                                                    if (string.Equals(access, "public", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Public;
+                                                    else if (string.Equals(access, "protected", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Protected;
+                                                    else if (string.Equals(access, "internal", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Internal;
+                                                    else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Private;
+
+                                                    var memberObs = new EngineeringDiscovery.Core.Models.MemberObservation
+                                                    {
+                                                        Project = name,
+                                                        Namespace = string.IsNullOrWhiteSpace(fileNs) ? null : fileNs,
+                                                        Type = typeName,
+                                                        MemberName = methodName,
+                                                        Visibility = visibility,
+                                                        IsStatic = mm.Value.IndexOf("static", StringComparison.OrdinalIgnoreCase) >= 0,
+                                                        IsAsync = mm.Value.IndexOf("async", StringComparison.OrdinalIgnoreCase) >= 0,
+                                                        ReturnType = null,
+                                                        ParameterCount = 0,
+                                                        ApproximateSourceLines = approxLines
+                                                    };
+
+                                                    try { _investigation.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Member, Project = memberObs.Project, Type = memberObs.Type, Member = memberObs.MemberName, Description = memberObs.ToString() }); } catch { }
+                                                    try { context.MemberObservations.Add(memberObs); } catch { }
+                                                }
+                                                catch { }
                                             }
                                         }
                                         catch { }

@@ -21,6 +21,9 @@ namespace EngineeringDiscovery.Web.Services
 
         public List<(string Name, string Path)> DiscoveredProjects { get; }
 
+        // Structured collection of member observations populated during MemberDiscoveryStep
+        public List<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations { get; } = new();
+
         public List<string> Diagnostics { get; }
 
         public string[] Exclusions { get; }
