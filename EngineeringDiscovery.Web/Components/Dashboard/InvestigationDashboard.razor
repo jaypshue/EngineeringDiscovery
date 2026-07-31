@@ -107,6 +107,56 @@
                             <dd>@item.Value</dd>
                         }
                     </dl>
+                    <h6>Investigation Summary</h6>
+                    @if (Investigation is not null)
+                    {
+                        var invSummary = EngineeringDiscovery.Core.Domain.Investigation.InvestigationSummary.CreateFrom(Investigation);
+                        <dl>
+                            <dt>Repository</dt>
+                            <dd>@invSummary.RepositoryName</dd>
+                            <dt>Projects</dt>
+                            <dd>@invSummary.ProjectCount</dd>
+                            <dt>Namespaces</dt>
+                            <dd>@invSummary.NamespaceCount</dd>
+                            <dt>Types</dt>
+                            <dd>@invSummary.TypeCount</dd>
+                            <dt>Members</dt>
+                            <dd>@invSummary.MemberCount</dd>
+                        </dl>
+
+                        <h6>Engineering Summary</h6>
+                        <dl>
+                            <dt>Total Artifacts</dt>
+                            <dd>@invSummary.TotalArtifacts</dd>
+                            <dt>Layer Violations</dt>
+                            <dd>@invSummary.LayerViolations</dd>
+                            <dt>Circular Project References</dt>
+                            <dd>@invSummary.CircularProjectReferences</dd>
+                            <dt>Empty Controllers</dt>
+                            <dd>@invSummary.EmptyControllers</dd>
+                            <dt>Long Methods</dt>
+                            <dd>@invSummary.LongMethods</dd>
+                        </dl>
+                    }
+
+                    <h6>Engineering Artifacts</h6>
+                    @if (Investigation?.Artifacts == null || !Investigation.Artifacts.Any())
+                    {
+                        <p class="muted">No engineering artifacts produced.</p>
+                    }
+                    else
+                    {
+                        <ul>
+                            @foreach (var a in Investigation.Artifacts.OrderByDescending(x => x.CreatedOn))
+                            {
+                                <li>
+                                    <strong>@a.Title</strong>
+                                    <div>@a.Description</div>
+                                    <small>@a.CreatedOn.ToLocalTime().ToString("s")</small>
+                                </li>
+                            }
+                        </ul>
+                    }
                     @if (SelectedObservations?.Any() ?? false)
                     {
                         <h6>Observations</h6>

@@ -32,18 +32,41 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
             ViewModel = new EngineeringDiscovery.Web.Components.Dashboard.ViewModels.InvestigationDashboardViewModel();
             if (Investigation == null) return;
 
-            ViewModel.Summary = new EngineeringDiscovery.Web.Components.Dashboard.ViewModels.SummaryCard
+            // Build summary from InvestigationSummary to avoid duplicating logic
+            try
             {
-                Repository = Investigation.RepositoryPath,
-                Solution = Investigation.Target,
-                Target = Investigation.Target,
-                ProjectCount = 0,
-                NamespaceCount = 0,
-                TypeCount = 0,
-                MemberCount = 0,
-                TechnologyCount = 0,
-                FindingCount = Investigation.Findings?.Count ?? 0
-            };
+                var summary = EngineeringDiscovery.Core.Domain.Investigation.InvestigationSummary.CreateFrom(Investigation);
+                ViewModel.Summary = new EngineeringDiscovery.Web.Components.Dashboard.ViewModels.SummaryCard
+                {
+                    Repository = summary.RepositoryName,
+                    Solution = Investigation.Target,
+                    Target = Investigation.Target,
+                    ProjectCount = summary.ProjectCount,
+                    NamespaceCount = summary.NamespaceCount,
+                    TypeCount = summary.TypeCount,
+                    MemberCount = summary.MemberCount,
+                    TechnologyCount = 0,
+                    FindingCount = Investigation.Findings?.Count ?? 0
+                };
+
+                // Add engineering summary values to ViewModel via a simple mapping in the SummaryCard.Description (lightweight)
+                // The UI will render artifact counts in an artifacts panel below.
+            }
+            catch
+            {
+                ViewModel.Summary = new EngineeringDiscovery.Web.Components.Dashboard.ViewModels.SummaryCard
+                {
+                    Repository = Investigation.RepositoryPath,
+                    Solution = Investigation.Target,
+                    Target = Investigation.Target,
+                    ProjectCount = 0,
+                    NamespaceCount = 0,
+                    TypeCount = 0,
+                    MemberCount = 0,
+                    TechnologyCount = 0,
+                    FindingCount = Investigation.Findings?.Count ?? 0
+                };
+            }
 
             var projects = new Dictionary<string, ProjectNodeViewModel>(StringComparer.OrdinalIgnoreCase);
             var dependencies = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
