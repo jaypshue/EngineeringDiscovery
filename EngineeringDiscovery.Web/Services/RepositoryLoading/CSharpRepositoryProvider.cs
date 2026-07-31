@@ -155,6 +155,13 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 IsStatic = symbol.IsStatic,
                                 IsGeneric = symbol.IsGenericType,
                                 GenericParameterCount = symbol.TypeParameters.Length,
+                                GenericConstraintCount = symbol.TypeParameters.Sum(p => p.ConstraintTypes.Length),
+                                IsSealed = symbol.IsSealed,
+                                ImplementedInterfaceCount = symbol.Interfaces.Length,
+                                AttributeCount = symbol.GetAttributes().Length,
+                                NestedTypeCount = symbol.GetTypeMembers().Length,
+                                SourceLineCount = GetSourceLineCount(tree, decl),
+                                DependencyCount = 0, // heuristic: not computed here
                                 BaseType = symbol.BaseType?.ToDisplayString(),
                                 MethodCount = symbol.GetMembers().OfType<IMethodSymbol>().Count(m => m.MethodKind == MethodKind.Ordinary),
                                 ConstructorCount = symbol.Constructors.Length,
@@ -173,6 +180,21 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
             }
 
             return ctx;
+        }
+
+        private static int GetSourceLineCount(Microsoft.CodeAnalysis.SyntaxTree tree, TypeDeclarationSyntax decl)
+        {
+            try
+            {
+                var span = decl.Span;
+                var startLine = tree.GetLineSpan(span).StartLinePosition.Line;
+                var endLine = tree.GetLineSpan(span).EndLinePosition.Line;
+                return Math.Max(0, endLine - startLine + 1);
+            }
+            catch
+            {
+                return 0;
+            }
         }
     }
 }

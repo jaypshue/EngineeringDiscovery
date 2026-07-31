@@ -14,6 +14,13 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public bool IsStatic { get; set; }
         public bool IsGeneric { get; set; }
         public int GenericParameterCount { get; set; }
+        public int GenericConstraintCount { get; set; }
+        public bool IsSealed { get; set; }
+        public int ImplementedInterfaceCount { get; set; }
+        public int AttributeCount { get; set; }
+        public int NestedTypeCount { get; set; }
+        public int SourceLineCount { get; set; }
+        public int DependencyCount { get; set; } // provider-known only heuristic
         public int MethodCount { get; set; }
         public int ConstructorCount { get; set; }
         public int PropertyCount { get; set; }
