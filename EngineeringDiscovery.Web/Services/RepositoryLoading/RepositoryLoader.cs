@@ -14,7 +14,8 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
             // Register available providers here. Additional providers can be added in future.
             _providers = new List<IRepositoryProvider>
             {
-                new CSharpRepositoryProvider()
+                new CSharpRepositoryProvider(),
+                new JavaRepositoryProvider()
             };
         }
 

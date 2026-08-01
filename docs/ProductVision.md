@@ -20,6 +20,15 @@ The objective is to help engineers make consistently better engineering decision
 
 ---
 
+# Engineering Discovery Product Principle #1
+
+Engineers don't need help reading code.
+
+They need help understanding systems.
+
+---
+
+
 # The Problem
 
 Software projects rarely fail because developers cannot write code.
