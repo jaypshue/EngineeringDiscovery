@@ -91,11 +91,12 @@ namespace EngineeringDiscovery.Web.Services
                                     }
 
                                     // Methods
-                                    var methodRegexLocal = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|async\\s+|sealed\\s+|new\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
+                                    var methodRegexLocal = new Regex("(^|\\s)(public|private|protected|internal)\\s+(static\\s+|virtual\\s+|override\\s+|async\\s+|sealed\\s+|new\\s+|partial\\s+)*([A-Za-z_][A-Za-z0-9_<>,\\[\\]\\.\\?]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(", RegexOptions.Compiled | RegexOptions.Multiline);
                                     foreach (Match mm in methodRegexLocal.Matches(typeBody))
                                     {
                                         var access = mm.Groups[2].Value.Trim();
-                                        var methodName = mm.Groups[4].Value.Trim();
+                                        var returnTypeDisplay = mm.Groups[4].Value.Trim();
+                                        var methodName = mm.Groups[5].Value.Trim();
                                         if (string.IsNullOrWhiteSpace(methodName)) continue;
                                         if (string.Equals(methodName, typeName, StringComparison.OrdinalIgnoreCase)) continue;
                                         var desc = $"Project '{name}' defines method '{methodName}' in type '{typeName}'.";
@@ -129,7 +130,7 @@ namespace EngineeringDiscovery.Web.Services
                                                     else if (string.Equals(access, "internal", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Internal;
                                                     else if (string.Equals(access, "private", StringComparison.OrdinalIgnoreCase)) visibility = EngineeringDiscovery.Core.Models.Visibility.Private;
 
-                                                    var memberObs = new EngineeringDiscovery.Core.Models.MemberObservation
+                                                    var memberObs = new EngineeringDiscovery.Core.Models.MemberObservation()
                                                     {
                                                         Project = name,
                                                         Namespace = string.IsNullOrWhiteSpace(fileNs) ? null : fileNs,
@@ -139,9 +140,129 @@ namespace EngineeringDiscovery.Web.Services
                                                         IsStatic = mm.Value.IndexOf("static", StringComparison.OrdinalIgnoreCase) >= 0,
                                                         IsAsync = mm.Value.IndexOf("async", StringComparison.OrdinalIgnoreCase) >= 0,
                                                         ReturnType = null,
+                                                        ReturnTypeReference = null,
                                                         ParameterCount = 0,
+                                                        ParameterTypeReferences = new List<EngineeringDiscovery.Core.Models.TypeReference>(),
                                                         ApproximateSourceLines = approxLines
                                                     };
+
+                                                    try
+                                                    {
+                                                        // Attempt to build a compilation-scoped display->qualified map for the project so
+                                                        // we can produce canonical TypeReference instances for member parameter and return types.
+                                                        var localDisplayToQualified = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                                                        try
+                                                        {
+                                                            var comp = context.CompilationContexts?.FirstOrDefault(cc => string.Equals(cc.ProjectName, name, StringComparison.OrdinalIgnoreCase));
+                                                            if (comp != null)
+                                                            {
+                                                                foreach (var tt in comp.Types)
+                                                                {
+                                                                    try
+                                                                    {
+                                                                        var q = tt.QualifiedName ?? string.Empty;
+                                                                        if (string.IsNullOrWhiteSpace(q)) continue;
+                                                                        if (!string.IsNullOrWhiteSpace(tt.TypeName))
+                                                                        {
+                                                                            if (!localDisplayToQualified.ContainsKey(tt.TypeName)) localDisplayToQualified[tt.TypeName] = q;
+                                                                            var nsKey = $"{tt.Namespace}.{tt.TypeName}";
+                                                                            if (!localDisplayToQualified.ContainsKey(nsKey)) localDisplayToQualified[nsKey] = q;
+                                                                        }
+                                                                    }
+                                                                    catch { }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch { }
+
+                                                        // Determine return type and parameter types by inspecting the source text around the match
+                                                        try
+                                                        {
+                                                            // Extract parameter list text by finding matching parentheses starting at the first '(' after the match index
+                                                            int parenStart = typeBody.IndexOf('(', mm.Index - m.Index);
+                                                            if (parenStart >= 0)
+                                                            {
+                                                                int depth = 1;
+                                                                int i = parenStart + 1;
+                                                                for (; i < typeBody.Length; i++)
+                                                                {
+                                                                    var ch = typeBody[i];
+                                                                    if (ch == '(') depth++;
+                                                                    else if (ch == ')') depth--;
+                                                                    if (depth == 0) break;
+                                                                }
+
+                                                                var paramText = string.Empty;
+                                                                if (i < typeBody.Length && depth == 0)
+                                                                {
+                                                                    paramText = typeBody.Substring(parenStart + 1, i - parenStart - 1);
+                                                                }
+
+                                                                var paramList = new List<string>();
+                                                                if (!string.IsNullOrWhiteSpace(paramText))
+                                                                {
+                                                                    // Split on commas not inside angle brackets
+                                                                    var current = new System.Text.StringBuilder();
+                                                                    int angle = 0;
+                                                                    foreach (var ch in paramText)
+                                                                    {
+                                                                        if (ch == '<') angle++;
+                                                                        else if (ch == '>') angle = Math.Max(0, angle - 1);
+                                                                        if (ch == ',' && angle == 0)
+                                                                        {
+                                                                            paramList.Add(current.ToString());
+                                                                            current.Clear();
+                                                                        }
+                                                                        else current.Append(ch);
+                                                                    }
+                                                                    if (current.Length > 0) paramList.Add(current.ToString());
+                                                                }
+
+                                                                foreach (var p in paramList)
+                                                                {
+                                                                    try
+                                                                    {
+                                                                        var raw = p.Trim();
+                                                                        if (string.IsNullOrWhiteSpace(raw)) continue;
+                                                                        // Remove default values
+                                                                        var eq = raw.IndexOf('=');
+                                                                        if (eq >= 0) raw = raw.Substring(0, eq).Trim();
+                                                                        // Remove parameter modifiers
+                                                                        var modifiers = new[] { "ref ", "out ", "in ", "params ", "this " };
+                                                                        foreach (var mod in modifiers) { if (raw.StartsWith(mod, StringComparison.OrdinalIgnoreCase)) { raw = raw.Substring(mod.Length).Trim(); break; } }
+                                                                        // Find last space outside angle brackets to split type from identifier
+                                                                        int lastSpace = -1; int angleDepth = 0;
+                                                                        for (int j = 0; j < raw.Length; j++)
+                                                                        {
+                                                                            var ch = raw[j];
+                                                                            if (ch == '<') angleDepth++;
+                                                                            else if (ch == '>') angleDepth = Math.Max(0, angleDepth - 1);
+                                                                            else if (ch == ' ' && angleDepth == 0) lastSpace = j;
+                                                                        }
+                                                                        var typeToken = lastSpace > 0 ? raw.Substring(0, lastSpace).Trim() : raw;
+                                                                        if (string.IsNullOrWhiteSpace(typeToken)) continue;
+                                                                        var qn = localDisplayToQualified.TryGetValue(typeToken, out var f) ? f : string.Empty;
+                                                                        var tref = new EngineeringDiscovery.Core.Models.TypeReference { DisplayName = typeToken, QualifiedName = qn ?? string.Empty, IsExternal = string.IsNullOrWhiteSpace(qn), Kind = EngineeringDiscovery.Core.Models.TypeReferenceKind.Type };
+                                                                        memberObs.ParameterTypeReferences.Add(tref);
+                                                                    }
+                                                                    catch { }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch { }
+
+                                                        try
+                                                        {
+                                                            if (!string.IsNullOrWhiteSpace(returnTypeDisplay))
+                                                            {
+                                                                memberObs.ReturnType = returnTypeDisplay;
+                                                                var qn = localDisplayToQualified.TryGetValue(returnTypeDisplay, out var f2) ? f2 : string.Empty;
+                                                                memberObs.ReturnTypeReference = new EngineeringDiscovery.Core.Models.TypeReference { DisplayName = returnTypeDisplay, QualifiedName = qn ?? string.Empty, IsExternal = string.IsNullOrWhiteSpace(qn), Kind = EngineeringDiscovery.Core.Models.TypeReferenceKind.Type };
+                                                            }
+                                                        }
+                                                        catch { }
+                                                    }
+                                                    catch { }
 
                                                     try { _investigation.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Member, Project = memberObs.Project, Type = memberObs.Type, Member = memberObs.MemberName, Description = memberObs.ToString() }); } catch { }
                                                     try { context.MemberObservations.Add(memberObs); } catch { }

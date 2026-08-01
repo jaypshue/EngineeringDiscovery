@@ -27,7 +27,14 @@ namespace EngineeringDiscovery.Core.Models
 
         public bool IsAsync { get; init; }
 
-        public string? ReturnType { get; init; }
+        // Display form of the return type (presentation compatibility)
+        public string? ReturnType { get; set; }
+
+        // Canonical reference for the return type produced by Discovery (ED-182)
+        public TypeReference? ReturnTypeReference { get; set; }
+
+        // Canonical references for parameter types produced by Discovery (ED-182)
+        public System.Collections.Generic.List<TypeReference> ParameterTypeReferences { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
         public int ParameterCount { get; init; }
 
