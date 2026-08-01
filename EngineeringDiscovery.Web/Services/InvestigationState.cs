@@ -7,6 +7,9 @@ namespace EngineeringDiscovery.Web.Services
     {
         public Investigation? Investigation { get; private set; }
 
+        // Persisted view state for the graph workspace
+        public GraphViewState? GraphViewState { get; set; }
+
         public event Action? OnChange;
 
         public void SetInvestigation(Investigation? investigation)

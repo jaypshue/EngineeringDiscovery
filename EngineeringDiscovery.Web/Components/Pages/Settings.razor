@@ -1,0 +1,12 @@
+@page "/settings"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+<PageTitle>Settings</PageTitle>
+
+<h2>Settings</h2>
+<p>Application settings placeholder.</p>
+
+@code {
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+}

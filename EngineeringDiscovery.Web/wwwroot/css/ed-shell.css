@@ -40,6 +40,13 @@ body{background:var(--bg);color:var(--text);font-family:Segoe UI,Segoe,Arial,san
 .main-pane{flex:1 1 auto;padding:15px;min-width:0}
 .cards-row{display:flex;gap:12px;align-items:flex-start}
 
+/* Graph workspace layout and sizing */
+.graph-workspace{display:flex;flex-direction:column;gap:8px;min-height:0}
+.graph-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.graph-body{display:flex;gap:12px;flex:1;min-height:0}
+.graph-container{flex:1;min-width:0;height:calc(100vh - 160px);min-height:360px;box-sizing:border-box}
+.graph-details{width:320px;flex-shrink:0}
+
 @media (max-width:800px){
     /* small screens: hide the left roles column and stack content vertically */
     .left-pane{display:none}

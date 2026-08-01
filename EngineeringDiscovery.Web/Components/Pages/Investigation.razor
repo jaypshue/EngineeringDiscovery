@@ -1,0 +1,13 @@
+@page "/investigation"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+<PageTitle>Investigation</PageTitle>
+
+<h2>Investigation</h2>
+<p>Investigation workspace placeholder — opens WorkspaceHost.</p>
+<WorkspaceHost Investigation="InvestigationState.Investigation" />
+
+@code {
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+}

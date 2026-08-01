@@ -300,6 +300,7 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             catch { }
 
                             try { context.TypeObservations.Add(typeObs); } catch { }
+                            try { _inv.AddTypeObservation(typeObs); } catch { }
                         }
                             catch { }
                         }

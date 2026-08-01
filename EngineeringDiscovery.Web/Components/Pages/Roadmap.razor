@@ -1,0 +1,12 @@
+@page "/roadmap"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+<PageTitle>Roadmap</PageTitle>
+
+<h2>Roadmap</h2>
+<p>Roadmap view placeholder.</p>
+
+@code {
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+}

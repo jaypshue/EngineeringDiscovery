@@ -1,0 +1,12 @@
+@page "/metrics"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+<PageTitle>Metrics</PageTitle>
+
+<h2>Repository Metrics</h2>
+<p>Metrics view placeholder.</p>
+
+@code {
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+}

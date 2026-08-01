@@ -1,0 +1,12 @@
+@page "/findings"
+@using EngineeringDiscovery.Core.Domain.Investigation
+@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+
+<PageTitle>Findings</PageTitle>
+
+<h2>Findings</h2>
+<p>Findings view placeholder.</p>
+
+@code {
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+}

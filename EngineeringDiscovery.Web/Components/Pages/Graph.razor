@@ -6,12 +6,12 @@
 
 <h2>Engineering Graph</h2>
 
-<GraphWorkspace Investigation="SampleInvestigation" />
-
 @inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
 
+<GraphWorkspace Investigation="SampleInvestigation" />
+
 @code {
-    private Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
 
     protected override void OnInitialized()
     {

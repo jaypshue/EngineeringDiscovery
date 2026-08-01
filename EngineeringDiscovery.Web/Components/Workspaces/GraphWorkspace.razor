@@ -2,44 +2,44 @@
 @using EngineeringDiscovery.Core.Models
 @using Microsoft.AspNetCore.Components.Web
 @namespace EngineeringDiscovery.Web.Components.Workspaces
+@using System.Text.Json
+@using System.Linq
+@implements System.IAsyncDisposable
 
 <section class="graph-workspace">
-    <div class="graph-container" @ondragstart:preventDefault>
-        <svg @ref="SvgRef" class="graph-svg" @onwheel="OnWheel" @onmousedown="OnMouseDown" @onmouseup="OnMouseUp" @onmousemove="OnMouseMove" viewBox="@ViewBoxAttr">
-            <g transform="@($"translate({PanX},{PanY}) scale({Scale})")">
-                @foreach (var node in Nodes)
-                {
-                    <g class="@($"graph-node {(SelectedNode == node.Id ? "selected" : "")}")" transform="@($"translate({node.X},{node.Y})")" @onclick="() => OnNodeClick(node.Id)">
-                        <circle r="20" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.5"></circle>
-                        <text x="0" y="5" text-anchor="middle" fill="var(--text)" font-size="10">@node.Label</text>
-                    </g>
-                }
-
-                @foreach (var edge in Edges)
-                {
-                    var cls = edge.Type == RelationshipType.Inheritance ? "edge-inheritance" : "edge-dependency";
-                    var highlighted = SelectedNode != null && (edge.Source == SelectedNode || edge.Target == SelectedNode);
-                    <line x1="@edge.SourceX" y1="@edge.SourceY" x2="@edge.TargetX" y2="@edge.TargetY" class="graph-edge @(highlighted ? "highlighted" : "") @(cls)" stroke-width="1.2" stroke="rgba(255,255,255,0.25)" />
-                }
-            </g>
-        </svg>
+    <div class="graph-toolbar">
+        <input placeholder="Search by qualified name" @bind="SearchText" />
+        <button class="btn" @onclick="PerformSearch">Search</button>
+        <button class="btn" @onclick="Fit">Fit</button>
+        <button class="btn" @onclick="Reset">Reset</button>
+        <button class="btn" @onclick="ZoomIn">Zoom +</button>
+        <button class="btn" @onclick="ZoomOut">Zoom -</button>
+        <label><input type="checkbox" @bind="FilterInheritance" /> Inheritance</label>
+        <label><input type="checkbox" @bind="FilterImplementation" /> Implementation</label>
+        <label><input type="checkbox" @bind="FilterDependency" /> Dependency</label>
     </div>
 
-    <aside class="graph-details">
-        @if (SelectedNode is null)
-        {
-            <p class="muted">Select a node to see details.</p>
-        }
-        else
-        {
-            <div>
-                <h4>@SelectedNode</h4>
-                <p>Qualified Name: @SelectedNode</p>
-                <p>Dependencies: @GetDependenciesCount(SelectedNode)</p>
-                <p>Dependents: @GetDependentsCount(SelectedNode)</p>
-            </div>
-        }
-    </aside>
+    <div class="graph-body">
+        <div class="graph-container" @ondragstart:preventDefault>
+            <div id="cy" style="width:100%; height:100%;"></div>
+        </div>
+
+        <aside class="graph-details">
+            @if (SelectedNode is null)
+            {
+                <p class="muted">Select a node to see details.</p>
+            }
+            else
+            {
+                <div>
+                    <h4>@SelectedNode</h4>
+                    <p>Qualified Name: @SelectedNode</p>
+                    <p>Dependencies: @GetDependenciesCount(SelectedNode)</p>
+                    <p>Dependents: @GetDependentsCount(SelectedNode)</p>
+                </div>
+            }
+        </aside>
+    </div>
 </section>
 
 @code {
@@ -49,7 +49,7 @@
     [Inject]
     private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
 
-    private ElementReference SvgRef;
+    private DotNetObjectReference<GraphWorkspace>? dotNetRef;
 
     private record NodeInfo(string Id, string Label, double X, double Y);
     private record EdgeInfo(string Source, string Target, RelationshipType Type, double SourceX, double SourceY, double TargetX, double TargetY);
@@ -59,27 +59,228 @@
 
     private string? SelectedNode { get; set; }
 
-    // Simple pan/zoom state
-    private double Scale { get; set; } = 1.0;
-    private double PanX { get; set; } = 0;
-    private double PanY { get; set; } = 0;
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
 
-    // For mouse drag
-    private bool IsDragging { get; set; }
-    private double LastMouseX { get; set; }
-    private double LastMouseY { get; set; }
+    private IJSObjectReference? _graphModule;
+    private bool GraphNeedsUpdate { get; set; }
 
-    private string ViewBoxAttr => "0 0 1000 600";
+    private string SearchText { get; set; } = string.Empty;
+    private bool FilterInheritance { get; set; } = true;
+    private bool FilterImplementation { get; set; } = true;
+    private bool FilterDependency { get; set; } = true;
+
+    public GraphWorkspace()
+    {
+        Console.WriteLine("================GraphWorkspace()====================");
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        System.Diagnostics.Debugger.Break();
+    }
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-        // If no investigation parameter provided, try shared state
         if (Investigation is null)
         {
             Investigation = InvestigationState.Investigation;
         }
+        // Presentation-layer diagnostics: verify investigation and relationship graph state
+        try
+        {
+            Console.WriteLine($"GraphWorkspace: Investigation is null? {Investigation is null}");
+            var rg = Investigation?.RelationshipGraph;
+            Console.WriteLine($"GraphWorkspace: RelationshipGraph is null? {rg is null}");
+            if (rg != null)
+            {
+                var inh = rg.GetRelationships(RelationshipType.Inheritance).Count();
+                var dep = rg.GetRelationships(RelationshipType.Dependency).Count();
+                var impl = rg.GetRelationships(RelationshipType.Implementation).Count();
+                Console.WriteLine($"GraphWorkspace: relationships - Inheritance={inh} Dependency={dep} Implementation={impl}");
+            }
+        }
+        catch { }
+
         BuildGraphFromInvestigation();
+        GraphNeedsUpdate = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            var elements = BuildCytoscapeElements();
+            var viewState = InvestigationState.GraphViewState;
+            // Import module using relative path so it resolves under the app base href
+            var modulePath = NavigationManager.BaseUri.TrimEnd('/') + "/js/graphInterop.js";
+            _graphModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", modulePath);
+            try
+            {
+                // Presentation-layer diagnostics immediately before JS interop init
+                try
+                {
+                    Console.WriteLine("====================================");
+                    Console.WriteLine($"Investigation null: {Investigation == null}");
+                    Console.WriteLine($"RelationshipGraph null: {Investigation?.RelationshipGraph == null}");
+                    var relCount = 0;
+                    if (Investigation?.RelationshipGraph != null)
+                    {
+                        relCount = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
+                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
+                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
+                    }
+                    Console.WriteLine($"Relationship count: {relCount}");
+                    try
+                    {
+                        int elementCount = 0;
+                        if (elements is System.Collections.ICollection c) elementCount = c.Count;
+                        else if (elements is System.Collections.IEnumerable e)
+                        {
+                            foreach (var _ in e) elementCount++;
+                        }
+                        Console.WriteLine($"Element count: {elementCount}");
+                    }
+                    catch { Console.WriteLine("Element count: <unavailable>"); }
+
+                    var rels = Enumerable.Empty<(string Source, string Target)>();
+                    if (Investigation?.RelationshipGraph != null)
+                    {
+                        rels = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance)
+                            .Concat(Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
+                            .Concat(Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation))
+                            .Select(r => (Source: r.Source, Target: r.Target));
+                    }
+
+                    foreach (var r in rels.Take(10))
+                    {
+                        Console.WriteLine($"{r.Source} -> {r.Target}");
+                    }
+
+                    Console.WriteLine("====================================");
+                }
+                catch { }
+
+                await _graphModule.InvokeVoidAsync("init", "cy", elements, dotNetRef, viewState);
+            }
+            catch (JSException jsEx)
+            {
+                Console.Error.WriteLine($"Graph init JSException: {jsEx.Message}");
+                InvestigationState.GraphViewState ??= new EngineeringDiscovery.Web.Services.GraphViewState();
+                InvestigationState.GraphViewState.SelectedNode = null;
+            }
+            await _graphModule.InvokeVoidAsync("setFilters", new { Inheritance = FilterInheritance, Implementation = FilterImplementation, Dependency = FilterDependency });
+            GraphNeedsUpdate = false;
+        }
+        else if (GraphNeedsUpdate && _graphModule != null)
+        {
+            var elements = BuildCytoscapeElements();
+            // Diagnostics immediately before update interop
+            try
+            {
+                Console.WriteLine("====================================");
+                Console.WriteLine($"Investigation null: {Investigation == null}");
+                Console.WriteLine($"RelationshipGraph null: {Investigation?.RelationshipGraph == null}");
+                var relCount2 = 0;
+                if (Investigation?.RelationshipGraph != null)
+                {
+                    relCount2 = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
+                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
+                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
+                }
+                Console.WriteLine($"Relationship count: {relCount2}");
+                try
+                {
+                    int elementCount2 = 0;
+                    if (elements is System.Collections.ICollection c2) elementCount2 = c2.Count;
+                    else if (elements is System.Collections.IEnumerable e2)
+                    {
+                        foreach (var _ in e2) elementCount2++;
+                    }
+                    Console.WriteLine($"Element count: {elementCount2}");
+                }
+                catch { Console.WriteLine("Element count: <unavailable>"); }
+                Console.WriteLine("====================================");
+            }
+            catch { }
+
+            await _graphModule.InvokeVoidAsync("update", elements);
+            await _graphModule.InvokeVoidAsync("setFilters", new { Inheritance = FilterInheritance, Implementation = FilterImplementation, Dependency = FilterDependency });
+            GraphNeedsUpdate = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (dotNetRef != null) dotNetRef.Dispose();
+        if (_graphModule != null) await _graphModule.InvokeVoidAsync("destroy");
+    }
+
+    [JSInvokable]
+    public void OnGraphInitError(string message)
+    {
+        Console.Error.WriteLine($"Graph init error: {message}");
+    }
+
+    [JSInvokable]
+    public void OnGraphInitialized(int nodes, int edges, int width, int height)
+    {
+        Console.WriteLine($"Graph initialized: nodes={nodes} edges={edges} container={width}x{height}");
+        // If no nodes, surface a warning
+        if (nodes == 0)
+        {
+            Console.Error.WriteLine("Graph initialized with zero nodes — check Investigation.RelationshipGraph data.");
+        }
+    }
+
+    private object BuildCytoscapeElements()
+    {
+        var elems = new List<object>();
+        if (Investigation?.RelationshipGraph is null) return elems;
+
+        var qnames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Collect all relationship types we render into the graph view
+        foreach (var r in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance)) { qnames.Add(r.Source); qnames.Add(r.Target); }
+        foreach (var r in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency)) { qnames.Add(r.Source); qnames.Add(r.Target); }
+        foreach (var r in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation)) { qnames.Add(r.Source); qnames.Add(r.Target); }
+
+        foreach (var q in qnames)
+        {
+            elems.Add(new { data = new { id = q, label = ShortLabel(q), kind = "Class" } });
+        }
+
+        // Add edges for each supported relationship type
+        foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance))
+        {
+            elems.Add(new { data = new { id = $"e_{rel.Source}_{rel.Target}", source = rel.Source, target = rel.Target, type = "Inheritance" } });
+        }
+        foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
+        {
+            elems.Add(new { data = new { id = $"e_{rel.Source}_{rel.Target}_dep", source = rel.Source, target = rel.Target, type = "Dependency" } });
+        }
+        foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation))
+        {
+            elems.Add(new { data = new { id = $"e_{rel.Source}_{rel.Target}_impl", source = rel.Source, target = rel.Target, type = "Implementation" } });
+        }
+
+        // Diagnostic: report how many elements are produced for Cytoscape
+        try
+        {
+            var nodeCount = qnames.Count;
+            var edgeCount = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
+                         + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
+                         + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
+            Console.WriteLine($"GraphWorkspace: BuildCytoscapeElements produced nodes={nodeCount} edges={edgeCount} elements={elems.Count}");
+        }
+        catch { }
+
+        return elems;
     }
 
     private void BuildGraphFromInvestigation()
@@ -95,13 +296,14 @@
             qnames.Add(src.Source);
             qnames.Add(src.Target);
         }
+
         foreach (var src in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
         {
             qnames.Add(src.Source);
             qnames.Add(src.Target);
         }
 
-        // Simple placement: grid layout
+        // Simple placement: grid layout (kept for compatibility)
         var cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(qnames.Count)));
         int i = 0;
         foreach (var q in qnames)
@@ -114,7 +316,7 @@
             i++;
         }
 
-        // Build edges with coordinates
+        // Build edges with coordinates (kept for compatibility in case of fallback)
         foreach (var rel in Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance))
         {
             var s = Nodes.FirstOrDefault(n => string.Equals(n.Id, rel.Source, StringComparison.OrdinalIgnoreCase));
@@ -145,37 +347,55 @@
     private int GetDependenciesCount(string qn) => Investigation?.RelationshipGraph?.GetOutgoingRelationships(qn).Count(r => r.Type == RelationshipType.Dependency) ?? 0;
     private int GetDependentsCount(string qn) => Investigation?.RelationshipGraph?.GetIncomingRelationships(qn).Count(r => r.Type == RelationshipType.Dependency) ?? 0;
 
-    private void OnNodeClick(string id)
+    [JSInvokable]
+    public void OnNodeSelected(string id)
     {
         SelectedNode = id;
+        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        InvestigationState.GraphViewState.SelectedNode = id;
+        StateHasChanged();
     }
 
-    private void OnWheel(WheelEventArgs e)
+    [JSInvokable]
+    public void OnViewStateChanged(JsonElement state)
     {
-        var delta = e.DeltaY > 0 ? 0.9 : 1.1;
-        Scale *= delta;
+        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        try
+        {
+            if (state.TryGetProperty("zoom", out var z)) InvestigationState.GraphViewState.Zoom = z.GetDouble();
+            if (state.TryGetProperty("pan", out var p) && p.ValueKind == JsonValueKind.Object) InvestigationState.GraphViewState.Pan = p;
+            if (state.TryGetProperty("selected", out var s) && s.ValueKind == JsonValueKind.String) InvestigationState.GraphViewState.SelectedNode = s.GetString();
+        }
+        catch { }
     }
 
-    private void OnMouseDown(MouseEventArgs e)
+    private async Task PerformSearch()
     {
-        IsDragging = true;
-        LastMouseX = e.ClientX;
-        LastMouseY = e.ClientY;
+        if (string.IsNullOrWhiteSpace(SearchText) || _graphModule == null) return;
+        await _graphModule.InvokeVoidAsync("selectNode", SearchText.Trim());
+        SelectedNode = SearchText.Trim();
+        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        InvestigationState.GraphViewState.SelectedNode = SelectedNode;
+        StateHasChanged();
     }
 
-    private void OnMouseUp(MouseEventArgs e)
+    private async Task Fit()
     {
-        IsDragging = false;
+        if (_graphModule != null) await _graphModule.InvokeVoidAsync("fit");
     }
 
-    private void OnMouseMove(MouseEventArgs e)
+    private async Task Reset()
     {
-        if (!IsDragging) return;
-        var dx = e.ClientX - LastMouseX;
-        var dy = e.ClientY - LastMouseY;
-        PanX += dx;
-        PanY += dy;
-        LastMouseX = e.ClientX;
-        LastMouseY = e.ClientY;
+        if (_graphModule != null) await _graphModule.InvokeVoidAsync("reset");
+    }
+
+    private async Task ZoomIn()
+    {
+        if (_graphModule != null) await _graphModule.InvokeVoidAsync("zoomIn");
+    }
+
+    private async Task ZoomOut()
+    {
+        if (_graphModule != null) await _graphModule.InvokeVoidAsync("zoomOut");
     }
 }

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="1100" height="700" viewBox="0 0 1100 700" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <rect width="100%" height="100%" fill="#0B1220"/>
+  <!-- Top-left: Search -->
+  <g transform="translate(18,16)">
+    <rect x="0" y="0" width="360" height="44" rx="8" fill="#071428" stroke="#1E3550"/>
+    <text x="12" y="28" fill="#9fb8d6" font-size="13">Search: </text>
+    <rect x="80" y="8" width="260" height="28" rx="6" fill="#0e2638" stroke="#2e4d67"/>
+    <text x="92" y="28" fill="#cfe6ff" font-size="12">InterviewOrchestrator</text>
+  </g>
+
+  <!-- Top-right: Toolbar -->
+  <g transform="translate(760,16)">
+    <rect x="0" y="0" width="320" height="44" rx="8" fill="#071428" stroke="#1f6feb"/>
+    <g transform="translate(8,8)" fill="#cfe6ff" font-size="12">
+      <text x="0" y="12">Fit</text>
+      <rect x="28" y="-6" width="28" height="28" rx="6" fill="#0b2a44"/>
+      <text x="66" y="12">Reset</text>
+      <rect x="120" y="-6" width="28" height="28" rx="6" fill="#0b2a44"/>
+      <text x="156" y="12">Zoom + / -</text>
+      <rect x="232" y="-6" width="28" height="28" rx="6" fill="#0b2a44"/>
+    </g>
+  </g>
+
+  <!-- Filters bar below toolbar -->
+  <g transform="translate(760,68)">
+    <rect x="0" y="0" width="320" height="34" rx="6" fill="#071428" stroke="#1f6feb"/>
+    <text x="8" y="22" fill="#cfe6ff" font-size="12">Filters: </text>
+    <text x="72" y="22" fill="#9fb8d6" font-size="12">☑ Inheritance</text>
+    <text x="180" y="22" fill="#9fb8d6" font-size="12">☑ Implementation</text>
+    <text x="320" y="22" fill="#9fb8d6" font-size="12">☑ Dependency</text>
+  </g>
+
+  <!-- Graph area: only engineering artifacts (no repo/project nodes) -->
+  <g transform="translate(80,120)">
+    <!-- faded background grid for context -->
+    <rect x="0" y="0" width="640" height="520" rx="10" fill="#071224"/>
+    <!-- faded unrelated nodes (spotlight) -->
+    <g opacity="0.25">
+      <rect x="20" y="40" width="140" height="40" rx="4" fill="#2b3b56"/><text x="90" y="68" text-anchor="middle" fill="#9fb8d6" font-size="11">LoggingService</text>
+      <rect x="320" y="160" width="140" height="40" rx="4" fill="#2b3b56"/><text x="390" y="188" text-anchor="middle" fill="#9fb8d6" font-size="11">NotificationService</text>
+      <rect x="480" y="60" width="140" height="40" rx="4" fill="#2b3b56"/><text x="550" y="88" text-anchor="middle" fill="#9fb8d6" font-size="11">HistoryStore</text>
+    </g>
+
+    <!-- highlighted node (spotlight center) -->
+    <g transform="translate(280,200)">
+      <rect x="-110" y="-26" width="220" height="52" rx="8" fill="#60a5fa" stroke="#9be0ff" stroke-width="2" filter="url(#glow)"/>
+      <text x="0" y="6" text-anchor="middle" fill="#021428" font-size="14" font-weight="700">InterviewOrchestrator</text>
+    </g>
+
+    <!-- connected nodes -->
+    <g opacity="1">
+      <rect x="60" y="180" width="150" height="40" rx="6" fill="#60a5fa" stroke="#2b6cb0"/><text x="135" y="206" text-anchor="middle" fill="#021428" font-size="12">SessionController</text>
+      <rect x="520" y="180" width="150" height="40" rx="6" fill="#60a5fa" stroke="#2b6cb0"/><text x="595" y="206" text-anchor="middle" fill="#021428" font-size="12">InterviewController</text>
+      <rect x="420" y="80" width="160" height="40" rx="6" fill="none" stroke="#60a5fa" stroke-dasharray="6 4"/><text x="500" y="106" text-anchor="middle" fill="#cfe6ff" font-size="12">IInterviewOrchestrator</text>
+      <rect x="640" y="300" width="140" height="40" rx="6" fill="#2b6b4a" stroke="#4fa77a"/><text x="710" y="326" text-anchor="middle" fill="#e7fff2" font-size="12">TranscriptService</text>
+      <polygon points="200,320 290,320 330,360 290,400 200,400 160,360" fill="#f472b6" stroke="#c34a7d"/><text x="245" y="360" fill="#fff" font-size="11" text-anchor="middle">NotificationLevel</text>
+    </g>
+
+    <!-- edges: dependency (thin neutral) -->
+    <line x1="400" y1="220" x2="560" y2="200" stroke="#9aa6b3" stroke-width="1.2" opacity="0.9"/>
+    <line x1="320" y1="220" x2="200" y2="360" stroke="#9aa6b3" stroke-width="1.2" opacity="0.9"/>
+    <!-- implementation: dashed -->
+    <line x1="420" y1="120" x2="330" y2="200" stroke="#9fc3ff" stroke-width="1.6" stroke-dasharray="6 4" opacity="0.95"/>
+    <!-- inheritance: solid arrow -->
+    <defs>
+      <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#7dd3fc"/>
+      </marker>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <line x1="360" y1="140" x2="360" y2="80" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arrow2)" opacity="0.95"/>
+
+  </g>
+
+  <!-- Right: Details panel -->
+  <g transform="translate(760,140)">
+    <rect x="0" y="0" width="320" height="420" rx="10" fill="#071427" stroke="#18344a"/>
+    <text x="16" y="28" fill="#cfe6ff" font-size="14" font-weight="700">InterviewOrchestrator</text>
+    <text x="16" y="52" fill="#9fb8d6">Type: Class</text>
+    <text x="16" y="72" fill="#9fb8d6">Namespace: InterviewAssistant.Core</text>
+    <text x="16" y="92" fill="#9fb8d6">Project: InterviewAssistant.Core</text>
+    <text x="16" y="122" fill="#cfe6ff" font-size="13" font-weight="600">Metrics</text>
+    <text x="16" y="144" fill="#9fb8d6">Fan-In: 11</text>
+    <text x="16" y="164" fill="#9fb8d6">Fan-Out: 4</text>
+    <text x="16" y="184" fill="#9fb8d6">Inheritance Depth: 2</text>
+
+    <text x="16" y="214" fill="#cfe6ff" font-size="13" font-weight="600">Implements</text>
+    <g transform="translate(20,226)">
+      <text x="0" y="14" fill="#9fb8d6" font-size="12">• <tspan fill="#7fd1ff" font-weight="600">IInterviewOrchestrator</tspan></text>
+    </g>
+
+    <text x="16" y="264" fill="#cfe6ff" font-size="13" font-weight="600">Depends On</text>
+    <g transform="translate(20,276)">
+      <text x="0" y="14" fill="#9fb8d6">• TranscriptService</text>
+      <text x="0" y="32" fill="#9fb8d6">• AIService</text>
+      <text x="0" y="50" fill="#9fb8d6">• NotificationService</text>
+    </g>
+
+    <text x="16" y="332" fill="#cfe6ff" font-size="13" font-weight="600">Used By</text>
+    <g transform="translate(20,344)">
+      <text x="0" y="14" fill="#9fb8d6">• InterviewController</text>
+      <text x="0" y="32" fill="#9fb8d6">• SessionController</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="18" y="690" fill="#6b7788" font-size="11">Engineering Graph (relationship-focused view). Nodes and edges originate from the canonical RepositoryRelationshipGraph only.</text>
+</svg>
