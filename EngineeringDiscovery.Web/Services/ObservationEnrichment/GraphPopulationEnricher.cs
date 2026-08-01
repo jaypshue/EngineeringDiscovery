@@ -21,6 +21,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             try
             {
                 var types = (investigation.TypeObservations ?? Array.Empty<TypeObservation>()).ToList();
+                var memberObservations = (investigation.MemberObservations ?? Array.Empty<MemberObservation>()).ToList();
                 var graph = new RepositoryRelationshipGraph();
 
                 if (types.Count == 0)
@@ -29,7 +30,9 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     return;
                 }
 
-                // Build resolution maps used to translate discovery display names to repository QualifiedName.
+                // ED-181: Discovery now produces canonical TypeReference objects. No downstream
+                // identity resolution should be performed here. The resolution helpers remain
+                // only for compatibility with older TypeObservation instances (transitional).
                 var displayToQualified = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 var typeByQualified = new Dictionary<string, TypeObservation>(StringComparer.OrdinalIgnoreCase);
                 var qualifiedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -42,27 +45,56 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     try
                     {
                         var childQualified = t.QualifiedName ?? t.TypeName ?? string.Empty;
-                        var parentDisplay = t.BaseType;
-                        if (string.IsNullOrWhiteSpace(childQualified) || string.IsNullOrWhiteSpace(parentDisplay)) continue;
-
-                        if (!TryResolveToQualified(parentDisplay, qualifiedSet, displayToQualified, out var parentQualified))
+                        // Prefer canonical BaseTypeReference when provided by Discovery
+                        if (!string.IsNullOrWhiteSpace(childQualified))
                         {
-                            graph.IncrementExternalDependencyDiscardCount();
-                            continue;
+                            if (t.BaseTypeReference != null)
+                            {
+                                var parentQualified = t.BaseTypeReference.QualifiedName;
+                                if (!string.IsNullOrWhiteSpace(parentQualified) && !string.Equals(childQualified, parentQualified, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    graph.AddInheritance(childQualified, parentQualified);
+                                }
+                                else if (!t.BaseTypeReference.IsExternal && string.IsNullOrWhiteSpace(parentQualified))
+                                {
+                                    // Discovery signaled unresolved but non-external? Treat as external for now
+                                    graph.IncrementExternalDependencyDiscardCount();
+                                }
+                            }
+                            else if (!string.IsNullOrWhiteSpace(t.BaseType))
+                            {
+                                // Transitional behavior: resolve display names emitted by older discovery
+                                if (!TryResolveToQualified(t.BaseType, qualifiedSet, displayToQualified, out var parentQualified))
+                                {
+                                    graph.IncrementExternalDependencyDiscardCount();
+                                }
+                                else if (!string.IsNullOrWhiteSpace(parentQualified) && !string.Equals(childQualified, parentQualified, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    graph.AddInheritance(childQualified, parentQualified);
+                                }
+                            }
                         }
-
-                        if (string.IsNullOrWhiteSpace(parentQualified)) continue; // unresolved or ambiguous
-                        if (string.Equals(childQualified, parentQualified, StringComparison.OrdinalIgnoreCase)) continue;
-
-                        graph.AddInheritance(childQualified, parentQualified);
                     }
                     catch { }
                 }
 
-                void ResolveAndAddRelationship(string from, string? display, RelationshipType relationshipType)
+                void ResolveAndAddRelationship(string from, TypeReference? tr, RelationshipType relationshipType)
                 {
-                    if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(display)) return;
+                    if (string.IsNullOrWhiteSpace(from) || tr == null) return;
 
+                    // If Discovery provided a canonical QualifiedName, use it directly
+                    if (!string.IsNullOrWhiteSpace(tr.QualifiedName))
+                    {
+                        if (!string.Equals(from, tr.QualifiedName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            graph.AddRelationship(from, tr.QualifiedName, relationshipType);
+                        }
+                        return;
+                    }
+
+                    // Fallback (transitional): attempt to resolve display strings produced by older discovery
+                    var display = tr.DisplayName;
+                    if (string.IsNullOrWhiteSpace(display)) return;
                     if (TryResolveToQualified(display, qualifiedSet, displayToQualified, out var qualified))
                     {
                         if (!string.IsNullOrWhiteSpace(qualified) && !string.Equals(from, qualified, StringComparison.OrdinalIgnoreCase))
@@ -85,79 +117,96 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
 
                         if (t.ImplementedInterfaces != null)
                         {
-                            foreach (var ifaceDisplay in t.ImplementedInterfaces
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var ifaceRef in t.ImplementedInterfaces
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, ifaceDisplay, RelationshipType.Implementation);
+                                ResolveAndAddRelationship(from, ifaceRef, RelationshipType.Implementation);
                             }
                         }
 
                         if (t.ConstructorParameterTypes != null)
                         {
-                            foreach (var paramDisplay in t.ConstructorParameterTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var paramRef in t.ConstructorParameterTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, paramDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, paramRef, RelationshipType.Dependency);
                             }
                         }
 
                         if (t.MethodParameterTypes != null)
                         {
-                            foreach (var paramDisplay in t.MethodParameterTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var paramRef in t.MethodParameterTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, paramDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, paramRef, RelationshipType.Dependency);
                             }
                         }
 
                         if (t.FieldTypes != null)
                         {
-                            foreach (var fDisplay in t.FieldTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var fRef in t.FieldTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, fDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, fRef, RelationshipType.Dependency);
                             }
                         }
 
                         if (t.PropertyTypes != null)
                         {
-                            foreach (var pDisplay in t.PropertyTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var pRef in t.PropertyTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, pDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, pRef, RelationshipType.Dependency);
                             }
                         }
 
                         if (t.EventTypes != null)
                         {
-                            foreach (var eDisplay in t.EventTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var eRef in t.EventTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, eDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, eRef, RelationshipType.Dependency);
                             }
                         }
 
                         if (t.GenericArgumentTypes != null)
                         {
-                            foreach (var gDisplay in t.GenericArgumentTypes
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            foreach (var gRef in t.GenericArgumentTypes
+                                .Where(x => x != null)
+                                .DistinctBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => (x.QualifiedName ?? x.DisplayName) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
                             {
-                                ResolveAndAddRelationship(from, gDisplay, RelationshipType.Dependency);
+                                ResolveAndAddRelationship(from, gRef, RelationshipType.Dependency);
                             }
+                        }
+
+                        var membersOfType = memberObservations.Where(m =>
+                            string.Equals(m.Type ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                        foreach (var m in membersOfType)
+                        {
+                            try
+                            {
+                                if (!string.IsNullOrWhiteSpace(m.ReturnType))
+                                {
+                                    ResolveAndAddRelationship(
+                                        from,
+                                        new TypeReference { DisplayName = m.ReturnType },
+                                        RelationshipType.Dependency);
+                                }
+                            }
+                            catch { }
                         }
                     }
                     catch { }

@@ -225,6 +225,7 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 SourceLineCount = GetSourceLineCount(tree, decl),
                                 DependencyCount = 0, // heuristic: not computed here
                                 BaseType = symbol.BaseType?.ToDisplayString(),
+                                BaseTypeReference = null,
                                 MethodCount = symbol.GetMembers().OfType<IMethodSymbol>().Count(m => m.MethodKind == MethodKind.Ordinary),
                                 ConstructorCount = symbol.Constructors.Length,
                                 PropertyCount = symbol.GetMembers().OfType<IPropertySymbol>().Count(),
@@ -238,7 +239,28 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                             {
                                 foreach (var iface in symbol.Interfaces)
                                 {
-                                    try { td.ImplementedInterfaces.Add(iface.ToDisplayString()); } catch { }
+                                    try
+                                    {
+                                        var disp = iface.ToDisplayString();
+                                        td.ImplementedInterfaces.Add(disp);
+                                        // If the interface is defined in the same compilation, produce a canonical QualifiedName
+                                        try
+                                        {
+                                            if (iface.DeclaringSyntaxReferences != null && iface.DeclaringSyntaxReferences.Length > 0)
+                                            {
+                                                var ifaceNs = iface.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+                                                var ifaceName = iface.Name ?? string.Empty;
+                                                var ifaceQn = !string.IsNullOrWhiteSpace(projectName)
+                                                    ? (!string.IsNullOrWhiteSpace(ifaceNs) ? $"{projectName}:{ifaceNs}.{ifaceName}" : $"{projectName}:{ifaceName}")
+                                                    : (!string.IsNullOrWhiteSpace(ifaceNs) ? $"{ifaceNs}.{ifaceName}" : $"{tree.FilePath}:{ifaceName}");
+                                                // Attach a minimal canonical reference via BaseTypeReference on TypeDescriptor only for discovery to map
+                                                // We'll rely on Discovery to convert display lists to TypeReference objects using project-local knowledge.
+                                                // For interface lists we do not store TypeReference here to avoid exposing Core types; keep discovery responsible.
+                                            }
+                                        }
+                                        catch { }
+                                    }
+                                    catch { }
                                 }
                             }
                             catch { }

@@ -8,6 +8,10 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public string TypeName { get; set; } = string.Empty;
         public string QualifiedName { get; set; } = string.Empty; // canonical repository-unique identity
         public string? BaseType { get; set; } // display form of base type
+
+        // Canonical references (if the repository provider can resolve them to repository-local QualifiedName)
+        // Discovery is responsible for converting display strings to TypeReference objects.
+        public EngineeringDiscovery.Core.Models.TypeReference? BaseTypeReference { get; set; }
         public EngineeringTypeKind Kind { get; set; } = EngineeringTypeKind.Class;
         public EngineeringAccessibility Accessibility { get; set; } = EngineeringAccessibility.Unknown;
         public bool IsAbstract { get; set; }

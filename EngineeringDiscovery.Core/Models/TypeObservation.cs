@@ -47,24 +47,27 @@ namespace EngineeringDiscovery.Core.Models
 
         public string? BaseType { get; set; }
 
+        // Canonical references produced by Discovery. When available, these should be used by
+        // downstream components instead of display-name strings.
+        public TypeReference? BaseTypeReference { get; set; }
+
         public int ImplementedInterfaceCount { get; set; }
 
-        // Newly captured lists of related type identities (discovery may populate these when available)
-        // Stored as display strings and resolved to QualifiedName by enrichment.
-        public System.Collections.Generic.List<string> ImplementedInterfaces { get; set; } = new System.Collections.Generic.List<string>();
+        // Canonical collections of TypeReference produced by Discovery.
+        public System.Collections.Generic.List<TypeReference> ImplementedInterfaces { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
-        public System.Collections.Generic.List<string> ConstructorParameterTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> ConstructorParameterTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
-        public System.Collections.Generic.List<string> MethodParameterTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> MethodParameterTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
-        public System.Collections.Generic.List<string> FieldTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> FieldTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
-        public System.Collections.Generic.List<string> PropertyTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> PropertyTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
-        public System.Collections.Generic.List<string> EventTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> EventTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
         // Generic argument types discovered from members (where practical)
-        public System.Collections.Generic.List<string> GenericArgumentTypes { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<TypeReference> GenericArgumentTypes { get; set; } = new System.Collections.Generic.List<TypeReference>();
 
         public int MethodCount { get; set; }
 
