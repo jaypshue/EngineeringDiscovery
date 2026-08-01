@@ -30,14 +30,9 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                     return;
                 }
 
-                // ED-181: Discovery now produces canonical TypeReference objects. No downstream
-                // identity resolution should be performed here. The resolution helpers remain
-                // only for compatibility with older TypeObservation instances (transitional).
-                var displayToQualified = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                var typeByQualified = new Dictionary<string, TypeObservation>(StringComparer.OrdinalIgnoreCase);
-                var qualifiedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                BuildResolutionMaps(types, displayToQualified, qualifiedSet, typeByQualified, graph);
+                // ED-181/ED-183: Discovery produces canonical TypeReference objects. No downstream
+                // identity resolution should be performed here. GraphPopulationEnricher consumes
+                // those canonical references directly.
 
                 // Inheritance edges
                 foreach (var t in types.OrderBy(x => x.QualifiedName ?? x.TypeName ?? string.Empty, StringComparer.OrdinalIgnoreCase))
@@ -63,15 +58,9 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                             }
                             else if (!string.IsNullOrWhiteSpace(t.BaseType))
                             {
-                                // Transitional behavior: resolve display names emitted by older discovery
-                                if (!TryResolveToQualified(t.BaseType, qualifiedSet, displayToQualified, out var parentQualified))
-                                {
-                                    graph.IncrementExternalDependencyDiscardCount();
-                                }
-                                else if (!string.IsNullOrWhiteSpace(parentQualified) && !string.Equals(childQualified, parentQualified, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    graph.AddInheritance(childQualified, parentQualified);
-                                }
+                                // Legacy display-only BaseType encountered; Discovery should provide BaseTypeReference.
+                                // Treat display-only base types as external/unresolved.
+                                graph.IncrementExternalDependencyDiscardCount();
                             }
                         }
                     }
@@ -82,28 +71,17 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                 {
                     if (string.IsNullOrWhiteSpace(from) || tr == null) return;
 
-                    // If Discovery provided a canonical QualifiedName, use it directly
+                    // Use canonical QualifiedName produced by Discovery. If missing, treat as external/unresolved.
                     if (!string.IsNullOrWhiteSpace(tr.QualifiedName))
                     {
                         if (!string.Equals(from, tr.QualifiedName, StringComparison.OrdinalIgnoreCase))
                         {
                             graph.AddRelationship(from, tr.QualifiedName, relationshipType);
                         }
-                        return;
-                    }
-
-                    // Fallback (transitional): attempt to resolve display strings produced by older discovery
-                    var display = tr.DisplayName;
-                    if (string.IsNullOrWhiteSpace(display)) return;
-                    if (TryResolveToQualified(display, qualifiedSet, displayToQualified, out var qualified))
-                    {
-                        if (!string.IsNullOrWhiteSpace(qualified) && !string.Equals(from, qualified, StringComparison.OrdinalIgnoreCase))
-                        {
-                            graph.AddRelationship(from, qualified, relationshipType);
-                        }
                     }
                     else
                     {
+                        // Discovery signaled external or unresolved reference; count as discarded external dependency.
                         graph.IncrementExternalDependencyDiscardCount();
                     }
                 }
@@ -198,12 +176,18 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                         {
                             try
                             {
-                                if (!string.IsNullOrWhiteSpace(m.ReturnType))
+                                // MemberObservation now contains canonical ReturnTypeReference and ParameterTypeReferences populated by Discovery.
+                                if (m.ReturnTypeReference != null)
                                 {
-                                    ResolveAndAddRelationship(
-                                        from,
-                                        new TypeReference { DisplayName = m.ReturnType },
-                                        RelationshipType.Dependency);
+                                    ResolveAndAddRelationship(from, m.ReturnTypeReference, RelationshipType.Dependency);
+                                }
+
+                                if (m.ParameterTypeReferences != null)
+                                {
+                                    foreach (var pRef in m.ParameterTypeReferences.Where(x => x != null))
+                                    {
+                                        ResolveAndAddRelationship(from, pRef, RelationshipType.Dependency);
+                                    }
                                 }
                             }
                             catch { }
@@ -232,64 +216,8 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             catch { }
         }
 
-        private static void BuildResolutionMaps(
-            List<TypeObservation> types,
-            Dictionary<string, List<string>> displayToQualified,
-            HashSet<string> qualifiedSet,
-            Dictionary<string, TypeObservation> typeByQualified,
-            RepositoryRelationshipGraph graph)
-        {
-            foreach (var t in types)
-            {
-                try
-                {
-                    var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(qn)) continue;
-                    qualifiedSet.Add(qn);
-                    typeByQualified[qn] = t;
-                    graph.AddNode(qn);
+        // Resolution maps removed: Discovery is the owner of canonical TypeReference identities.
 
-                    if (!string.IsNullOrWhiteSpace(t.TypeName))
-                    {
-                        if (!displayToQualified.TryGetValue(t.TypeName!, out var l)) { l = new List<string>(); displayToQualified[t.TypeName!] = l; }
-                        if (!l.Contains(qn, StringComparer.OrdinalIgnoreCase)) l.Add(qn);
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(t.Namespace))
-                    {
-                        var nsKey = $"{t.Namespace}.{t.TypeName}";
-                        if (!displayToQualified.TryGetValue(nsKey, out var l2)) { l2 = new List<string>(); displayToQualified[nsKey] = l2; }
-                        if (!l2.Contains(qn, StringComparer.OrdinalIgnoreCase)) l2.Add(qn);
-                    }
-                }
-                catch { }
-            }
-        }
-
-        // Transitional helper: resolve a display name to a unique QualifiedName within the investigation when possible.
-        // Once discovery emits canonical QualifiedName for all references this helper can be removed.
-        private static bool TryResolveToQualified(string? display, HashSet<string> qualifiedSet, Dictionary<string, List<string>> displayToQualified, out string? qualified)
-        {
-            qualified = null;
-            if (string.IsNullOrWhiteSpace(display)) return false;
-
-            if (qualifiedSet.Contains(display))
-            {
-                qualified = display;
-                return true;
-            }
-
-            if (displayToQualified.TryGetValue(display!, out var candidates))
-            {
-                var distinct = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                if (distinct.Count == 1)
-                {
-                    qualified = distinct[0];
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        // TryResolveToQualified removed: Discovery is the owner of canonical TypeReference identities.
     }
 }

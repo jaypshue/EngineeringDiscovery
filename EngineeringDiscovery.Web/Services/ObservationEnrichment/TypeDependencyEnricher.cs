@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using EngineeringDiscovery.Core.Domain.Investigation;
+using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
 {
@@ -20,34 +21,8 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
                 var outgoing = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
                 var incoming = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-                // Build display->Qualified lookup for resolution
-                var displayToQualified = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                var qualifiedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var t in types)
-                {
-                    try
-                    {
-                        var qn = t.QualifiedName ?? t.TypeName ?? string.Empty;
-                        if (string.IsNullOrWhiteSpace(qn)) continue;
-                        qualifiedSet.Add(qn);
-
-                        if (!string.IsNullOrWhiteSpace(t.TypeName))
-                        {
-                            if (!displayToQualified.TryGetValue(t.TypeName!, out var list)) { list = new List<string>(); displayToQualified[t.TypeName!] = list; }
-                            if (!list.Contains(qn, StringComparer.OrdinalIgnoreCase)) list.Add(qn);
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(t.Namespace))
-                        {
-                            var nsKey = $"{t.Namespace}.{t.TypeName}";
-                            if (!displayToQualified.TryGetValue(nsKey, out var list2)) { list2 = new List<string>(); displayToQualified[nsKey] = list2; }
-                            if (!list2.Contains(qn, StringComparer.OrdinalIgnoreCase)) list2.Add(qn);
-                        }
-                    }
-                    catch { }
-                }
-
-                // Discovery may have recorded direct references in TypeObservation.BaseType and possibly other fields.
+                // Discovery now produces canonical TypeReference collections on TypeObservation. Build outgoing/incoming
+                // dependency maps by consuming those canonical references only.
                 foreach (var t in types)
                 {
                     try
@@ -57,26 +32,51 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
 
                         if (!outgoing.TryGetValue(from, out var set)) { set = new HashSet<string>(StringComparer.OrdinalIgnoreCase); outgoing[from] = set; }
 
-                        // Base type reference: resolve BaseType display to QualifiedName (only within investigation)
-                        if (!string.IsNullOrWhiteSpace(t.BaseType))
+                        // BaseTypeReference
+                        if (t.BaseTypeReference != null && !string.IsNullOrWhiteSpace(t.BaseTypeReference.QualifiedName))
                         {
-                            string? resolved = null;
-                            if (qualifiedSet.Contains(t.BaseType!)) resolved = t.BaseType!;
-                            else if (displayToQualified.TryGetValue(t.BaseType!, out var candidates))
-                            {
-                                var distinct = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                                if (distinct.Count == 1) resolved = distinct[0];
-                            }
+                            var resolved = t.BaseTypeReference.QualifiedName;
+                            set.Add(resolved);
+                            if (!incoming.TryGetValue(resolved, out var inSet)) { inSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase); incoming[resolved] = inSet; }
+                            inSet.Add(from);
+                        }
 
-                            if (!string.IsNullOrWhiteSpace(resolved))
+                        // Implemented interfaces
+                        if (t.ImplementedInterfaces != null)
+                        {
+                            foreach (var iface in t.ImplementedInterfaces.Where(x => x != null && !string.IsNullOrWhiteSpace(x.QualifiedName)))
                             {
-                                set.Add(resolved);
-                                if (!incoming.TryGetValue(resolved, out var inSet)) { inSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase); incoming[resolved] = inSet; }
-                                inSet.Add(from);
+                                try
+                                {
+                                    var resolved = iface.QualifiedName!;
+                                    set.Add(resolved);
+                                    if (!incoming.TryGetValue(resolved, out var inSet2)) { inSet2 = new HashSet<string>(StringComparer.OrdinalIgnoreCase); incoming[resolved] = inSet2; }
+                                    inSet2.Add(from);
+                                }
+                                catch { }
                             }
                         }
 
-                        // If discovery recorded implemented interfaces as a comma-separated list in BaseType or another field, skip - avoid speculation.
+                        // Member-level references (constructor/method/field/property/event/generic args)
+                        var refs = new List<TypeReference>();
+                        if (t.ConstructorParameterTypes != null) refs.AddRange(t.ConstructorParameterTypes);
+                        if (t.MethodParameterTypes != null) refs.AddRange(t.MethodParameterTypes);
+                        if (t.FieldTypes != null) refs.AddRange(t.FieldTypes);
+                        if (t.PropertyTypes != null) refs.AddRange(t.PropertyTypes);
+                        if (t.EventTypes != null) refs.AddRange(t.EventTypes);
+                        if (t.GenericArgumentTypes != null) refs.AddRange(t.GenericArgumentTypes);
+
+                        foreach (var tr in refs.Where(x => x != null && !string.IsNullOrWhiteSpace(x.QualifiedName)))
+                        {
+                            try
+                            {
+                                var resolved = tr.QualifiedName!;
+                                set.Add(resolved);
+                                if (!incoming.TryGetValue(resolved, out var inSet3)) { inSet3 = new HashSet<string>(StringComparer.OrdinalIgnoreCase); incoming[resolved] = inSet3; }
+                                inSet3.Add(from);
+                            }
+                            catch { }
+                        }
                     }
                     catch { }
                 }
