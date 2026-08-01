@@ -46,7 +46,8 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                                 IsGeneric = t.IsGeneric,
                                 GenericParameterCount = t.GenericParameterCount,
                                 BaseType = t.BaseType,
-                                ImplementedInterfaceCount = 0,
+                                ImplementedInterfaceCount = t.ImplementedInterfaceCount,
+                                ImplementedInterfaces = t.ImplementedInterfaces ?? new System.Collections.Generic.List<string>(),
                                 MethodCount = t.MethodCount,
                                 ConstructorCount = t.ConstructorCount,
                                 PropertyCount = t.PropertyCount,
@@ -56,6 +57,18 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                                 PrivateMemberCount = 0,
                                 MemberCount = t.MethodCount + t.PropertyCount + t.FieldCount + t.EventCount + t.ConstructorCount
                             };
+
+                            // Preserve member-level type references discovered by repository provider
+                            try
+                            {
+                                if (t.ConstructorParameterTypes != null) typeObs.ConstructorParameterTypes.AddRange(t.ConstructorParameterTypes);
+                                if (t.MethodParameterTypes != null) typeObs.MethodParameterTypes.AddRange(t.MethodParameterTypes);
+                                if (t.FieldTypes != null) typeObs.FieldTypes.AddRange(t.FieldTypes);
+                                if (t.PropertyTypes != null) typeObs.PropertyTypes.AddRange(t.PropertyTypes);
+                                if (t.EventTypes != null) typeObs.EventTypes.AddRange(t.EventTypes);
+                                if (t.GenericArgumentTypes != null) typeObs.GenericArgumentTypes.AddRange(t.GenericArgumentTypes);
+                            }
+                            catch { }
 
                             try { context.TypeObservations.Add(typeObs); } catch { }
                         }

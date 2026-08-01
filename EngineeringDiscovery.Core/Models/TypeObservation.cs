@@ -49,6 +49,23 @@ namespace EngineeringDiscovery.Core.Models
 
         public int ImplementedInterfaceCount { get; set; }
 
+        // Newly captured lists of related type identities (discovery may populate these when available)
+        // Stored as display strings and resolved to QualifiedName by enrichment.
+        public System.Collections.Generic.List<string> ImplementedInterfaces { get; set; } = new System.Collections.Generic.List<string>();
+
+        public System.Collections.Generic.List<string> ConstructorParameterTypes { get; set; } = new System.Collections.Generic.List<string>();
+
+        public System.Collections.Generic.List<string> MethodParameterTypes { get; set; } = new System.Collections.Generic.List<string>();
+
+        public System.Collections.Generic.List<string> FieldTypes { get; set; } = new System.Collections.Generic.List<string>();
+
+        public System.Collections.Generic.List<string> PropertyTypes { get; set; } = new System.Collections.Generic.List<string>();
+
+        public System.Collections.Generic.List<string> EventTypes { get; set; } = new System.Collections.Generic.List<string>();
+
+        // Generic argument types discovered from members (where practical)
+        public System.Collections.Generic.List<string> GenericArgumentTypes { get; set; } = new System.Collections.Generic.List<string>();
+
         public int MethodCount { get; set; }
 
         public int ConstructorCount { get; set; }
