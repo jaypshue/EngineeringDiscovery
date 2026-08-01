@@ -278,6 +278,162 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                             }
                             catch { }
 
+                            // Capture member-level details into MemberDescriptor objects (provider-owned)
+                            try
+                            {
+                                // Methods (ordinary)
+                                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary))
+                                {
+                                    try
+                                    {
+                                        var md = new MemberDescriptor
+                                        {
+                                            Project = projectName ?? string.Empty,
+                                            Namespace = ns ?? string.Empty,
+                                            TypeName = typeName ?? string.Empty,
+                                            MemberName = method.Name ?? string.Empty,
+                                            Kind = MemberKind.Method,
+                                            Visibility = method.DeclaredAccessibility.ToString(),
+                                            IsStatic = method.IsStatic,
+                                            IsAsync = method.IsAsync,
+                                            LineCount = 0
+                                        };
+
+                                        try { md.ReturnTypeDisplay = method.ReturnType?.ToDisplayString(); } catch { }
+
+                                        try
+                                        {
+                                            foreach (var p in method.Parameters)
+                                            {
+                                                try { md.ParameterTypeDisplays.Add(p.Type.ToDisplayString()); } catch { }
+                                            }
+                                        }
+                                        catch { }
+
+                                        try
+                                        {
+                                            var returnNamed = method.ReturnType as INamedTypeSymbol;
+                                            if (returnNamed != null && returnNamed.IsGenericType)
+                                            {
+                                                foreach (var ta in returnNamed.TypeArguments)
+                                                {
+                                                    try { md.GenericArgumentDisplays.Add(ta.ToDisplayString()); } catch { }
+                                                }
+                                            }
+                                        }
+                                        catch { }
+
+                                        ctx.MemberDescriptors.Add(md);
+                                    }
+                                    catch { }
+                                }
+
+                                // Constructors
+                                foreach (var ctor in symbol.InstanceConstructors)
+                                {
+                                    try
+                                    {
+                                        var md = new MemberDescriptor
+                                        {
+                                            Project = projectName ?? string.Empty,
+                                            Namespace = ns ?? string.Empty,
+                                            TypeName = typeName ?? string.Empty,
+                                            MemberName = ctor.Name ?? string.Empty,
+                                            Kind = MemberKind.Constructor,
+                                            Visibility = ctor.DeclaredAccessibility.ToString(),
+                                            IsStatic = ctor.IsStatic,
+                                            IsAsync = false,
+                                            LineCount = 0
+                                        };
+
+                                        try
+                                        {
+                                            foreach (var p in ctor.Parameters)
+                                            {
+                                                try { md.ParameterTypeDisplays.Add(p.Type.ToDisplayString()); } catch { }
+                                            }
+                                        }
+                                        catch { }
+
+                                        ctx.MemberDescriptors.Add(md);
+                                    }
+                                    catch { }
+                                }
+
+                                // Properties
+                                foreach (var prop in symbol.GetMembers().OfType<IPropertySymbol>())
+                                {
+                                    try
+                                    {
+                                        var md = new MemberDescriptor
+                                        {
+                                            Project = projectName ?? string.Empty,
+                                            Namespace = ns ?? string.Empty,
+                                            TypeName = typeName ?? string.Empty,
+                                            MemberName = prop.Name ?? string.Empty,
+                                            Kind = MemberKind.Property,
+                                            Visibility = prop.DeclaredAccessibility.ToString(),
+                                            IsStatic = prop.IsStatic,
+                                            IsAsync = false,
+                                            LineCount = 0
+                                        };
+
+                                        try { md.ReturnTypeDisplay = prop.Type?.ToDisplayString(); } catch { }
+                                        ctx.MemberDescriptors.Add(md);
+                                    }
+                                    catch { }
+                                }
+
+                                // Fields
+                                foreach (var f in symbol.GetMembers().OfType<IFieldSymbol>())
+                                {
+                                    try
+                                    {
+                                        var md = new MemberDescriptor
+                                        {
+                                            Project = projectName ?? string.Empty,
+                                            Namespace = ns ?? string.Empty,
+                                            TypeName = typeName ?? string.Empty,
+                                            MemberName = f.Name ?? string.Empty,
+                                            Kind = MemberKind.Field,
+                                            Visibility = f.DeclaredAccessibility.ToString(),
+                                            IsStatic = f.IsStatic,
+                                            IsAsync = false,
+                                            LineCount = 0
+                                        };
+
+                                        try { md.ReturnTypeDisplay = f.Type?.ToDisplayString(); } catch { }
+                                        ctx.MemberDescriptors.Add(md);
+                                    }
+                                    catch { }
+                                }
+
+                                // Events
+                                foreach (var ev in symbol.GetMembers().OfType<IEventSymbol>())
+                                {
+                                    try
+                                    {
+                                        var md = new MemberDescriptor
+                                        {
+                                            Project = projectName ?? string.Empty,
+                                            Namespace = ns ?? string.Empty,
+                                            TypeName = typeName ?? string.Empty,
+                                            MemberName = ev.Name ?? string.Empty,
+                                            Kind = MemberKind.Event,
+                                            Visibility = ev.DeclaredAccessibility.ToString(),
+                                            IsStatic = ev.IsStatic,
+                                            IsAsync = false,
+                                            LineCount = 0
+                                        };
+
+                                        try { md.ReturnTypeDisplay = ev.Type?.ToDisplayString(); } catch { }
+                                        ctx.MemberDescriptors.Add(md);
+                                    }
+                                    catch { }
+                                }
+                            }
+                            catch { }
+
                             // Capture method parameter types and generic argument types
                             try
                             {

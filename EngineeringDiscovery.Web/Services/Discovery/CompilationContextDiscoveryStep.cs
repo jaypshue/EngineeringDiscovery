@@ -227,6 +227,78 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             }
                             catch { }
 
+                            // Map provider MemberDescriptors into MemberObservation and canonicalize member-level types
+                            try
+                            {
+                                if (c.MemberDescriptors != null)
+                                {
+                                    var membersForType = c.MemberDescriptors.Where(md => string.Equals(md.TypeName ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                                    foreach (var md in membersForType)
+                                    {
+                                        try
+                                        {
+                                            var mo = new EngineeringDiscovery.Core.Models.MemberObservation
+                                            {
+                                                Project = md.Project,
+                                                Namespace = string.IsNullOrWhiteSpace(md.Namespace) ? null : md.Namespace,
+                                                Type = md.TypeName,
+                                                MemberName = md.MemberName,
+                                                Visibility = md.Visibility switch
+                                                {
+                                                    var s when string.Equals(s, "Public", StringComparison.OrdinalIgnoreCase) => EngineeringDiscovery.Core.Models.Visibility.Public,
+                                                    var s when string.Equals(s, "Protected", StringComparison.OrdinalIgnoreCase) => EngineeringDiscovery.Core.Models.Visibility.Protected,
+                                                    var s when string.Equals(s, "Internal", StringComparison.OrdinalIgnoreCase) => EngineeringDiscovery.Core.Models.Visibility.Internal,
+                                                    var s when string.Equals(s, "Private", StringComparison.OrdinalIgnoreCase) => EngineeringDiscovery.Core.Models.Visibility.Private,
+                                                    _ => EngineeringDiscovery.Core.Models.Visibility.Unknown
+                                                },
+                                                IsStatic = md.IsStatic,
+                                                IsAsync = md.IsAsync,
+                                                ReturnType = md.ReturnTypeDisplay,
+                                                ReturnTypeReference = null,
+                                                ParameterCount = md.ParameterTypeDisplays?.Count ?? 0,
+                                                ParameterTypeReferences = new System.Collections.Generic.List<TypeReference>(),
+                                                ApproximateSourceLines = md.LineCount
+                                            };
+
+                                            // Canonicalize return type
+                                            try
+                                            {
+                                                if (!string.IsNullOrWhiteSpace(md.ReturnTypeDisplay))
+                                                {
+                                                    var display = md.ReturnTypeDisplay!;
+                                                    var qn = localDisplayToQualified.TryGetValue(display, out var found) ? found : string.Empty;
+                                                    mo.ReturnTypeReference = new TypeReference { DisplayName = display, QualifiedName = qn ?? string.Empty, IsExternal = string.IsNullOrWhiteSpace(qn), Kind = TypeReferenceKind.Type };
+                                                }
+                                            }
+                                            catch { }
+
+                                            // Canonicalize parameter types
+                                            try
+                                            {
+                                                if (md.ParameterTypeDisplays != null)
+                                                {
+                                                    foreach (var pd in md.ParameterTypeDisplays.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+                                                    {
+                                                        try
+                                                        {
+                                                            var qn = localDisplayToQualified.TryGetValue(pd, out var f) ? f : string.Empty;
+                                                            mo.ParameterTypeReferences.Add(new TypeReference { DisplayName = pd, QualifiedName = qn ?? string.Empty, IsExternal = string.IsNullOrWhiteSpace(qn), Kind = TypeReferenceKind.Type });
+                                                        }
+                                                        catch { }
+                                                    }
+                                                }
+                                            }
+                                            catch { }
+
+                                            try { context.MemberObservations.Add(mo); } catch { }
+                                            try { _inv.AddMemberObservation(mo); } catch { }
+                                        }
+                                        catch { }
+                                    }
+                                }
+                            }
+                            catch { }
+
                             try { context.TypeObservations.Add(typeObs); } catch { }
                         }
                             catch { }

@@ -10,5 +10,8 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public string? ProjectFilePath { get; set; }
 
         public List<TypeDescriptor> Types { get; } = new List<TypeDescriptor>();
+
+        // Member descriptors produced by repository providers (language-specific)
+        public List<MemberDescriptor> MemberDescriptors { get; } = new List<MemberDescriptor>();
     }
 }
