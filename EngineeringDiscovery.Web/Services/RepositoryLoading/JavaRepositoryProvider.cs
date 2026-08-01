@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 {
     internal class JavaRepositoryProvider : IRepositoryProvider
     {
+        private static readonly Regex PackageDeclarationRegex = new Regex(@"^\s*package\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Compiled | RegexOptions.Multiline);
+
         private static readonly string[] BuildFileNames =
         {
             "pom.xml",
@@ -91,7 +95,41 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                 JavaLayout = layout
             };
 
+            foreach (var namespaceObservation in DiscoverNamespaces(context.ProjectName, layout.JavaSourceFiles))
+            {
+                context.NamespaceObservations.Add(namespaceObservation);
+            }
+
             return new[] { context };
+        }
+
+        private static IEnumerable<NamespaceObservation> DiscoverNamespaces(string projectName, IEnumerable<string> javaSourceFiles)
+        {
+            var packages = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var javaFile in javaSourceFiles)
+            {
+                try
+                {
+                    var text = File.ReadAllText(javaFile);
+                    var match = PackageDeclarationRegex.Match(text);
+                    if (match.Success)
+                    {
+                        var packageName = match.Groups[1].Value.Trim();
+                        if (!string.IsNullOrWhiteSpace(packageName)) packages.Add(packageName);
+                    }
+                }
+                catch { }
+            }
+
+            foreach (var packageName in packages)
+            {
+                yield return new NamespaceObservation
+                {
+                    Project = projectName,
+                    NamespaceName = packageName
+                };
+            }
         }
 
         private static IEnumerable<string> EnumerateBuildFiles(string repositoryRoot)

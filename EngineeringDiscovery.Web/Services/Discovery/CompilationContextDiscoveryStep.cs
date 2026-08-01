@@ -28,6 +28,16 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                 {
                     try
                     {
+                        try
+                        {
+                            foreach (var nsObs in c.NamespaceObservations)
+                            {
+                                try { context.NamespaceObservations.Add(nsObs); } catch { }
+                                try { _inv.AddNamespaceObservation(nsObs); } catch { }
+                            }
+                        }
+                        catch { }
+
                         foreach (var t in c.Types)
                         {
                         try

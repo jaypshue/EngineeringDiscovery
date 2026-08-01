@@ -120,6 +120,14 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             _typeObservations.Add(observation);
         }
 
+        // Add a structured NamespaceObservation to the investigation.
+        public void AddNamespaceObservation(EngineeringDiscovery.Core.Models.NamespaceObservation observation)
+        {
+            if (observation is null) throw new ArgumentNullException(nameof(observation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Namespace observations can only be added while the investigation is Started.");
+            _namespaceObservations.Add(observation);
+        }
+
         public static Investigation Create(Guid id, string repositoryPath)
             => Create(id, repositoryPath, goal: string.Empty, owner: string.Empty, target: string.Empty);
 

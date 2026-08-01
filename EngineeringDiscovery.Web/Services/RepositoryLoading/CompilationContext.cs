@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 {
@@ -54,6 +55,8 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public string RepositoryRoot { get; set; } = string.Empty;
 
         public JavaRepositoryLayout? JavaLayout { get; set; }
+
+        public List<NamespaceObservation> NamespaceObservations { get; } = new List<NamespaceObservation>();
 
         public List<TypeDescriptor> Types { get; } = new List<TypeDescriptor>();
 
