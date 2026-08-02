@@ -30,6 +30,10 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 
         public bool IsStatic { get; set; }
 
+        public bool IsAbstract { get; set; }
+
+        public bool IsSealed { get; set; }
+
         public bool IsAsync { get; set; }
 
         public string? ReturnTypeDisplay { get; set; }
@@ -39,5 +43,7 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public List<string> GenericArgumentDisplays { get; } = new List<string>();
 
         public int LineCount { get; set; }
+
+        public string? SourceFilePath { get; set; }
     }
 }

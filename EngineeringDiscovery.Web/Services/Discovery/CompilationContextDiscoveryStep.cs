@@ -251,7 +251,9 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             {
                                 if (c.MemberDescriptors != null)
                                 {
-                                    var membersForType = c.MemberDescriptors.Where(md => string.Equals(md.TypeName ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                                    var membersForType = c.MemberDescriptors.Where(md =>
+                                        string.Equals(md.TypeName ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(md.Namespace ?? string.Empty, t.Namespace ?? string.Empty, StringComparison.OrdinalIgnoreCase));
                                     foreach (var md in membersForType)
                                     {
                                         try
@@ -271,12 +273,15 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                                                     _ => EngineeringDiscovery.Core.Models.Visibility.Unknown
                                                 },
                                                 IsStatic = md.IsStatic,
+                                                 IsAbstract = md.IsAbstract,
+                                                 IsSealed = md.IsSealed,
                                                 IsAsync = md.IsAsync,
                                                 ReturnType = md.ReturnTypeDisplay,
                                                 ReturnTypeReference = null,
                                                 ParameterCount = md.ParameterTypeDisplays?.Count ?? 0,
                                                 ParameterTypeReferences = new System.Collections.Generic.List<TypeReference>(),
-                                                ApproximateSourceLines = md.LineCount
+                                                 ApproximateSourceLines = md.LineCount,
+                                                 SourceFilePath = md.SourceFilePath
                                             };
 
                                             // Canonicalize return type

@@ -25,6 +25,10 @@ namespace EngineeringDiscovery.Core.Models
 
         public bool IsStatic { get; init; }
 
+        public bool IsAbstract { get; init; }
+
+        public bool IsSealed { get; init; }
+
         public bool IsAsync { get; init; }
 
         // Display form of the return type (presentation compatibility)
@@ -39,5 +43,7 @@ namespace EngineeringDiscovery.Core.Models
         public int ParameterCount { get; init; }
 
         public int ApproximateSourceLines { get; init; }
+
+        public string? SourceFilePath { get; init; }
     }
 }
