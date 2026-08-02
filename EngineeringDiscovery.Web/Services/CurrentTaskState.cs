@@ -17,6 +17,15 @@ namespace EngineeringDiscovery.Web.Services
             return task;
         }
 
+        public void UpdateBrief(Action<EngineeringDiscovery.Core.Domain.CurrentTask.EngineeringBrief> update)
+        {
+            if (ActiveTask is null) return;
+
+            update(ActiveTask.Brief);
+            ActiveTask = ActiveTask; // keep reference but indicate mutation
+            NotifyStateChanged();
+        }
+
         public void CompleteTask()
         {
             if (ActiveTask is null) return;

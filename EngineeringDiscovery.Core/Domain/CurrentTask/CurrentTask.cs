@@ -20,6 +20,7 @@ namespace EngineeringDiscovery.Core.Domain.CurrentTask
             Status = CurrentTaskStatus.Active;
             CreatedUtc = DateTime.UtcNow;
             UpdatedUtc = CreatedUtc;
+            Brief = new EngineeringBrief();
         }
 
         public string Title { get; private set; }
@@ -33,6 +34,8 @@ namespace EngineeringDiscovery.Core.Domain.CurrentTask
         public DateTime CreatedUtc { get; private set; }
 
         public DateTime UpdatedUtc { get; private set; }
+
+        public EngineeringBrief Brief { get; private set; }
 
         public void Complete()
         {

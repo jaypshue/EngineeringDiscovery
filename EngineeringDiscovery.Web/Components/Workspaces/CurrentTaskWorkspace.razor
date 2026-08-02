@@ -45,6 +45,25 @@
                 <dd>@ActiveTask.Status</dd>
             </dl>
             <button class="btn" @onclick="CompleteTask">Complete Task</button>
+
+            <section class="workspace__section workspace__section--brief">
+                <h5>Engineering Brief</h5>
+                <label>
+                    Objective
+                    <input value="@BriefObjective" @oninput="OnObjectiveChanged" placeholder="Short objective" />
+                </label>
+                <label>
+                    Notes
+                    <textarea @bind="BriefNotes" placeholder="Notes about the work"></textarea>
+                </label>
+                <label>
+                    Implementation Thoughts
+                    <textarea @bind="BriefImplementation" placeholder="Ideas for implementation"></textarea>
+                </label>
+                <div class="brief-actions">
+                    <button class="btn" @onclick="SaveBrief">Save Brief</button>
+                </div>
+            </section>
         </section>
     }
 </section>
@@ -63,9 +82,18 @@
 
     private string? ErrorMessage { get; set; }
 
+    // Engineering Brief editor backing fields
+    private string BriefObjective { get; set; } = string.Empty;
+    private string BriefNotes { get; set; } = string.Empty;
+    private string BriefImplementation { get; set; } = string.Empty;
+
     protected override void OnInitialized()
     {
         CurrentTaskState.OnChange += OnCurrentTaskChanged;
+        if (ActiveTask is not null)
+        {
+            LoadBriefFromActiveTask();
+        }
     }
 
     private void StartTask()
@@ -92,7 +120,41 @@
 
     private void OnCurrentTaskChanged()
     {
+        LoadBriefFromActiveTask();
         InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadBriefFromActiveTask()
+    {
+        if (ActiveTask is null)
+        {
+            BriefObjective = string.Empty;
+            BriefNotes = string.Empty;
+            BriefImplementation = string.Empty;
+            return;
+        }
+
+        BriefObjective = ActiveTask.Brief.Objective;
+        BriefNotes = ActiveTask.Brief.Notes;
+        BriefImplementation = ActiveTask.Brief.ImplementationThoughts;
+    }
+
+    private void OnObjectiveChanged(ChangeEventArgs e)
+    {
+        BriefObjective = e?.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SaveBrief()
+    {
+        if (ActiveTask is null) return;
+
+        CurrentTaskState.UpdateBrief(b =>
+        {
+            b.Objective = BriefObjective ?? string.Empty;
+            b.Notes = BriefNotes ?? string.Empty;
+            b.ImplementationThoughts = BriefImplementation ?? string.Empty;
+            b.Touch();
+        });
     }
 
     public void Dispose()
