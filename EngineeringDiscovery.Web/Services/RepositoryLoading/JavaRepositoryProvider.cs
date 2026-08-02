@@ -10,6 +10,7 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
     internal class JavaRepositoryProvider : IRepositoryProvider
     {
         private static readonly Regex PackageDeclarationRegex = new Regex(@"^\s*package\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex TypeDeclarationRegex = new Regex(@"^\s*(?:(public|protected|private)\s+)?(?:(abstract|final|static)\s+)*(class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)\b", RegexOptions.Compiled | RegexOptions.Multiline);
 
         private static readonly string[] BuildFileNames =
         {
@@ -100,7 +101,49 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                 context.NamespaceObservations.Add(namespaceObservation);
             }
 
+            foreach (var typeDescriptor in DiscoverTypes(context.ProjectName, layout.JavaSourceFiles))
+            {
+                context.Types.Add(typeDescriptor);
+            }
+
             return new[] { context };
+        }
+
+        private static IEnumerable<TypeDescriptor> DiscoverTypes(string projectName, IEnumerable<string> javaSourceFiles)
+        {
+            foreach (var javaFile in javaSourceFiles)
+            {
+                string text;
+                try { text = File.ReadAllText(javaFile); }
+                catch { continue; }
+
+                var packageName = GetPackageName(text);
+                if (string.IsNullOrWhiteSpace(packageName)) continue;
+
+                foreach (Match match in TypeDeclarationRegex.Matches(text))
+                {
+                    if (!match.Success) continue;
+
+                    var keyword = match.Groups[3].Value.Trim();
+                    var typeName = match.Groups[4].Value.Trim();
+                    if (string.IsNullOrWhiteSpace(keyword) || string.IsNullOrWhiteSpace(typeName)) continue;
+
+                    var declarationPrefix = match.Value;
+
+                    yield return new TypeDescriptor
+                    {
+                        Namespace = packageName,
+                        TypeName = typeName,
+                        QualifiedName = $"{projectName}:{packageName}.{typeName}",
+                        Kind = MapJavaTypeKind(keyword),
+                        Accessibility = MapJavaAccessibility(match.Groups[1].Value),
+                        IsAbstract = ContainsModifier(declarationPrefix, "abstract") || string.Equals(keyword, "interface", StringComparison.OrdinalIgnoreCase),
+                        IsSealed = ContainsModifier(declarationPrefix, "final"),
+                        IsStatic = ContainsModifier(declarationPrefix, "static"),
+                        SourceFilePath = javaFile
+                    };
+                }
+            }
         }
 
         private static IEnumerable<NamespaceObservation> DiscoverNamespaces(string projectName, IEnumerable<string> javaSourceFiles)
@@ -130,6 +173,40 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                     NamespaceName = packageName
                 };
             }
+        }
+
+        private static string GetPackageName(string text)
+        {
+            var match = PackageDeclarationRegex.Match(text);
+            return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+        }
+
+        private static EngineeringTypeKind MapJavaTypeKind(string keyword)
+        {
+            return keyword.ToLowerInvariant() switch
+            {
+                "class" => EngineeringTypeKind.Class,
+                "interface" => EngineeringTypeKind.Interface,
+                "enum" => EngineeringTypeKind.Enum,
+                "record" => EngineeringTypeKind.Record,
+                _ => EngineeringTypeKind.Unknown
+            };
+        }
+
+        private static EngineeringAccessibility MapJavaAccessibility(string modifier)
+        {
+            return modifier.ToLowerInvariant() switch
+            {
+                "public" => EngineeringAccessibility.Public,
+                "protected" => EngineeringAccessibility.Protected,
+                "private" => EngineeringAccessibility.Private,
+                _ => EngineeringAccessibility.Package
+            };
+        }
+
+        private static bool ContainsModifier(string declarationPrefix, string modifier)
+        {
+            return Regex.IsMatch(declarationPrefix ?? string.Empty, $@"\b{Regex.Escape(modifier)}\b", RegexOptions.IgnoreCase);
         }
 
         private static IEnumerable<string> EnumerateBuildFiles(string repositoryRoot)

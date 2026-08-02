@@ -1,10 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Components;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using EngineeringDiscovery.Web.Components.Dashboard.ViewModels;
+using Microsoft.AspNetCore.Components;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace EngineeringDiscovery.Web.Components.Dashboard
 {
@@ -170,10 +171,6 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
             ViewModel.Technologies = technologies.ToList();
             ViewModel.Findings = findings;
 
-            ViewModel.Summary.ProjectCount = projects.Count;
-            ViewModel.Summary.NamespaceCount = projects.Values.SelectMany(p => p.Namespaces.Keys).Distinct().Count();
-            ViewModel.Summary.TypeCount = projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Keys).Distinct().Count();
-            ViewModel.Summary.MemberCount = projects.Values.SelectMany(p => p.Namespaces.Values).SelectMany(n => n.Types.Values).SelectMany(t => t.Members).Count();
             ViewModel.Summary.TechnologyCount = technologies.Count;
 
             // Reset selection on rebuild

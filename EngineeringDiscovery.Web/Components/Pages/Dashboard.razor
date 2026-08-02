@@ -43,6 +43,21 @@
 
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
 
+    protected override void OnInitialized()
+    {
+        InvestigationState.OnChange += OnInvestigationChanged;
+    }
+
+    private void OnInvestigationChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        InvestigationState.OnChange -= OnInvestigationChanged;
+    }
+
     private List<(string Name, bool IsComplete)> PipelineStatuses => new()
     {
         ("Repository Loaded", !string.IsNullOrWhiteSpace(InvestigationState.Investigation?.RepositoryPath)),

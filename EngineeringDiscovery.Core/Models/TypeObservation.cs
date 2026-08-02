@@ -39,6 +39,8 @@ namespace EngineeringDiscovery.Core.Models
 
         public bool IsStatic { get; set; }
 
+        public bool IsSealed { get; set; }
+
         public bool IsPartial { get; set; }
 
         public bool IsGeneric { get; set; }

@@ -46,27 +46,70 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             }
             catch { repoName = investigation.RepositoryPath ?? string.Empty; }
 
-            var obs = investigation.Observations ?? Array.Empty<EngineeringDiscovery.Core.Models.DiscoveryObservation>();
+            // Prefer canonical observations where available
+            var types = investigation.TypeObservations ?? Array.Empty<EngineeringDiscovery.Core.Models.TypeObservation>();
+            var namespaces = investigation.NamespaceObservations ?? Array.Empty<EngineeringDiscovery.Core.Models.NamespaceObservation>();
+            var members = investigation.MemberObservations ?? Array.Empty<EngineeringDiscovery.Core.Models.MemberObservation>();
 
-            var projectCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Project)
-                                   .Select(o => o.Project)
-                                   .Where(s => !string.IsNullOrWhiteSpace(s))
-                                   .Distinct(StringComparer.OrdinalIgnoreCase)
-                                   .Count();
+            int projectCount;
+            if (investigation.ProjectObservation != null)
+            {
+                // Single canonical project observation present
+                projectCount = 1;
+            }
+            else
+            {
+                // Derive project count from TypeObservations first, then NamespaceObservations, then fall back to legacy Observations
+                projectCount = (types?.Where(t => !string.IsNullOrWhiteSpace(t.Project)).Select(t => t.Project).Distinct(StringComparer.OrdinalIgnoreCase).Count())
+                               ?? 0;
+                if (projectCount == 0)
+                {
+                    projectCount = (namespaces?.Where(n => !string.IsNullOrWhiteSpace(n.Project)).Select(n => n.Project).Distinct(StringComparer.OrdinalIgnoreCase).Count()) ?? 0;
+                }
+                if (projectCount == 0)
+                {
+                    var obs = investigation.Observations ?? Array.Empty<EngineeringDiscovery.Core.Models.DiscoveryObservation>();
+                    projectCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Project)
+                                      .Select(o => o.Project)
+                                      .Where(s => !string.IsNullOrWhiteSpace(s))
+                                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                                      .Count();
+                }
+            }
 
-            var namespaceCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Namespace)
-                                     .Select(o => o.Namespace)
-                                     .Where(s => !string.IsNullOrWhiteSpace(s))
-                                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                                     .Count();
+            int namespaceCount = (namespaces?.Count) ?? 0;
+            if (namespaceCount == 0)
+            {
+                // Fallback: count distinct namespace values from types
+                namespaceCount = (types?.Where(t => !string.IsNullOrWhiteSpace(t.Namespace)).Select(t => t.Namespace).Distinct(StringComparer.OrdinalIgnoreCase).Count()) ?? 0;
+                if (namespaceCount == 0)
+                {
+                    var obs = investigation.Observations ?? Array.Empty<EngineeringDiscovery.Core.Models.DiscoveryObservation>();
+                    namespaceCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Namespace)
+                                         .Select(o => o.Namespace)
+                                         .Where(s => !string.IsNullOrWhiteSpace(s))
+                                         .Distinct(StringComparer.OrdinalIgnoreCase)
+                                         .Count();
+                }
+            }
 
-            var typeCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Type)
-                                .Select(o => o.Type)
-                                .Where(s => !string.IsNullOrWhiteSpace(s))
-                                .Distinct(StringComparer.OrdinalIgnoreCase)
-                                .Count();
+            int typeCount = (types?.Count) ?? 0;
+            if (typeCount == 0)
+            {
+                var obs = investigation.Observations ?? Array.Empty<EngineeringDiscovery.Core.Models.DiscoveryObservation>();
+                typeCount = obs.Where(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Type)
+                               .Select(o => o.Type)
+                               .Where(s => !string.IsNullOrWhiteSpace(s))
+                               .Distinct(StringComparer.OrdinalIgnoreCase)
+                               .Count();
+            }
 
-            var memberCount = obs.Count(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Member);
+            int memberCount = (members?.Count) ?? 0;
+            if (memberCount == 0)
+            {
+                var obs = investigation.Observations ?? Array.Empty<EngineeringDiscovery.Core.Models.DiscoveryObservation>();
+                memberCount = obs.Count(o => o.Kind == EngineeringDiscovery.Core.Models.ObservationKind.Member);
+            }
 
             var totalArtifacts = investigation.Artifacts?.Count ?? 0;
             var layerViolations = investigation.Artifacts?.Count(a => a.Type == EngineeringDiscovery.Core.Models.ArtifactType.LayerViolation) ?? 0;

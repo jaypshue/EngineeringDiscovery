@@ -169,6 +169,8 @@ namespace EngineeringDiscovery.Web.Services
                     .Add(new LayerAnalysisStep(inv));
 
                 pipeline.Execute(context);
+                // Diagnostics: record investigation identity and counts after pipeline
+                try { Debug.WriteLine($"InvestigationEngine: InvHash={inv.GetHashCode()}, Namespaces={inv.NamespaceObservations?.Count ?? 0}, Types={inv.TypeObservations?.Count ?? 0}"); } catch { }
             }
             catch { }
 

@@ -15,6 +15,8 @@ namespace EngineeringDiscovery.Web.Services
         public void SetInvestigation(Investigation? investigation)
         {
             Investigation = investigation;
+            // Diagnostics: log investigation identity being set into state
+            try { System.Diagnostics.Debug.WriteLine($"InvestigationState.SetInvestigation: InvHash={(investigation?.GetHashCode().ToString() ?? "null")}, Namespaces={(investigation?.NamespaceObservations?.Count ?? 0)}, Types={(investigation?.TypeObservations?.Count ?? 0)}"); } catch { }
             NotifyStateChanged();
         }
 
