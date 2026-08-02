@@ -10,27 +10,53 @@
 
     <section class="discovery">
         <h4>Repository Dashboard</h4>
-        <p><strong>Repository:</strong></p>
-        <div class="target-selector">
-            <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Enter repository root path (required)" tabindex="0" aria-disabled="false" />
-            <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
-                @if (IsBuilding)
-                {
-                    <span class="spinner" aria-hidden="true"></span>
-                    <span>Building Engineering Model...</span>
-                }
-                else
-                {
-                    <span>Build Engineering Model</span>
-                }
-            </button>
-        </div>
-        <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
-        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        @if (!WorkspaceState.HasWorkspace)
         {
-            <p class="error">Error: @ErrorMessage</p>
+            <p>No repository has been imported.</p>
+            <p><strong>Repository Path</strong></p>
+            <div class="target-selector">
+                <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Enter repository root path (required)" tabindex="0" aria-disabled="false" />
+                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
+                    @if (IsBuilding)
+                    {
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span>Importing Repository...</span>
+                    }
+                    else
+                    {
+                        <span>Import Repository</span>
+                    }
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <p class="error">Error: @ErrorMessage</p>
+            }
         }
-        <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
+        else
+        {
+            <p><strong>Repository:</strong> @WorkspaceState.ActiveWorkspace?.RepositoryPath</p>
+            <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
+            <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
+            <div class="target-selector">
+                <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Replace repository root path" tabindex="0" aria-disabled="false" />
+                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
+                    @if (IsBuilding)
+                    {
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span>Importing Repository...</span>
+                    }
+                    else
+                    {
+                        <span>Import Repository (replace)</span>
+                    }
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <p class="error">Error: @ErrorMessage</p>
+            }
+        }
     </section>
 
     <div class="workspace-placeholder">
@@ -44,6 +70,14 @@
 
     [Inject]
     private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+    [Inject]
+    private EngineeringDiscovery.Web.Services.CurrentTaskState CurrentTaskState { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+
+    [Inject]
+    private IJSRuntime JS { get; set; } = null!;
 
     private string Title => Role switch
     {
@@ -89,6 +123,13 @@
             return;
         }
 
+        // If a workspace already exists, confirm replacement
+        if (WorkspaceState.HasWorkspace)
+        {
+            var ok = await JS.InvokeAsync<bool>("confirm", "Importing another repository will replace the current Workspace. Continue?");
+            if (!ok) return;
+        }
+
         IsBuilding = true;
         DiscoveryStatus = "Building Engineering Model...";
         StateHasChanged();
@@ -97,13 +138,32 @@
         {
             var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
 
-            // Run the potentially long-running work off the UI thread.
+            // Run discovery and create the Investigation off the UI thread
             var investigation = await Task.Run(() => engine.CreateInvestigation(SelectedRepositoryPath, null));
 
-            DiscoveryStatus = investigation is null ? "Discovery Failed" : "Engineering Model Complete";
+            if (investigation is null)
+            {
+                DiscoveryStatus = "Discovery Failed";
+                ErrorMessage = "Investigation creation failed.";
+                return;
+            }
 
-            // Publish the investigation to shared state so other components (Dashboard, Graph) can consume it.
+            DiscoveryStatus = "Engineering Model Complete";
+
+            // Build a complete Workspace and persist it
+            var workspace = new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace
+            {
+                RepositoryPath = SelectedRepositoryPath,
+                Investigation = investigation,
+                CurrentTask = null,
+                SelectedRole = Role
+            };
+
+            WorkspaceState.ReplaceWorkspace(workspace);
+
+            // Seed existing compatibility state services
             InvestigationState.SetInvestigation(investigation);
+            CurrentTaskState.SeedFromWorkspace(workspace.CurrentTask);
         }
         catch (Exception ex)
         {

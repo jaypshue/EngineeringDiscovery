@@ -1,5 +1,6 @@
 using System;
 using EngineeringDiscovery.Core.Domain.Investigation;
+using EngineeringDiscovery.Web.Services;
 
 namespace EngineeringDiscovery.Web.Services
 {

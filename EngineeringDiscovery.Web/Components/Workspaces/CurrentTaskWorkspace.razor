@@ -71,6 +71,8 @@
 @code {
     [Inject]
     private EngineeringDiscovery.Web.Services.CurrentTaskState CurrentTaskState { get; set; } = null!;
+    [Inject]
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private CurrentTask? ActiveTask => CurrentTaskState.ActiveTask;
 
@@ -155,6 +157,13 @@
             b.ImplementationThoughts = BriefImplementation ?? string.Empty;
             b.Touch();
         });
+
+        // Ensure the persisted workspace is updated immediately with the latest brief
+        if (WorkspaceState.ActiveWorkspace is not null)
+        {
+            WorkspaceState.ActiveWorkspace.CurrentTask = CurrentTaskState.ActiveTask;
+            WorkspaceState.Save();
+        }
     }
 
     public void Dispose()

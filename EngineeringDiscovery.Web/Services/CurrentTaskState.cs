@@ -1,5 +1,6 @@
 using System;
 using EngineeringDiscovery.Core.Domain.CurrentTask;
+using EngineeringDiscovery.Web.Services;
 
 namespace EngineeringDiscovery.Web.Services
 {
@@ -8,6 +9,14 @@ namespace EngineeringDiscovery.Web.Services
         public CurrentTask? ActiveTask { get; private set; }
 
         public event Action? OnChange;
+
+        // Called by WorkspaceState during startup to seed the active task from persisted workspace
+        public void SeedFromWorkspace(CurrentTask? task)
+        {
+            ActiveTask = task;
+            NotifyStateChanged();
+        }
+
 
         public CurrentTask StartTask(string title, string description, string goal)
         {
