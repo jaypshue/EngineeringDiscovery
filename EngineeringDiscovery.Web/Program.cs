@@ -7,6 +7,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 // Shared investigation state for workspace components
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.InvestigationState>();
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.CurrentTaskState>();
 
 var app = builder.Build();
 

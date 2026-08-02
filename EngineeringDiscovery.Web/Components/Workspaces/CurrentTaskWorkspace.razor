@@ -1,0 +1,102 @@
+@using EngineeringDiscovery.Core.Domain.CurrentTask
+@namespace EngineeringDiscovery.Web.Components.Workspaces
+
+<section class="workspace workspace--current-task">
+    <h3>Current Task</h3>
+
+    @if (ActiveTask is null)
+    {
+        <section class="workspace__section">
+            <h4>Begin Engineering Work</h4>
+            <p>No Current Task is active. Begin a task to capture the engineering intent for the work you are about to perform.</p>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <p class="error">@ErrorMessage</p>
+            }
+
+            <div class="task-form">
+                <label>
+                    Title
+                    <input @bind="Title" placeholder="Short task title" />
+                </label>
+                <label>
+                    Description
+                    <textarea @bind="Description" placeholder="What work is being performed?"></textarea>
+                </label>
+                <label>
+                    Goal
+                    <textarea @bind="Goal" placeholder="What outcome should this work produce?"></textarea>
+                </label>
+                <button class="btn" @onclick="StartTask">Begin Current Task</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="workspace__section">
+            <h4>@ActiveTask.Title</h4>
+            <dl>
+                <dt>Description</dt>
+                <dd>@ActiveTask.Description</dd>
+                <dt>Goal</dt>
+                <dd>@ActiveTask.Goal</dd>
+                <dt>Status</dt>
+                <dd>@ActiveTask.Status</dd>
+            </dl>
+            <button class="btn" @onclick="CompleteTask">Complete Task</button>
+        </section>
+    }
+</section>
+
+@code {
+    [Inject]
+    private EngineeringDiscovery.Web.Services.CurrentTaskState CurrentTaskState { get; set; } = null!;
+
+    private CurrentTask? ActiveTask => CurrentTaskState.ActiveTask;
+
+    private string Title { get; set; } = string.Empty;
+
+    private string Description { get; set; } = string.Empty;
+
+    private string Goal { get; set; } = string.Empty;
+
+    private string? ErrorMessage { get; set; }
+
+    protected override void OnInitialized()
+    {
+        CurrentTaskState.OnChange += OnCurrentTaskChanged;
+    }
+
+    private void StartTask()
+    {
+        ErrorMessage = null;
+
+        try
+        {
+            CurrentTaskState.StartTask(Title, Description, Goal);
+            Title = string.Empty;
+            Description = string.Empty;
+            Goal = string.Empty;
+        }
+        catch (ArgumentException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    private void CompleteTask()
+    {
+        CurrentTaskState.CompleteTask();
+    }
+
+    private void OnCurrentTaskChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CurrentTaskState.OnChange -= OnCurrentTaskChanged;
+    }
+}

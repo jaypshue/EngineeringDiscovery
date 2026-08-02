@@ -17,7 +17,7 @@
                 aria-current="@(isActive ? "page" : null)"
                 @onclick="() => SelectRole(role)"
                 @onkeydown="(e) => OnKeyDown(e, role)">
-                <span class="role-nav__name">@role</span>
+                <span class="role-nav__name">@GetRoleName(role)</span>
             </li>
         }
     </ul>
@@ -55,9 +55,15 @@
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private static readonly EngineeringRole[] DefaultRoles = new[] { EngineeringRole.Architect, EngineeringRole.Planner, EngineeringRole.Developer, EngineeringRole.Verifier, EngineeringRole.Reviewer };
+    private static readonly EngineeringRole[] DefaultRoles = new[] { EngineeringRole.CurrentTask, EngineeringRole.Architect, EngineeringRole.Planner, EngineeringRole.Developer, EngineeringRole.Verifier, EngineeringRole.Reviewer };
 
     private IEnumerable<EngineeringRole> ItemsResolved => Items ?? DefaultRoles;
+
+    private static string GetRoleName(EngineeringRole role) => role switch
+    {
+        EngineeringRole.CurrentTask => "Current Task",
+        _ => role.ToString()
+    };
 
     private async Task SelectRole(EngineeringRole role)
     {

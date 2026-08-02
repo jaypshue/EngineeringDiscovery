@@ -13,6 +13,7 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
             // Deterministic, static registration for now
             yield return new NamespaceMetricsEnrichmentPass();
             yield return new ProjectMetricsEnrichmentPass();
+            yield return new DeclarationRelationshipEnrichmentPass();
             // Build the canonical repository relationship graph (inheritance + dependencies)
             yield return new GraphPopulationEnricher();
 

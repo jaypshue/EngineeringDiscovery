@@ -1,8 +1,7 @@
 @using EngineeringDiscovery.Core.Domain.Investigation
 @namespace EngineeringDiscovery.Web.Components.Dashboard.Cards
 
-<div class="card repository-card"
-     style="border:8px solid red;background:yellow;">
+<div class="card repository-card">
     <strong>@(RepositoryName ?? "(unknown)")</strong>
     <div class="muted">@Summary</div>
     <ul class="repo-facts">
@@ -23,13 +22,4 @@
     private int Namespaces => Investigation?.NamespaceObservations?.Count ?? 0;
     private int Types => Investigation?.TypeObservations?.Count ?? 0;
     private int Members => Investigation?.MemberObservations?.Count ?? 0;
-}
-
-@code {
-    // Diagnostics: log investigation instance when rendering repository card
-    protected override void OnParametersSet()
-    {
-        try { System.Diagnostics.Debug.WriteLine($"RepositoryCard.Render: InvHash={(Investigation?.GetHashCode().ToString() ?? "null")}, Namespaces={Namespaces}, Types={Types}"); } catch { }
-        base.OnParametersSet();
-    }
 }

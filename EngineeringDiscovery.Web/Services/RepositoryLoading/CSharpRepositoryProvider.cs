@@ -60,7 +60,6 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                         }
                         else
                         {
-                            try { System.Diagnostics.Debug.WriteLine("MSBuild assemblies already loaded; skipping MSBuildLocator registration."); } catch { }
                         }
                     }
                 }

@@ -80,8 +80,6 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
-        System.Diagnostics.Debugger.Break();
     }
 
     protected override void OnParametersSet()
@@ -91,22 +89,6 @@
         {
             Investigation = InvestigationState.Investigation;
         }
-        // Presentation-layer diagnostics: verify investigation and relationship graph state
-        try
-        {
-            Console.WriteLine($"GraphWorkspace: Investigation is null? {Investigation is null}");
-            var rg = Investigation?.RelationshipGraph;
-            Console.WriteLine($"GraphWorkspace: RelationshipGraph is null? {rg is null}");
-            if (rg != null)
-            {
-                var inh = rg.GetRelationships(RelationshipType.Inheritance).Count();
-                var dep = rg.GetRelationships(RelationshipType.Dependency).Count();
-                var impl = rg.GetRelationships(RelationshipType.Implementation).Count();
-                Console.WriteLine($"GraphWorkspace: relationships - Inheritance={inh} Dependency={dep} Implementation={impl}");
-            }
-        }
-        catch { }
-
         BuildGraphFromInvestigation();
         GraphNeedsUpdate = true;
     }
@@ -123,50 +105,6 @@
             _graphModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", modulePath);
             try
             {
-                // Presentation-layer diagnostics immediately before JS interop init
-                try
-                {
-                    Console.WriteLine("====================================");
-                    Console.WriteLine($"Investigation null: {Investigation == null}");
-                    Console.WriteLine($"RelationshipGraph null: {Investigation?.RelationshipGraph == null}");
-                    var relCount = 0;
-                    if (Investigation?.RelationshipGraph != null)
-                    {
-                        relCount = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
-                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
-                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
-                    }
-                    Console.WriteLine($"Relationship count: {relCount}");
-                    try
-                    {
-                        int elementCount = 0;
-                        if (elements is System.Collections.ICollection c) elementCount = c.Count;
-                        else if (elements is System.Collections.IEnumerable e)
-                        {
-                            foreach (var _ in e) elementCount++;
-                        }
-                        Console.WriteLine($"Element count: {elementCount}");
-                    }
-                    catch { Console.WriteLine("Element count: <unavailable>"); }
-
-                    var rels = Enumerable.Empty<(string Source, string Target)>();
-                    if (Investigation?.RelationshipGraph != null)
-                    {
-                        rels = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance)
-                            .Concat(Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency))
-                            .Concat(Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation))
-                            .Select(r => (Source: r.Source, Target: r.Target));
-                    }
-
-                    foreach (var r in rels.Take(10))
-                    {
-                        Console.WriteLine($"{r.Source} -> {r.Target}");
-                    }
-
-                    Console.WriteLine("====================================");
-                }
-                catch { }
-
                 await _graphModule.InvokeVoidAsync("init", "cy", elements, dotNetRef, viewState);
             }
             catch (JSException jsEx)
@@ -181,35 +119,6 @@
         else if (GraphNeedsUpdate && _graphModule != null)
         {
             var elements = BuildCytoscapeElements();
-            // Diagnostics immediately before update interop
-            try
-            {
-                Console.WriteLine("====================================");
-                Console.WriteLine($"Investigation null: {Investigation == null}");
-                Console.WriteLine($"RelationshipGraph null: {Investigation?.RelationshipGraph == null}");
-                var relCount2 = 0;
-                if (Investigation?.RelationshipGraph != null)
-                {
-                    relCount2 = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
-                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
-                                 + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
-                }
-                Console.WriteLine($"Relationship count: {relCount2}");
-                try
-                {
-                    int elementCount2 = 0;
-                    if (elements is System.Collections.ICollection c2) elementCount2 = c2.Count;
-                    else if (elements is System.Collections.IEnumerable e2)
-                    {
-                        foreach (var _ in e2) elementCount2++;
-                    }
-                    Console.WriteLine($"Element count: {elementCount2}");
-                }
-                catch { Console.WriteLine("Element count: <unavailable>"); }
-                Console.WriteLine("====================================");
-            }
-            catch { }
-
             await _graphModule.InvokeVoidAsync("update", elements);
             await _graphModule.InvokeVoidAsync("setFilters", new { Inheritance = FilterInheritance, Implementation = FilterImplementation, Dependency = FilterDependency });
             GraphNeedsUpdate = false;
@@ -231,12 +140,6 @@
     [JSInvokable]
     public void OnGraphInitialized(int nodes, int edges, int width, int height)
     {
-        Console.WriteLine($"Graph initialized: nodes={nodes} edges={edges} container={width}x{height}");
-        // If no nodes, surface a warning
-        if (nodes == 0)
-        {
-            Console.Error.WriteLine("Graph initialized with zero nodes — check Investigation.RelationshipGraph data.");
-        }
     }
 
     private object BuildCytoscapeElements()
@@ -268,17 +171,6 @@
         {
             elems.Add(new { data = new { id = $"e_{rel.Source}_{rel.Target}_impl", source = rel.Source, target = rel.Target, type = "Implementation" } });
         }
-
-        // Diagnostic: report how many elements are produced for Cytoscape
-        try
-        {
-            var nodeCount = qnames.Count;
-            var edgeCount = Investigation.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count()
-                         + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count()
-                         + Investigation.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count();
-            Console.WriteLine($"GraphWorkspace: BuildCytoscapeElements produced nodes={nodeCount} edges={edgeCount} elements={elems.Count}");
-        }
-        catch { }
 
         return elems;
     }

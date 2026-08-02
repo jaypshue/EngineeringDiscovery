@@ -10,7 +10,7 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
     internal class JavaRepositoryProvider : IRepositoryProvider
     {
         private static readonly Regex PackageDeclarationRegex = new Regex(@"^\s*package\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Compiled | RegexOptions.Multiline);
-        private static readonly Regex TypeDeclarationRegex = new Regex(@"^\s*(?:(public|protected|private)\s+)?(?:(abstract|final|static)\s+)*(class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)\b", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex TypeDeclarationRegex = new Regex(@"^\s*(?:(public|protected|private)\s+)?(?:(abstract|final|static)\s+)*(class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)(?<clauses>[^\{;]*)", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly Regex MemberDeclarationRegex = new Regex(@"^(?:(?<visibility>public|protected|private)\s+)?(?:(?<modifier>static|abstract|final|synchronized|native|strictfp|default)\s+)*(?:(?<typeParams><[^>]+>)\s+)?(?:(?<returnType>[A-Za-z_$][A-Za-z0-9_$.]*(?:\s*<[^;{}()]+>)?(?:\s*\[\])?(?:\s*\.\.\.)?)\s+)?(?<name>[A-Za-z_$][A-Za-z0-9_$]*)\s*\((?<parameters>[^)]*)\)\s*(?:throws\s+[^{;]+)?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static readonly string[] BuildFileNames =
@@ -366,8 +366,7 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                     if (string.IsNullOrWhiteSpace(keyword) || string.IsNullOrWhiteSpace(typeName)) continue;
 
                     var declarationPrefix = match.Value;
-
-                    yield return new TypeDescriptor
+                    var typeDescriptor = new TypeDescriptor
                     {
                         Namespace = packageName,
                         TypeName = typeName,
@@ -379,8 +378,70 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                         IsStatic = ContainsModifier(declarationPrefix, "static"),
                         SourceFilePath = javaFile
                     };
+
+                    PopulateJavaTypeRelationships(typeDescriptor, match.Groups["clauses"].Value);
+
+                    yield return typeDescriptor;
                 }
             }
+        }
+
+        private static void PopulateJavaTypeRelationships(TypeDescriptor typeDescriptor, string clauses)
+        {
+            if (typeDescriptor == null || string.IsNullOrWhiteSpace(clauses)) return;
+
+            var extendsMatch = Regex.Match(clauses, @"\bextends\s+(?<types>.*?)(?=\bimplements\b|$)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (extendsMatch.Success)
+            {
+                var extendedTypes = ParseJavaTypeList(extendsMatch.Groups["types"].Value).ToList();
+                if (typeDescriptor.Kind == EngineeringTypeKind.Interface)
+                {
+                    foreach (var extendedInterface in extendedTypes)
+                    {
+                        typeDescriptor.ImplementedInterfaces.Add(extendedInterface);
+                    }
+                }
+                else
+                {
+                    typeDescriptor.BaseType = extendedTypes.FirstOrDefault();
+                }
+            }
+
+            var implementsMatch = Regex.Match(clauses, @"\bimplements\s+(?<types>.*)$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (implementsMatch.Success)
+            {
+                foreach (var implementedInterface in ParseJavaTypeList(implementsMatch.Groups["types"].Value))
+                {
+                    typeDescriptor.ImplementedInterfaces.Add(implementedInterface);
+                }
+            }
+
+            typeDescriptor.ImplementedInterfaceCount = typeDescriptor.ImplementedInterfaces
+                .Where(typeName => !string.IsNullOrWhiteSpace(typeName))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+        }
+
+        private static IEnumerable<string> ParseJavaTypeList(string text)
+        {
+            foreach (var item in SplitTopLevel(text ?? string.Empty, ','))
+            {
+                var normalized = NormalizeJavaTypeName(item);
+                if (!string.IsNullOrWhiteSpace(normalized)) yield return normalized;
+            }
+        }
+
+        private static string NormalizeJavaTypeName(string typeName)
+        {
+            typeName = (typeName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(typeName)) return string.Empty;
+
+            var genericStart = typeName.IndexOf('<');
+            if (genericStart >= 0) typeName = typeName.Substring(0, genericStart).Trim();
+            typeName = typeName.Replace("...", string.Empty, StringComparison.Ordinal).Trim();
+            while (typeName.EndsWith("[]", StringComparison.Ordinal)) typeName = typeName.Substring(0, typeName.Length - 2).Trim();
+
+            return Regex.Match(typeName, @"[A-Za-z_$][A-Za-z0-9_$.]*").Value;
         }
 
         private static IEnumerable<NamespaceObservation> DiscoverNamespaces(string projectName, IEnumerable<string> javaSourceFiles)

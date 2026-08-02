@@ -47,6 +47,7 @@
 
     private string Title => Role switch
     {
+        EngineeringRole.CurrentTask => "Current Task Workspace",
         EngineeringRole.Architect => "Architect Workspace",
         EngineeringRole.Planner => "Planner Workspace",
         EngineeringRole.Developer => "Developer Workspace",
@@ -123,6 +124,11 @@
 
     private RenderFragment RenderWorkspace()
     {
+        if (Role == EngineeringRole.CurrentTask)
+        {
+            return (__builder) => { __builder.OpenComponent(0, typeof(CurrentTaskWorkspace)); __builder.CloseComponent(); };
+        }
+
         // Do not render any workspace until an Investigation has been produced by the Discovery Engine.
         if (InvestigationState.Investigation is null)
         {

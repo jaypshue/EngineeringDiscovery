@@ -70,6 +70,10 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
         private readonly List<EngineeringDiscovery.Core.Models.NamespaceObservation> _namespaceObservations = new();
         public IReadOnlyList<EngineeringDiscovery.Core.Models.NamespaceObservation> NamespaceObservations => _namespaceObservations.AsReadOnly();
 
+        // Structured relationship observations populated from canonical engineering artifacts.
+        private readonly List<EngineeringDiscovery.Core.Models.RelationshipObservation> _relationshipObservations = new();
+        public IReadOnlyList<EngineeringDiscovery.Core.Models.RelationshipObservation> RelationshipObservations => _relationshipObservations.AsReadOnly();
+
         // Structured project observation: canonical project-level metrics populated by enrichment passes
         private EngineeringDiscovery.Core.Models.ProjectObservation? _projectObservation;
         public EngineeringDiscovery.Core.Models.ProjectObservation? ProjectObservation => _projectObservation;
@@ -126,6 +130,14 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
             if (observation is null) throw new ArgumentNullException(nameof(observation));
             if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Namespace observations can only be added while the investigation is Started.");
             _namespaceObservations.Add(observation);
+        }
+
+        // Add a structured RelationshipObservation to the investigation.
+        public void AddRelationshipObservation(EngineeringDiscovery.Core.Models.RelationshipObservation observation)
+        {
+            if (observation is null) throw new ArgumentNullException(nameof(observation));
+            if (Status != InvestigationStatus.Started) throw new InvalidOperationException("Relationship observations can only be added while the investigation is Started.");
+            _relationshipObservations.Add(observation);
         }
 
         public static Investigation Create(Guid id, string repositoryPath)

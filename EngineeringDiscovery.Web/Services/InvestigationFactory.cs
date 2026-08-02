@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using EngineeringDiscovery.Core.Domain;
 
@@ -25,8 +24,6 @@ namespace EngineeringDiscovery.Web.Services
 
             // Seed some sample findings to preserve previous behavior
             inv.Start();
-            // Diagnostics: record investigation identity and initial counts
-            try { Debug.WriteLine($"InvestigationFactory.Create: InvHash={inv.GetHashCode()}, Namespaces={inv.NamespaceObservations?.Count ?? 0}, Types={inv.TypeObservations?.Count ?? 0}"); } catch { }
             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Architecture, "API follows layered architecture."));
             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Risk, "Authentication library is deprecated."));
             inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Decision, "WorkspaceHost owns the Investigation aggregate."));

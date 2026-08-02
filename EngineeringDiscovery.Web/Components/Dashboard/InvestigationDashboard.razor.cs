@@ -3,7 +3,6 @@ using EngineeringDiscovery.Web.Components.Dashboard.ViewModels;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -57,9 +56,6 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                     TechnologyCount = 0,
                     FindingCount = Investigation.Findings?.Count ?? 0
                 };
-
-                // Add engineering summary values to ViewModel via a simple mapping in the SummaryCard.Description (lightweight)
-                // The UI will render artifact counts in an artifacts panel below.
             }
             catch
             {

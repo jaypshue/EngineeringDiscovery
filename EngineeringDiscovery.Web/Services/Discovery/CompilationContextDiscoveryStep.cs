@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using EngineeringDiscovery.Core.Models;
 using EngineeringDiscovery.Web.Services.RepositoryLoading;
@@ -34,14 +33,7 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             foreach (var nsObs in c.NamespaceObservations)
                             {
                                 try { context.NamespaceObservations.Add(nsObs); } catch { }
-                                try
-                                {
-                                    // Diagnostics: log namespace addition and investigation identity
-                                    try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddNamespace: InvHash={_inv.GetHashCode()}, BeforeNamespaces={_inv.NamespaceObservations?.Count ?? 0}"); } catch { }
-                                    _inv.AddNamespaceObservation(nsObs);
-                                    try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddNamespace: InvHash={_inv.GetHashCode()}, AfterNamespaces={_inv.NamespaceObservations?.Count ?? 0}"); } catch { }
-                                }
-                                catch (Exception ex) { try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddNamespace: Exception={ex.Message}"); } catch { } }
+                                try { _inv.AddNamespaceObservation(nsObs); } catch { }
                             }
                         }
                         catch { }
@@ -324,14 +316,7 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             catch { }
 
                             try { context.TypeObservations.Add(typeObs); } catch { }
-                            try
-                            {
-                                // Diagnostics: log type addition and investigation identity
-                                try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddType: InvHash={_inv.GetHashCode()}, BeforeTypes={_inv.TypeObservations?.Count ?? 0}"); } catch { }
-                                _inv.AddTypeObservation(typeObs);
-                                try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddType: InvHash={_inv.GetHashCode()}, AfterTypes={_inv.TypeObservations?.Count ?? 0}"); } catch { }
-                            }
-                            catch (Exception ex) { try { Debug.WriteLine($"CompilationContextDiscoveryStep.AddType: Exception={ex.Message}"); } catch { } }
+                            try { _inv.AddTypeObservation(typeObs); } catch { }
                         }
                             catch { }
                         }
