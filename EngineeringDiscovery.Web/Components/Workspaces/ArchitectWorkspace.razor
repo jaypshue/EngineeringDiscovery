@@ -10,7 +10,7 @@
     public EngInv.Investigation? Investigation { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private string? ErrorMessage { get; set; }
 
@@ -30,7 +30,7 @@
     {
         try
         {
-            (Investigation ?? InvestigationState.Investigation)!.Complete();
+            (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)!.Complete();
             ClearError();
         }
         catch (InvalidOperationException ex)
@@ -43,7 +43,7 @@
     {
         try
         {
-            (Investigation ?? InvestigationState.Investigation)!.Reopen();
+            (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)!.Reopen();
             ClearError();
         }
         catch (InvalidOperationException ex)
@@ -73,7 +73,7 @@
             var desc = NewFindingDescription?.Trim();
             if (string.IsNullOrEmpty(desc)) return; // nothing to add
             var f = new EngInv.Finding(Guid.NewGuid(), NewFindingType, desc);
-            (Investigation ?? InvestigationState.Investigation)!.AddFinding(f);
+            (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)!.AddFinding(f);
             NewFindingDescription = string.Empty;
             ClearError();
         }

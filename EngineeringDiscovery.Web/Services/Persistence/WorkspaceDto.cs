@@ -42,6 +42,14 @@ namespace EngineeringDiscovery.Web.Services.Persistence
         public string Notes { get; set; } = string.Empty;
         public string ImplementationThoughts { get; set; } = string.Empty;
         public DateTime LastUpdatedUtc { get; set; }
+        public EngineeringContextDto? EngineeringContext { get; set; }
+    }
+
+    internal sealed class EngineeringContextDto
+    {
+        public string[] ProjectIds { get; set; } = Array.Empty<string>();
+        public string[] NamespaceIds { get; set; } = Array.Empty<string>();
+        public string[] TypeIds { get; set; } = Array.Empty<string>();
     }
 
     internal sealed class InvestigationDto

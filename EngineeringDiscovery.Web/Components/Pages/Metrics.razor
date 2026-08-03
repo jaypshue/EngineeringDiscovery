@@ -1,6 +1,6 @@
 @page "/metrics"
 @using EngineeringDiscovery.Core.Domain.Investigation
-@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+@inject EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState
 
 <PageTitle>Metrics</PageTitle>
 
@@ -8,5 +8,5 @@
 <p>Metrics view placeholder.</p>
 
 @code {
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 }

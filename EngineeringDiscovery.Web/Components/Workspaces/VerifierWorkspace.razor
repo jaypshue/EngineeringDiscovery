@@ -9,11 +9,11 @@
     [Parameter]
     public Investigation? Investigation { get; set; }
 
-    [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
-
     private IReadOnlyList<object> Findings =>
-        (Investigation ?? InvestigationState.Investigation)?.Findings?.Cast<object>().ToList() ?? new List<object>();
+        (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)?.Findings?.Cast<object>().ToList() ?? new List<object>();
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private int FindingCount => Findings.Count;
 

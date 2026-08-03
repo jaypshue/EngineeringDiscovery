@@ -1,6 +1,6 @@
 @page "/repository"
 @using EngineeringDiscovery.Core.Domain.Investigation
-@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+@inject EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState
 
 <PageTitle>Repository</PageTitle>
 
@@ -8,5 +8,5 @@
 <p>Repository view placeholder — renders repository explorer in future.</p>
 
 @code {
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 }

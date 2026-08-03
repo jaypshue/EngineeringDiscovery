@@ -31,6 +31,18 @@ namespace EngineeringDiscovery.Web.Services
             if (ActiveTask is null) return;
 
             update(ActiveTask.Brief);
+            // Trace update for debugging propagation issues
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var dir = System.IO.Path.Combine(localAppData, "EngineeringDiscovery");
+                if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+                var logPath = System.IO.Path.Combine(dir, "currenttask_updates.log");
+                var msg = $"{DateTime.UtcNow:o} UpdateBrief invoked. Objective='{ActiveTask.Brief.Objective}' Notes='{ActiveTask.Brief.Notes}' Implementation='{ActiveTask.Brief.ImplementationThoughts}'\n";
+                System.IO.File.AppendAllText(logPath, msg);
+            }
+            catch { }
+
             ActiveTask = ActiveTask; // keep reference but indicate mutation
             NotifyStateChanged();
         }

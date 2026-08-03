@@ -63,6 +63,60 @@
                 <div class="brief-actions">
                     <button class="btn" @onclick="SaveBrief">Save Brief</button>
                 </div>
+                <div class="engineering-context">
+                    <h6>Engineering Context</h6>
+                    @if (ActiveTask?.Brief?.Context == null || ActiveTask.Brief.Context.IsEmpty())
+                    {
+                        <p>No engineering context selected.</p>
+                    }
+                    else
+                    {
+                        <ul>
+                            @foreach (var pid in ActiveTask.Brief.Context.ProjectIds)
+                            {
+                                <li>@pid <button class="btn--small" @onclick="() => RemoveProject(pid)">Remove</button></li>
+                            }
+                            @foreach (var nid in ActiveTask.Brief.Context.NamespaceIds)
+                            {
+                                <li>@nid <button class="btn--small" @onclick="() => RemoveNamespace(nid)">Remove</button></li>
+                            }
+                            @foreach (var tid in ActiveTask.Brief.Context.TypeIds)
+                            {
+                                <li>@tid <button class="btn--small" @onclick="() => RemoveType(tid)">Remove</button></li>
+                            }
+                        </ul>
+                    }
+                    <div class="add-context">
+                    <label>
+                            Add Context (enter identifier):
+                            <input @bind="ContextQuery" placeholder="Enter project / namespace / type id" />
+                        </label>
+                        <div class="context-kind">
+                            <label>
+                                Kind
+                                <select @bind="SelectedContextKind">
+                                    <option value="Project">Project</option>
+                                    <option value="Namespace">Namespace</option>
+                                    <option value="Type">Type</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="context-results">
+                            @if (ContextResults?.Any() == true)
+                            {
+                                <ul>
+                                    @foreach (var r in ContextResults)
+                                    {
+                                        <li>@r <button class="btn--small" @onclick="() => AddContextItem(r)">Add</button></li>
+                                    }
+                                </ul>
+                            }
+                            <div class="context-add-inline">
+                                <button class="btn" @onclick="() => AddContextItem(ContextQuery)">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
         </section>
     }
@@ -70,11 +124,9 @@
 
 @code {
     [Inject]
-    private EngineeringDiscovery.Web.Services.CurrentTaskState CurrentTaskState { get; set; } = null!;
-    [Inject]
     private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
-    private CurrentTask? ActiveTask => CurrentTaskState.ActiveTask;
+    private CurrentTask? ActiveTask => WorkspaceState.ActiveWorkspace?.CurrentTask;
 
     private string Title { get; set; } = string.Empty;
 
@@ -88,15 +140,72 @@
     private string BriefObjective { get; set; } = string.Empty;
     private string BriefNotes { get; set; } = string.Empty;
     private string BriefImplementation { get; set; } = string.Empty;
+    private string ContextQuery { get; set; } = string.Empty;
+    private string[] ContextResults { get; set; } = Array.Empty<string>();
+    private string SelectedContextKind { get; set; } = "Type";
 
     protected override void OnInitialized()
     {
-        CurrentTaskState.OnChange += OnCurrentTaskChanged;
+        WorkspaceState.OnChange += OnCurrentTaskChanged;
         if (ActiveTask is not null)
         {
             LoadBriefFromActiveTask();
         }
     }
+
+    private async Task UpdateContextResults()
+    {
+        // V1: simple echo search (replace with InvestigationState lookup later)
+        if (string.IsNullOrWhiteSpace(ContextQuery) || ActiveTask is null)
+        {
+            ContextResults = Array.Empty<string>();
+            return;
+        }
+
+        ContextResults = new[] { ContextQuery };
+    }
+
+    private void AddContextItem(string id)
+    {
+        if (ActiveTask is null) return;
+
+        WorkspaceState.UpdateBrief(b =>
+        {
+            switch (SelectedContextKind)
+            {
+                case "Project":
+                    b.Context.AddProject(id);
+                    break;
+                case "Namespace":
+                    b.Context.AddNamespace(id);
+                    break;
+                default:
+                    b.Context.AddType(id);
+                    break;
+            }
+
+            b.Touch();
+        });
+    }
+
+    private void RemoveProject(string id)
+    {
+        if (ActiveTask is null) return;
+        WorkspaceState.UpdateBrief(b => { b.Context.RemoveProject(id); b.Touch(); });
+    }
+
+    private void RemoveNamespace(string id)
+    {
+        if (ActiveTask is null) return;
+        WorkspaceState.UpdateBrief(b => { b.Context.RemoveNamespace(id); b.Touch(); });
+    }
+
+    private void RemoveType(string id)
+    {
+        if (ActiveTask is null) return;
+        WorkspaceState.UpdateBrief(b => { b.Context.RemoveType(id); b.Touch(); });
+    }
+
 
     private void StartTask()
     {
@@ -104,7 +213,7 @@
 
         try
         {
-            CurrentTaskState.StartTask(Title, Description, Goal);
+            WorkspaceState.BeginTask(Title, Description, Goal);
             Title = string.Empty;
             Description = string.Empty;
             Goal = string.Empty;
@@ -117,7 +226,7 @@
 
     private void CompleteTask()
     {
-        CurrentTaskState.CompleteTask();
+        WorkspaceState.CompleteTask();
     }
 
     private void OnCurrentTaskChanged()
@@ -150,7 +259,8 @@
     {
         if (ActiveTask is null) return;
 
-        CurrentTaskState.UpdateBrief(b =>
+        // Update via WorkspaceState to keep Workspace as single source of truth
+        WorkspaceState.UpdateBrief(b =>
         {
             b.Objective = BriefObjective ?? string.Empty;
             b.Notes = BriefNotes ?? string.Empty;
@@ -158,16 +268,11 @@
             b.Touch();
         });
 
-        // Ensure the persisted workspace is updated immediately with the latest brief
-        if (WorkspaceState.ActiveWorkspace is not null)
-        {
-            WorkspaceState.ActiveWorkspace.CurrentTask = CurrentTaskState.ActiveTask;
-            WorkspaceState.Save();
-        }
+        // WorkspaceState.UpdateBrief already persisted changes; nothing more to do here
     }
 
     public void Dispose()
     {
-        CurrentTaskState.OnChange -= OnCurrentTaskChanged;
+        WorkspaceState.OnChange -= OnCurrentTaskChanged;
     }
 }

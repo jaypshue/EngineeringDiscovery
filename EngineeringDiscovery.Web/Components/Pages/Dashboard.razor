@@ -39,32 +39,32 @@
     private string? ViewModelProject { get; set; } = "(none)";
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 
     protected override void OnInitialized()
     {
-        InvestigationState.OnChange += OnInvestigationChanged;
+        WorkspaceState.OnChange += OnWorkspaceChanged;
     }
 
-    private void OnInvestigationChanged()
+    private void OnWorkspaceChanged()
     {
         InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        InvestigationState.OnChange -= OnInvestigationChanged;
+        WorkspaceState.OnChange -= OnWorkspaceChanged;
     }
 
     private List<(string Name, bool IsComplete)> PipelineStatuses => new()
     {
-        ("Repository Loaded", !string.IsNullOrWhiteSpace(InvestigationState.Investigation?.RepositoryPath)),
-        ("Engineering Model Built", InvestigationState.Investigation != null),
-        ("Relationship Graph Built", InvestigationState.Investigation?.RelationshipGraph != null),
-        ("Repository Metrics Calculated", InvestigationState.Investigation?.RepositoryMetrics != null),
-        ("Engineering Rules Evaluated", InvestigationState.Investigation?.Artifacts?.Count > 0),
+        ("Repository Loaded", !string.IsNullOrWhiteSpace(WorkspaceState.ActiveWorkspace?.RepositoryPath)),
+        ("Engineering Model Built", WorkspaceState.ActiveWorkspace?.Investigation != null),
+        ("Relationship Graph Built", WorkspaceState.ActiveWorkspace?.Investigation?.RelationshipGraph != null),
+        ("Repository Metrics Calculated", WorkspaceState.ActiveWorkspace?.Investigation?.RepositoryMetrics != null),
+        ("Engineering Rules Evaluated", WorkspaceState.ActiveWorkspace?.Investigation?.Artifacts?.Count > 0),
         ("Roadmap Generated", false)
     };
 }

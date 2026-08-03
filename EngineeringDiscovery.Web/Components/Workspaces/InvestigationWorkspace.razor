@@ -11,7 +11,7 @@
     public EngInv.Investigation? Investigation { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private string? ErrorMessage { get; set; }
 
@@ -24,12 +24,12 @@
         // If parent provided an Investigation parameter, prefer it. Otherwise fall back to shared InvestigationState.
         if (Investigation is null)
         {
-            Investigation = InvestigationState.Investigation;
+            Investigation = WorkspaceState.ActiveWorkspace?.Investigation;
         }
 
         if (Investigation is null)
         {
-            throw new InvalidOperationException("InvestigationWorkspace requires an Investigation parameter to be provided by the parent component or available in InvestigationState.");
+            throw new InvalidOperationException("InvestigationWorkspace requires an Investigation parameter to be provided by the parent component or available in WorkspaceState.ActiveWorkspace.");
         }
     }
 

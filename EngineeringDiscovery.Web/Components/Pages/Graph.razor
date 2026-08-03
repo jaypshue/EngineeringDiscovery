@@ -6,25 +6,25 @@
 
 <h2>Engineering Graph</h2>
 
-@inject EngineeringDiscovery.Web.Services.InvestigationState InvestigationState
+@inject EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState
 
 <GraphWorkspace Investigation="SampleInvestigation" />
 
 @code {
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 
     protected override void OnInitialized()
     {
-        InvestigationState.OnChange += OnInvestigationChanged;
+        WorkspaceState.OnChange += OnWorkspaceChanged;
     }
 
-    private void OnInvestigationChanged()
+    private void OnWorkspaceChanged()
     {
         InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        InvestigationState.OnChange -= OnInvestigationChanged;
+        WorkspaceState.OnChange -= OnWorkspaceChanged;
     }
 }

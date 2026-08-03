@@ -91,12 +91,8 @@
     public EngineeringRole Role { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
-    [Inject]
-    private EngineeringDiscovery.Web.Services.CurrentTaskState CurrentTaskState { get; set; } = null!;
-
-    [Inject]
     private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    // InvestigationState and CurrentTaskState deprecated - UI should use WorkspaceState directly
 
     [Inject]
     private IJSRuntime JS { get; set; } = null!;
@@ -122,7 +118,15 @@
 
     // Note: WorkspaceHost publishes the canonical Investigation to InvestigationState.
     // Do not store a separate authoritative instance here; use the shared InvestigationState for rendering and passing to children.
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => InvestigationState.Investigation;
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
+
+    protected override void OnInitialized()
+    {
+        if (WorkspaceState.ActiveWorkspace?.Investigation is not null)
+        {
+            WorkspaceState.SetInvestigation(WorkspaceState.ActiveWorkspace.Investigation);
+        }
+    }
 
     private void UseCurrentRepository()
     {
@@ -183,9 +187,9 @@
 
             WorkspaceState.ReplaceWorkspace(workspace);
 
-            // Seed existing compatibility state services
-            InvestigationState.SetInvestigation(investigation);
-            CurrentTaskState.SeedFromWorkspace(workspace.CurrentTask);
+            // Persist investigation into WorkspaceState directly
+            WorkspaceState.SetInvestigation(investigation);
+            // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
         }
         catch (Exception ex)
         {
@@ -211,8 +215,10 @@
             return (__builder) => { __builder.OpenComponent(0, typeof(CurrentTaskWorkspace)); __builder.CloseComponent(); };
         }
 
+        var investigation = WorkspaceState.ActiveWorkspace?.Investigation;
+
         // Do not render any workspace until an Investigation has been produced by the Discovery Engine.
-        if (InvestigationState.Investigation is null)
+        if (investigation is null)
         {
             // At startup the Investigation Dashboard (above) contains the single Start Discovery action.
             // The workspace area stays empty until discovery completes.
@@ -222,11 +228,11 @@
         // After discovery completes, render the appropriate workspace and always pass a non-null Investigation.
         return Role switch
         {
-            EngineeringRole.Architect => (__builder) => { __builder.OpenComponent(0, typeof(ArchitectWorkspace)); __builder.AddAttribute(1, "Investigation", (object)InvestigationState.Investigation!); __builder.CloseComponent(); },
-            EngineeringRole.Planner => (__builder) => { __builder.OpenComponent(0, typeof(PlannerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)InvestigationState.Investigation!); __builder.CloseComponent(); },
-            EngineeringRole.Developer => (__builder) => { __builder.OpenComponent(0, typeof(DeveloperWorkspace)); __builder.AddAttribute(1, "Investigation", (object)InvestigationState.Investigation!); __builder.CloseComponent(); },
-            EngineeringRole.Verifier => (__builder) => { __builder.OpenComponent(0, typeof(VerifierWorkspace)); __builder.AddAttribute(1, "Investigation", (object)InvestigationState.Investigation!); __builder.CloseComponent(); },
-            EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(ReviewerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)InvestigationState.Investigation!); __builder.CloseComponent(); },
+            EngineeringRole.Architect => (__builder) => { __builder.OpenComponent(0, typeof(ArchitectWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
+            EngineeringRole.Planner => (__builder) => { __builder.OpenComponent(0, typeof(PlannerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
+            EngineeringRole.Developer => (__builder) => { __builder.OpenComponent(0, typeof(DeveloperWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
+            EngineeringRole.Verifier => (__builder) => { __builder.OpenComponent(0, typeof(VerifierWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
+            EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(ReviewerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
             _ => (__builder) => { __builder.AddContent(0, "Workspace content."); }
         };
     }

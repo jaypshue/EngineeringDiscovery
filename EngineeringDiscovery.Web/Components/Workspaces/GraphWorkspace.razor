@@ -47,7 +47,7 @@
     public Investigation? Investigation { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private DotNetObjectReference<GraphWorkspace>? dotNetRef;
 
@@ -87,7 +87,7 @@
         base.OnParametersSet();
         if (Investigation is null)
         {
-            Investigation = InvestigationState.Investigation;
+            Investigation = WorkspaceState.ActiveWorkspace?.Investigation;
         }
         BuildGraphFromInvestigation();
         GraphNeedsUpdate = true;
@@ -99,7 +99,7 @@
         {
             dotNetRef = DotNetObjectReference.Create(this);
             var elements = BuildCytoscapeElements();
-            var viewState = InvestigationState.GraphViewState;
+            var viewState = WorkspaceState.GraphViewState;
             // Import module using relative path so it resolves under the app base href
             var modulePath = NavigationManager.BaseUri.TrimEnd('/') + "/js/graphInterop.js";
             _graphModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", modulePath);
@@ -110,8 +110,8 @@
             catch (JSException jsEx)
             {
                 Console.Error.WriteLine($"Graph init JSException: {jsEx.Message}");
-                InvestigationState.GraphViewState ??= new EngineeringDiscovery.Web.Services.GraphViewState();
-                InvestigationState.GraphViewState.SelectedNode = null;
+                WorkspaceState.GraphViewState ??= new EngineeringDiscovery.Web.Services.GraphViewState();
+                WorkspaceState.GraphViewState.SelectedNode = null;
             }
             await _graphModule.InvokeVoidAsync("setFilters", new { Inheritance = FilterInheritance, Implementation = FilterImplementation, Dependency = FilterDependency });
             GraphNeedsUpdate = false;
@@ -243,20 +243,20 @@
     public void OnNodeSelected(string id)
     {
         SelectedNode = id;
-        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
-        InvestigationState.GraphViewState.SelectedNode = id;
+        if (WorkspaceState.GraphViewState is null) WorkspaceState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        WorkspaceState.GraphViewState.SelectedNode = id;
         StateHasChanged();
     }
 
     [JSInvokable]
     public void OnViewStateChanged(JsonElement state)
     {
-        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        if (WorkspaceState.GraphViewState is null) WorkspaceState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
         try
         {
-            if (state.TryGetProperty("zoom", out var z)) InvestigationState.GraphViewState.Zoom = z.GetDouble();
-            if (state.TryGetProperty("pan", out var p) && p.ValueKind == JsonValueKind.Object) InvestigationState.GraphViewState.Pan = p;
-            if (state.TryGetProperty("selected", out var s) && s.ValueKind == JsonValueKind.String) InvestigationState.GraphViewState.SelectedNode = s.GetString();
+            if (state.TryGetProperty("zoom", out var z)) WorkspaceState.GraphViewState.Zoom = z.GetDouble();
+            if (state.TryGetProperty("pan", out var p) && p.ValueKind == JsonValueKind.Object) WorkspaceState.GraphViewState.Pan = p;
+            if (state.TryGetProperty("selected", out var s) && s.ValueKind == JsonValueKind.String) WorkspaceState.GraphViewState.SelectedNode = s.GetString();
         }
         catch { }
     }
@@ -266,8 +266,8 @@
         if (string.IsNullOrWhiteSpace(SearchText) || _graphModule == null) return;
         await _graphModule.InvokeVoidAsync("selectNode", SearchText.Trim());
         SelectedNode = SearchText.Trim();
-        if (InvestigationState.GraphViewState is null) InvestigationState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
-        InvestigationState.GraphViewState.SelectedNode = SelectedNode;
+        if (WorkspaceState.GraphViewState is null) WorkspaceState.GraphViewState = new EngineeringDiscovery.Web.Services.GraphViewState();
+        WorkspaceState.GraphViewState.SelectedNode = SelectedNode;
         StateHasChanged();
     }
 

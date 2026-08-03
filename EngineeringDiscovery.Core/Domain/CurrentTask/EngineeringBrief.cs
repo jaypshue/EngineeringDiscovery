@@ -10,6 +10,7 @@ namespace EngineeringDiscovery.Core.Domain.CurrentTask
             Notes = string.Empty;
             ImplementationThoughts = string.Empty;
             LastUpdatedUtc = DateTime.UtcNow;
+            Context = new EngineeringContext();
         }
 
         public string Objective { get; set; }
@@ -24,5 +25,7 @@ namespace EngineeringDiscovery.Core.Domain.CurrentTask
         {
             LastUpdatedUtc = DateTime.UtcNow;
         }
+
+        public EngineeringContext Context { get; set; }
     }
 }

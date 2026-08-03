@@ -71,9 +71,108 @@ namespace EngineeringDiscovery.Web.Services
 
         public Workspace? ActiveWorkspace { get; private set; }
 
+        // Persisted view state for the graph workspace (migrated from InvestigationState)
+        public GraphViewState? GraphViewState { get; set; }
+
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 
         public event Action? OnChange;
+
+        // Workspace-centric APIs to manipulate the current task and persist changes
+        public global::EngineeringDiscovery.Core.Domain.CurrentTask.CurrentTask? StartTask(string title, string description, string goal)
+        {
+            // Ensure there is an active workspace to attach the task to. If none exists, create a default workspace.
+            if (ActiveWorkspace is null)
+            {
+                ActiveWorkspace = new Workspace();
+            }
+
+            var ct = new global::EngineeringDiscovery.Core.Domain.CurrentTask.CurrentTask(title, description, goal);
+            ActiveWorkspace.CurrentTask = ct;
+            // Persist and notify listeners so UI re-renders based on the new active task
+            Save();
+            NotifyStateChanged();
+            return ct;
+        }
+
+        // Preferred API name: BeginTask - wraps StartTask for clearer intent
+        public global::EngineeringDiscovery.Core.Domain.CurrentTask.CurrentTask? BeginTask(string title, string description, string goal)
+        {
+            return StartTask(title, description, goal);
+        }
+
+        public void UpdateBrief(Action<global::EngineeringDiscovery.Core.Domain.CurrentTask.EngineeringBrief> update)
+        {
+            if (ActiveWorkspace is null || ActiveWorkspace.CurrentTask is null) return;
+            update(ActiveWorkspace.CurrentTask.Brief);
+            ActiveWorkspace.CurrentTask.Brief.Touch();
+            Save();
+            NotifyStateChanged();
+        }
+
+        // EngineeringContext manipulation helpers to keep UI from touching domain directly
+        public void AddContext(string kind, string id)
+        {
+            if (ActiveWorkspace is null || ActiveWorkspace.CurrentTask is null) return;
+            if (string.IsNullOrWhiteSpace(id)) return;
+
+            switch ((kind ?? string.Empty).Trim())
+            {
+                case "Project":
+                    ActiveWorkspace.CurrentTask.Brief.Context.AddProject(id);
+                    break;
+                case "Namespace":
+                    ActiveWorkspace.CurrentTask.Brief.Context.AddNamespace(id);
+                    break;
+                default:
+                    ActiveWorkspace.CurrentTask.Brief.Context.AddType(id);
+                    break;
+            }
+
+            ActiveWorkspace.CurrentTask.Brief.Touch();
+            Save();
+            NotifyStateChanged();
+        }
+
+        public void RemoveContext(string kind, string id)
+        {
+            if (ActiveWorkspace is null || ActiveWorkspace.CurrentTask is null) return;
+            if (string.IsNullOrWhiteSpace(id)) return;
+
+            switch ((kind ?? string.Empty).Trim())
+            {
+                case "Project":
+                    ActiveWorkspace.CurrentTask.Brief.Context.RemoveProject(id);
+                    break;
+                case "Namespace":
+                    ActiveWorkspace.CurrentTask.Brief.Context.RemoveNamespace(id);
+                    break;
+                default:
+                    ActiveWorkspace.CurrentTask.Brief.Context.RemoveType(id);
+                    break;
+            }
+
+            ActiveWorkspace.CurrentTask.Brief.Touch();
+            Save();
+            NotifyStateChanged();
+        }
+
+        public void CompleteTask()
+        {
+            if (ActiveWorkspace is null || ActiveWorkspace.CurrentTask is null) return;
+            ActiveWorkspace.CurrentTask.Complete();
+            // Keep the completed task in workspace; callers may clear it if desired
+            Save();
+            NotifyStateChanged();
+        }
+
+        public void SetInvestigation(global::EngineeringDiscovery.Core.Domain.Investigation.Investigation? investigation)
+        {
+            if (ActiveWorkspace is null) return;
+            ActiveWorkspace.Investigation = investigation;
+            Save();
+            NotifyStateChanged();
+        }
 
         public void ImportRepository(string repositoryPath)
         {
@@ -102,6 +201,18 @@ namespace EngineeringDiscovery.Web.Services
                 if (ActiveWorkspace is null) return;
 
                 ActiveWorkspace.Touch();
+
+                // Trace save for debugging propagation issues
+                try
+                {
+                    var traceDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppFolderName);
+                    if (!Directory.Exists(traceDir)) Directory.CreateDirectory(traceDir);
+                    var tracePath = Path.Combine(traceDir, "propagation_trace.log");
+                    var brief = ActiveWorkspace.CurrentTask?.Brief;
+                    var msg = $"{DateTime.UtcNow:o} WorkspaceState.Save invoked. Objective='{brief?.Objective}' Notes='{brief?.Notes}' Implementation='{brief?.ImplementationThoughts}'\n";
+                    File.AppendAllText(tracePath, msg);
+                }
+                catch { }
 
                 var dto = ToDto(ActiveWorkspace);
                 var options = new JsonSerializerOptions { WriteIndented = true };
@@ -266,6 +377,31 @@ namespace EngineeringDiscovery.Web.Services
                         if (b.TryGetProperty("Notes", out var bn) && bn.ValueKind == JsonValueKind.String) bd.Notes = bn.GetString() ?? string.Empty;
                         if (b.TryGetProperty("ImplementationThoughts", out var bi) && bi.ValueKind == JsonValueKind.String) bd.ImplementationThoughts = bi.GetString() ?? string.Empty;
                         if (b.TryGetProperty("LastUpdatedUtc", out var bu) && bu.ValueKind == JsonValueKind.String && DateTime.TryParse(bu.GetString(), out var budt)) bd.LastUpdatedUtc = budt;
+                        // EngineeringContext migration: capture arrays if present
+                        if (b.TryGetProperty("EngineeringContext", out var ec) && ec.ValueKind == JsonValueKind.Object)
+                        {
+                            var ecd = new EngineeringDiscovery.Web.Services.Persistence.EngineeringContextDto();
+                            if (ec.TryGetProperty("ProjectIds", out var pids) && pids.ValueKind == JsonValueKind.Array)
+                            {
+                                var list = new System.Collections.Generic.List<string>();
+                                foreach (var v in pids.EnumerateArray()) if (v.ValueKind == JsonValueKind.String) list.Add(v.GetString() ?? string.Empty);
+                                ecd.ProjectIds = list.ToArray();
+                            }
+                            if (ec.TryGetProperty("NamespaceIds", out var nids) && nids.ValueKind == JsonValueKind.Array)
+                            {
+                                var list = new System.Collections.Generic.List<string>();
+                                foreach (var v in nids.EnumerateArray()) if (v.ValueKind == JsonValueKind.String) list.Add(v.GetString() ?? string.Empty);
+                                ecd.NamespaceIds = list.ToArray();
+                            }
+                            if (ec.TryGetProperty("TypeIds", out var tids) && tids.ValueKind == JsonValueKind.Array)
+                            {
+                                var list = new System.Collections.Generic.List<string>();
+                                foreach (var v in tids.EnumerateArray()) if (v.ValueKind == JsonValueKind.String) list.Add(v.GetString() ?? string.Empty);
+                                ecd.TypeIds = list.ToArray();
+                            }
+
+                            bd.EngineeringContext = ecd;
+                        }
                         ctd.Brief = bd;
                     }
 
@@ -383,6 +519,33 @@ namespace EngineeringDiscovery.Web.Services
                 };
             }
 
+            // Serialize EngineeringContext into DTO if available
+            if (workspace.CurrentTask?.Brief?.Context is not null)
+            {
+                dto.CurrentTask ??= new EngineeringDiscovery.Web.Services.Persistence.CurrentTaskDto
+                {
+                    Title = workspace.CurrentTask.Title,
+                    Description = workspace.CurrentTask.Description,
+                    Goal = workspace.CurrentTask.Goal,
+                    Status = workspace.CurrentTask.Status.ToString()
+                };
+
+                dto.CurrentTask.Brief ??= new EngineeringDiscovery.Web.Services.Persistence.EngineeringBriefDto
+                {
+                    Objective = workspace.CurrentTask.Brief.Objective,
+                    Notes = workspace.CurrentTask.Brief.Notes,
+                    ImplementationThoughts = workspace.CurrentTask.Brief.ImplementationThoughts,
+                    LastUpdatedUtc = workspace.CurrentTask.Brief.LastUpdatedUtc
+                };
+
+                dto.CurrentTask.Brief.EngineeringContext = new EngineeringDiscovery.Web.Services.Persistence.EngineeringContextDto
+                {
+                    ProjectIds = workspace.CurrentTask.Brief.Context.ProjectIds.ToArray(),
+                    NamespaceIds = workspace.CurrentTask.Brief.Context.NamespaceIds.ToArray(),
+                    TypeIds = workspace.CurrentTask.Brief.Context.TypeIds.ToArray()
+                };
+            }
+
             return dto;
         }
 
@@ -403,6 +566,14 @@ namespace EngineeringDiscovery.Web.Services
                 ct.Brief.Objective = dto.CurrentTask.Brief?.Objective ?? string.Empty;
                 ct.Brief.Notes = dto.CurrentTask.Brief?.Notes ?? string.Empty;
                 ct.Brief.ImplementationThoughts = dto.CurrentTask.Brief?.ImplementationThoughts ?? string.Empty;
+                // Restore EngineeringContext if present
+                if (dto.CurrentTask.Brief?.EngineeringContext is not null)
+                {
+                    var ctx = dto.CurrentTask.Brief.EngineeringContext;
+                    foreach (var pid in ctx.ProjectIds ?? Array.Empty<string>()) ct.Brief.Context.AddProject(pid);
+                    foreach (var nid in ctx.NamespaceIds ?? Array.Empty<string>()) ct.Brief.Context.AddNamespace(nid);
+                    foreach (var tid in ctx.TypeIds ?? Array.Empty<string>()) ct.Brief.Context.AddType(tid);
+                }
                 workspace.CurrentTask = ct;
             }
 
