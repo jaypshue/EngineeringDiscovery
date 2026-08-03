@@ -35,6 +35,28 @@
         }
         else
         {
+            var freshness = WorkspaceState.GetFreshnessStatus();
+            <div class="freshness">
+                <h5>Engineering Model</h5>
+                @if (freshness == EngineeringDiscovery.Web.Services.WorkspaceState.EngineeringModelFreshness.Current)
+                {
+                    <p class="freshness--current">? Current</p>
+                    <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
+                }
+                else if (freshness == EngineeringDiscovery.Web.Services.WorkspaceState.EngineeringModelFreshness.RefreshRecommended)
+                {
+                    <p class="freshness--stale">? Repository Changed — Refresh Recommended</p>
+                    <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
+                    <button class="btn" @onclick="BuildEngineeringModelAsync">Refresh Engineering Model</button>
+                }
+                else
+                {
+                    <p>Engineering Model status: Unknown</p>
+                }
+            </div>
+        }
+        else
+        {
             <p><strong>Repository:</strong> @WorkspaceState.ActiveWorkspace?.RepositoryPath</p>
             <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
             <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
@@ -150,7 +172,7 @@
 
             DiscoveryStatus = "Engineering Model Complete";
 
-            // Build a complete Workspace and persist it
+            // Build a complete Workspace and persist it (includes freshness metadata)
             var workspace = new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace
             {
                 RepositoryPath = SelectedRepositoryPath,

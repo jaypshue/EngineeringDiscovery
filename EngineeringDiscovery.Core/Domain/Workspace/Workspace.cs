@@ -37,9 +37,24 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
 
         public DateTime LastModifiedUtc { get; private set; }
 
+        // Freshness metadata
+        // The time the Engineering Model (Investigation) was last built for this workspace
+        public DateTime? LastBuiltUtc { get; private set; }
+
+        // Lightweight repository fingerprint used to detect potential repository changes
+        // Version 1 uses a simple string (e.g., latest file write timestamp) and can be extended later
+        public string? RepositoryFingerprint { get; private set; }
+
         public void Touch()
         {
             LastModifiedUtc = DateTime.UtcNow;
+        }
+
+        public void SetFreshness(DateTime builtUtc, string? fingerprint)
+        {
+            LastBuiltUtc = builtUtc;
+            RepositoryFingerprint = fingerprint;
+            Touch();
         }
 
         public bool IsEmpty() => string.IsNullOrWhiteSpace(RepositoryPath) && Investigation is null;
