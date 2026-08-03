@@ -23,6 +23,7 @@ namespace EngineeringDiscovery.Web.Services
         private readonly string _workspaceFilePath;
         private readonly ILogger<WorkspaceState>? _logger;
         private readonly EngineeringRecommendationService _recommendationService = new();
+        private readonly EngineeringInsightService _insightService = new();
 
         public WorkspaceState(ILogger<WorkspaceState>? logger = null)
         {
@@ -178,6 +179,11 @@ namespace EngineeringDiscovery.Web.Services
         public IEnumerable<string> GetTypeRecommendations()
         {
             return _recommendationService.RecommendTypes(ActiveWorkspace ?? null);
+        }
+
+        public IEnumerable<EngineeringInsight> GetInsights()
+        {
+            return _insightService.GetInsights(ActiveWorkspace ?? null);
         }
 
         public void ImportRepository(string repositoryPath)

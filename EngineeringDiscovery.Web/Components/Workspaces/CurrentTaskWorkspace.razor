@@ -126,6 +126,17 @@
                                 </div>
                             }
                         </div>
+                        <div class="insights">
+                            <h6>Engineering Insights</h6>
+                            @foreach (var ins in WorkspaceState.GetInsights())
+                            {
+                                <div class="insight">
+                                    <strong>@ins.Subject</strong>
+                                    <div class="muted">@ins.Category</div>
+                                    <div>@ins.Observation</div>
+                                </div>
+                            }
+                        </div>
                 </div>
             </section>
         </section>
