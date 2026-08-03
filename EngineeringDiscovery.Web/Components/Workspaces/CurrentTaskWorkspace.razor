@@ -116,6 +116,16 @@
                             </div>
                         </div>
                     </div>
+                        <div class="recommendations">
+                            <h6>Recommendations</h6>
+                            @foreach (var rec in WorkspaceState.GetTypeRecommendations())
+                            {
+                                <div class="recommendation">
+                                    <span>@rec</span>
+                                    <button class="btn--small" @onclick="() => AcceptRecommendation(rec)">Add</button>
+                                </div>
+                            }
+                        </div>
                 </div>
             </section>
         </section>
@@ -259,6 +269,13 @@
         {
             ErrorMessage = ex.Message;
         }
+    }
+
+    private void AcceptRecommendation(string qualifiedName)
+    {
+        if (ActiveTask is null) return;
+        // Recommendations are types; add them as Type context
+        WorkspaceState.AddContext("Type", qualifiedName);
     }
 
     private void CompleteTask()
