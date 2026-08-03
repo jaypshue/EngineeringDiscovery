@@ -1,0 +1,20 @@
+@page "/workspace"
+@using EngineeringDiscovery.Web.Components.Workspaces
+
+<section class="engineering-workspace">
+    <h1>Engineering Workspace</h1>
+
+    <div class="workspace-main">
+        <CurrentTaskWorkspace />
+    </div>
+
+    <aside class="workspace-side">
+        <h4>Engineering Model</h4>
+        <p>Open the Relationship Graph to explore repository relationships.</p>
+        <p><a class="btn" href="/graph">Open Relationship Graph</a></p>
+    </aside>
+</section>
+
+@code {
+    // Page is intentionally minimal: CurrentTaskWorkspace contains the primary engineering workflow.
+}

@@ -116,8 +116,8 @@
     // Selected repository
     private string? SelectedRepositoryPath { get; set; }
 
-    // Note: WorkspaceHost publishes the canonical Investigation to InvestigationState.
-    // Do not store a separate authoritative instance here; use the shared InvestigationState for rendering and passing to children.
+    // Note: WorkspaceHost publishes the canonical Investigation to WorkspaceState.
+    // Do not store a separate authoritative instance here; UI should read/write via WorkspaceState.
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 
     protected override void OnInitialized()
