@@ -280,7 +280,17 @@ namespace EngineeringDiscovery.Web.Services
                     if (inv.TryGetProperty("Target", out var it) && it.ValueKind == JsonValueKind.String) idto.Target = it.GetString() ?? string.Empty;
                     if (inv.TryGetProperty("Goal", out var ig) && ig.ValueKind == JsonValueKind.String) idto.Goal = ig.GetString() ?? string.Empty;
                     if (inv.TryGetProperty("Owner", out var io) && io.ValueKind == JsonValueKind.String) idto.Owner = io.GetString() ?? string.Empty;
-                    if (inv.TryGetProperty("Status", out var isv) && isv.ValueKind == JsonValueKind.String) idto.Status = isv.GetString() ?? string.Empty;
+                        if (inv.TryGetProperty("Status", out var isv))
+                        {
+                            if (isv.ValueKind == JsonValueKind.String)
+                                idto.Status = isv.GetString() ?? string.Empty;
+                            else if (isv.ValueKind == JsonValueKind.Number && isv.TryGetInt32(out var intStatus))
+                            {
+                                // Map numeric enum value to its name to match DTO expectations
+                                var name = Enum.GetName(typeof(global::EngineeringDiscovery.Core.Domain.Investigation.InvestigationStatus), intStatus);
+                                idto.Status = name ?? intStatus.ToString();
+                            }
+                        }
                     dto.Investigation = idto;
                 }
 
