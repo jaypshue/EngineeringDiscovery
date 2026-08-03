@@ -57,7 +57,7 @@ namespace EngineeringDiscovery.E2ETests.Tests
             var page = Page!;
 
             // Import repository so the Engineering Model is available for recommendations/insights
-            await page.GotoAsync("http://localhost:5005", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+            await page.GotoAsync("http://localhost:5005/repository", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             await page.WaitForSelectorAsync("input.repo-input", new PageWaitForSelectorOptions { Timeout = 15000 });
             var solutionRoot = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", ".."));
             await page.FillAsync("input.repo-input", solutionRoot);

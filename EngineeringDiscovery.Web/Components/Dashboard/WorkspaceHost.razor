@@ -2,6 +2,7 @@
 @using EngineeringDiscovery.Core.Domain.Investigation
 @using EngineeringDiscovery.Core.Domain
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
 @using EngineeringDiscovery.Web.Components.Workspaces
 @namespace EngineeringDiscovery.Web.Components.Dashboard
 
@@ -9,14 +10,42 @@
     <h2>@Title</h2>
 
     <section class="discovery">
-        <h4>Repository Dashboard</h4>
+        <h4>Anchor Existing Software</h4>
         @if (!WorkspaceState.HasWorkspace)
         {
-            <p>No repository has been imported.</p>
-            <p><strong>Repository Path</strong></p>
-            <div class="target-selector">
-                <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Enter repository root path (required)" tabindex="0" aria-disabled="false" />
-                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
+            <div class="import-panel">
+                <p>No repository has been imported.</p>
+                <label><strong>Repository Folder</strong></label>
+                <div class="target-selector">
+                    <input id="repoPathInput" class="repo-input" @bind="SelectedRepositoryPath" @bind:event="oninput" @onblur="OnRepoInputBlur" @onkeydown="OnRepoInputKeyDown" placeholder="Enter repository root path" tabindex="0" aria-disabled="false" />
+                    <button class="btn" @onclick="BrowseForRepositoryAsync" disabled="@IsBuilding">Browse...</button>
+                    <!-- Offscreen folder input used as a fallback for browsers without showDirectoryPicker. Kept offscreen
+                         (not display:none) so programmatic SetInputFiles and change events are observable by JS and tests. -->
+                    <input id="folderPicker" type="file" webkitdirectory directory multiple style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" @ref="_hiddenFolderInput" />
+                </div>
+                <div id="dropArea" class="drop-area">
+                    <span>Drag and drop a repository folder here</span>
+                </div>
+                <div class="import-feedback">
+                    @if (IsDetecting)
+                    {
+                        <p><em>Detecting repository...</em></p>
+                    }
+                    else if (DetectedType != RepoType.None)
+                    {
+                        <p><strong>?</strong> <strong>@GetTypeLabel(DetectedType)</strong></p>
+                        <p><strong>@DetectedName</strong></p>
+                        @if (DetectedProjectCount > 0)
+                        {
+                            <p>@DetectedProjectCount project(s) detected</p>
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(SelectedRepositoryPath))
+                    {
+                        <p class="error">No supported repository detected. Supported: .NET, Java (Maven), Java (Gradle).</p>
+                    }
+                </div>
+                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(!IsImportEnabled)">
                     @if (IsBuilding)
                     {
                         <span class="spinner" aria-hidden="true"></span>
@@ -36,6 +65,7 @@
         else
         {
             var freshness = WorkspaceState.GetFreshnessStatus();
+
             <div class="freshness">
                 <h5>Engineering Model</h5>
                 @if (freshness == EngineeringDiscovery.Web.Services.WorkspaceState.EngineeringModelFreshness.Current)
@@ -59,8 +89,8 @@
             <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
             <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
             <div class="target-selector">
-                <input class="repo-input" @bind="SelectedRepositoryPath" placeholder="Replace repository root path" tabindex="0" aria-disabled="false" />
-                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(string.IsNullOrWhiteSpace(SelectedRepositoryPath) || IsBuilding)">
+                <input class="repo-input" @bind="SelectedRepositoryPath" @bind:event="oninput" placeholder="Replace repository root path" tabindex="0" aria-disabled="false" />
+                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(!IsImportEnabled)">
                     @if (IsBuilding)
                     {
                         <span class="spinner" aria-hidden="true"></span>
@@ -112,10 +142,249 @@
     private string DiscoveryStatus { get; set; } = "Repository Loaded";
 
     // Selected repository
-    private string? SelectedRepositoryPath { get; set; }
+    private string? _selectedRepositoryPath;
+    private string? SelectedRepositoryPath
+    {
+        get => _selectedRepositoryPath;
+        set
+        {
+            Console.WriteLine($"SelectedRepositoryPath setter called. Old='{_selectedRepositoryPath}' New='{value}'");
+            _selectedRepositoryPath = value;
+            // When a path is typed/pasted, run immediate server-side detection.
+            ClientSelectionDetected = false;
+            _ = DebouncedDetectAsync();
+        }
+    }
+
+    private System.Timers.Timer? _debounceTimer;
+    private Task DebouncedDetectAsync()
+    {
+        _debounceTimer?.Stop();
+        _debounceTimer?.Dispose();
+        var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _debounceTimer = new System.Timers.Timer(350) { AutoReset = false };
+        _debounceTimer.Elapsed += async (_, __) =>
+        {
+            try
+            {
+                await InvokeAsync(() => { DetectRepository(); StateHasChanged(); });
+            }
+            catch { }
+            tcs.TrySetResult(null);
+        };
+        _debounceTimer.Start();
+        return tcs.Task;
+    }
+
+    private enum RepoType
+    {
+        None,
+        DotNet,
+        JavaMaven,
+        JavaGradle
+    }
+
+    private RepoType DetectedType { get; set; } = RepoType.None;
+    private string DetectedName { get; set; } = string.Empty;
+    private int DetectedProjectCount { get; set; }
+    private int SolutionCount { get; set; }
+    private int SlnxCount { get; set; }
+    private int CsprojCount { get; set; }
+    private int PomCount { get; set; }
+    private int GradleCount { get; set; }
+    private bool ClientSelectionDetected { get; set; }
+    private bool IsDetecting { get; set; }
+    private bool FolderExists { get; set; }
+    private bool GitDetected { get; set; }
+    private bool HasSolution { get; set; }
+
+    private bool IsImportEnabled =>
+        DetectedType != RepoType.None &&
+        (!string.IsNullOrWhiteSpace(SelectedRepositoryPath) && Directory.Exists(SelectedRepositoryPath) || ClientSelectionDetected) &&
+        !IsBuilding;
 
     // Note: WorkspaceHost publishes the canonical Investigation to WorkspaceState.
-    // Do not store a separate authoritative instance here; UI should read/write via WorkspaceState.
+    private ElementReference? _hiddenFolderInput;
+
+    private DotNetObjectReference<WorkspaceHost>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("repoPicker.attachDropHandler", "dropArea", _dotNetRef);
+                // Also attach a handler to the hidden folder input so programmatic SetInputFiles triggers detection
+                await JS.InvokeVoidAsync("repoPicker.attachFolderInputHandler", "folderPicker", _dotNetRef);
+            }
+            catch { }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _dotNetRef?.Dispose();
+    }
+
+    private async Task BrowseForRepositoryAsync()
+    {
+        // Try native directory picker first via JS. If not available, trigger hidden input[file][webkitdirectory].
+        // Do not set IsDetecting until after checking for programmatic files to avoid re-rendering the hidden
+        // folder input and clearing files set by automation (Playwright SetInputFiles).
+        try
+        {
+            var summary = await JS.InvokeAsync<object?>("repoPicker.detectFromDirectoryPicker");
+            if (summary is not null)
+            {
+                ClientSelectionDetected = true;
+                await OnClientSelectionDetected(summary);
+                IsDetecting = false;
+                StateHasChanged();
+                return;
+            }
+        }
+        catch { }
+
+        try
+        {
+            // Fallback to file input. If files were already set programmatically (e.g., Playwright SetInputFiles),
+            // detect from existing files first to avoid triggering native picker click that can clear them.
+            object? result = null;
+            try
+            {
+                var existingCount = await JS.InvokeAsync<int>("(function(id){var el=document.getElementById(id); if(!el||!el.files) return 0; return el.files.length;})", "folderPicker");
+                if (existingCount > 0)
+                {
+                    result = await JS.InvokeAsync<object?>("(function(id){var el=document.getElementById(id); if(!el) return null; console.log('BrowseForRepositoryAsync: calling detectFromFileInput (existing files)'); var res = window.repoPicker.detectFromFileInput(el); console.log('BrowseForRepositoryAsync: detectFromFileInput returned', res); return res; })", "folderPicker");
+                }
+            }
+            catch { }
+
+            // If no files are already present, trigger native picker and then read via JS helper.
+            if (result is null)
+            {
+                await JS.InvokeVoidAsync("repoPicker.triggerFileInput", "folderPicker");
+                // Short delay to allow user interaction in browsers that support webkitdirectory selection via native dialog.
+                await Task.Delay(100);
+                result = await JS.InvokeAsync<object?>("(function(id){var el=document.getElementById(id); if(!el) return null; console.log('BrowseForRepositoryAsync: calling detectFromFileInput'); var res = window.repoPicker.detectFromFileInput(el); console.log('BrowseForRepositoryAsync: detectFromFileInput returned', res); return res; })", "folderPicker");
+            }
+            if (result is not null)
+            {
+                ClientSelectionDetected = true;
+                await OnClientSelectionDetected(result);
+            }
+            else
+            {
+                // If the helper didn't return a summary, try to read the file input files directly (Playwright may have set them)
+                try
+                {
+                    var filesInfo = await JS.InvokeAsync<object?>("(function(id){var el=document.getElementById(id); if(!el||!el.files) return null; var arr=[]; for(var i=0;i<el.files.length;i++){ var f=el.files[i]; arr.push({ name: f.name, path: f.path || null, webkitRelativePath: f.webkitRelativePath || null }); } return arr; })", "folderPicker");
+                    if (filesInfo is not null)
+                    {
+                        // Build a minimal summary object similar to detectFromFileInput
+                        await OnClientSelectionDetected(filesInfo);
+                        ClientSelectionDetected = true;
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
+        finally
+        {
+            IsDetecting = false;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnClientSelectionDetected(object summaryObj)
+    {
+        try
+        {
+            Console.WriteLine("OnClientSelectionDetected: received summaryObj=" + System.Text.Json.JsonSerializer.Serialize(summaryObj));
+            // summaryObj is a JS object with name, detectedType, detectedProjectCount
+            var json = System.Text.Json.JsonSerializer.Serialize(summaryObj);
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            string name;
+            string typeStr;
+            int projects;
+            string[] sampleFiles;
+
+            if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                // Handle fallback where JS returns an array of file descriptors: { name, path, webkitRelativePath }
+                var arr = root.EnumerateArray().ToArray();
+                sampleFiles = arr.Select(e =>
+                {
+                    if (e.ValueKind != System.Text.Json.JsonValueKind.Object) return string.Empty;
+                    if (e.TryGetProperty("webkitRelativePath", out var wr) && wr.ValueKind == System.Text.Json.JsonValueKind.String) return wr.GetString() ?? string.Empty;
+                    if (e.TryGetProperty("path", out var pth) && pth.ValueKind == System.Text.Json.JsonValueKind.String) return pth.GetString() ?? string.Empty;
+                    if (e.TryGetProperty("name", out var nm) && nm.ValueKind == System.Text.Json.JsonValueKind.String) return nm.GetString() ?? string.Empty;
+                    return string.Empty;
+                }).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+
+                if (sampleFiles.Length > 0)
+                {
+                    var first = sampleFiles[0];
+                    if (Path.IsPathRooted(first))
+                    {
+                        name = Path.GetDirectoryName(first) ?? first;
+                    }
+                    else
+                    {
+                        var parts = first.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                        name = parts.Length > 0 ? parts[0] : first;
+                    }
+                }
+                else
+                {
+                    name = string.Empty;
+                }
+
+                typeStr = "None";
+                projects = 0;
+                foreach (var f in sampleFiles)
+                {
+                    var lf = f.ToLowerInvariant();
+                    if (lf.EndsWith(".sln") || lf.EndsWith(".slnx")) typeStr = "DotNet";
+                    if (lf.EndsWith(".csproj")) { typeStr = "DotNet"; projects++; }
+                    if (lf.EndsWith("pom.xml")) { if (typeStr == "None") typeStr = "JavaMaven"; projects++; }
+                    if (lf.EndsWith("build.gradle") || lf.EndsWith("settings.gradle") || lf.EndsWith("build.gradle.kts") || lf.EndsWith("settings.gradle.kts")) { if (typeStr == "None") typeStr = "JavaGradle"; projects++; }
+                }
+            }
+            else
+            {
+                name = root.TryGetProperty("name", out var n) ? n.GetString() ?? string.Empty : string.Empty;
+                typeStr = root.TryGetProperty("detectedType", out var t) ? t.GetString() ?? "None" : "None";
+                projects = root.TryGetProperty("detectedProjectCount", out var p) ? p.GetInt32() : 0;
+                sampleFiles = root.TryGetProperty("sampleFiles", out var sf) && sf.ValueKind == System.Text.Json.JsonValueKind.Array
+                    ? sf.EnumerateArray().Select(e => e.GetString() ?? string.Empty).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray()
+                    : Array.Empty<string>();
+            }
+
+            // Respect the client-provided selection exactly. Do not resolve or substitute paths.
+            SelectedRepositoryPath = name;
+            DetectedName = name;
+            DetectedProjectCount = projects;
+            DetectedType = typeStr switch
+            {
+                "DotNet" => RepoType.DotNet,
+                "JavaMaven" => RepoType.JavaMaven,
+                "JavaGradle" => RepoType.JavaGradle,
+                _ => RepoType.None
+            };
+
+            // Mark this selection as coming from the client picker so Import is enabled even if Directory.Exists cannot be
+            // validated immediately. Server validation will occur when Import is pressed.
+            ClientSelectionDetected = DetectedType != RepoType.None;
+            StateHasChanged();
+        }
+        catch { }
+    }
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 
     protected override void OnInitialized()
@@ -131,6 +400,120 @@
         SelectedRepositoryPath = SelectedRepositoryPath; // placeholder - input must remain editable
     }
 
+    private void OnRepoInputBlur(FocusEventArgs args)
+    {
+        // Force immediate detection when the user leaves the input so Import toggles without waiting for debounce
+        InvokeAsync(() => { DetectRepository(); StateHasChanged(); });
+    }
+
+    private void OnRepoInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            InvokeAsync(() => { DetectRepository(); StateHasChanged(); });
+        }
+    }
+
+    private void OnDragOver(DragEventArgs _)
+    {
+    }
+
+    private Task OnDrop(DragEventArgs _)
+    {
+        ErrorMessage = "Drop detected. If folder path is not captured by the browser, use Browse or paste the path.";
+        return Task.CompletedTask;
+    }
+
+    private string GetTypeLabel(RepoType type) => type switch
+    {
+        RepoType.DotNet => ".NET Repository",
+        RepoType.JavaMaven => "Java (Maven) Repository",
+        RepoType.JavaGradle => "Java (Gradle) Repository",
+        _ => "Unknown"
+    };
+
+    private void DetectRepository()
+    {
+        Console.WriteLine($"DetectRepository: SelectedRepositoryPath='{SelectedRepositoryPath}'");
+        DetectedType = RepoType.None;
+        DetectedName = string.Empty;
+        DetectedProjectCount = 0;
+        SolutionCount = 0;
+        SlnxCount = 0;
+        CsprojCount = 0;
+        PomCount = 0;
+        GradleCount = 0;
+        FolderExists = false;
+        GitDetected = false;
+        HasSolution = false;
+
+        if (string.IsNullOrWhiteSpace(SelectedRepositoryPath) || !Directory.Exists(SelectedRepositoryPath))
+        {
+            return;
+        }
+
+        FolderExists = true;
+
+        try
+        {
+            DetectedName = Path.GetFileName(SelectedRepositoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(DetectedName))
+            {
+                DetectedName = new DirectoryInfo(SelectedRepositoryPath).Name;
+            }
+
+            var slnCount = Directory.EnumerateFiles(SelectedRepositoryPath, "*.sln", SearchOption.TopDirectoryOnly).Count();
+            var slnxCount = Directory.EnumerateFiles(SelectedRepositoryPath, "*.slnx", SearchOption.TopDirectoryOnly).Count();
+            var csprojCount = Directory.EnumerateFiles(SelectedRepositoryPath, "*.csproj", SearchOption.AllDirectories).Count();
+            SolutionCount = slnCount;
+            SlnxCount = slnxCount;
+            CsprojCount = csprojCount;
+            if (slnCount > 0 || slnxCount > 0 || csprojCount > 0)
+            {
+                HasSolution = slnCount > 0 || slnxCount > 0;
+                DetectedType = RepoType.DotNet;
+                DetectedProjectCount = Math.Max(DetectedProjectCount, csprojCount);
+            }
+
+            var pomCount = Directory.EnumerateFiles(SelectedRepositoryPath, "pom.xml", SearchOption.AllDirectories).Count();
+            PomCount = pomCount;
+            if (pomCount > 0)
+            {
+                DetectedType = DetectedType == RepoType.DotNet ? DetectedType : RepoType.JavaMaven;
+                DetectedProjectCount = Math.Max(DetectedProjectCount, pomCount);
+            }
+
+            var gradleCount =
+                Directory.EnumerateFiles(SelectedRepositoryPath, "build.gradle", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(SelectedRepositoryPath, "build.gradle.kts", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(SelectedRepositoryPath, "settings.gradle", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(SelectedRepositoryPath, "settings.gradle.kts", SearchOption.AllDirectories).Count();
+            GradleCount = gradleCount;
+            if (gradleCount > 0)
+            {
+                DetectedType = DetectedType == RepoType.DotNet ? DetectedType : RepoType.JavaGradle;
+                DetectedProjectCount = Math.Max(DetectedProjectCount, gradleCount);
+            }
+
+            // Detect git repository presence
+            try
+            {
+                GitDetected = Directory.Exists(Path.Combine(SelectedRepositoryPath, ".git"));
+            }
+            catch { GitDetected = false; }
+        }
+        catch { }
+    }
+
+    private string GetUnsupportedReason()
+    {
+        if (!FolderExists) return "Folder does not exist.";
+        if (!GitDetected) return "No .git folder detected.";
+        if (!HasSolution && DetectedType == RepoType.DotNet && DetectedProjectCount == 0) return "No .sln or .csproj files detected.";
+        if (DetectedType == RepoType.None) return "No supported project files found (.csproj, pom.xml, build.gradle).";
+        return "Unknown reason.";
+    }
+
     private bool IsBuilding { get; set; }
     private string? ErrorMessage { get; set; }
 
@@ -141,9 +524,12 @@
 
         ErrorMessage = null;
 
-        if (string.IsNullOrWhiteSpace(SelectedRepositoryPath) || !Directory.Exists(SelectedRepositoryPath))
+        // Ensure import is enabled before proceeding. This handles both typed/server-validated paths and
+        // client-side selections that set ClientSelectionDetected.
+        if (!IsImportEnabled)
         {
             DiscoveryStatus = "Discovery Failed";
+            ErrorMessage = "Please provide a valid supported repository path.";
             return;
         }
 

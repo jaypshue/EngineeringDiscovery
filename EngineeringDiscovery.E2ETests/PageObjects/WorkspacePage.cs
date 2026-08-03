@@ -13,9 +13,14 @@ namespace EngineeringDiscovery.E2ETests.PageObjects
 
         public async Task ImportRepositoryAsync(string path)
         {
-            await _page.FillAsync("input.repo-input", path);
+            // Navigate via the unified startup page to the repository import surface
+            await _page.GotoAsync("/", new() { WaitUntil = WaitUntilState.NetworkIdle });
             await _page.ClickAsync("text=Import Repository");
-            await _page.WaitForSelectorAsync("text=Engineering Model", new PageWaitForSelectorOptions { Timeout = 15000 });
+            await _page.WaitForSelectorAsync("input.repo-input", new PageWaitForSelectorOptions { Timeout = 15000 });
+            await _page.FillAsync("input.repo-input", path);
+            await _page.PressAsync("input.repo-input", "Tab");
+            await _page.ClickAsync("text=Import Repository");
+            await _page.WaitForSelectorAsync("text=Engineering Model", new PageWaitForSelectorOptions { Timeout = 60000 });
         }
 
         public async Task BeginCurrentTaskAsync(string title, string description, string goal)

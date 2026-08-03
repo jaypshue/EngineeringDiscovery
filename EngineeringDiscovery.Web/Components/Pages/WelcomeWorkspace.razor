@@ -1,0 +1,67 @@
+@page "/"
+
+@using EngineeringDiscovery.Core.Domain.Models
+@using Microsoft.AspNetCore.Components
+@inject EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState
+
+<PageTitle>Welcome — EngineOS</PageTitle>
+
+<section class="welcome-workspace">
+    <h1>EngineOS</h1>
+    <p>Begin with an idea or with existing software.</p>
+    <p><strong>What are you working on today?</strong></p>
+
+    <div class="welcome-actions">
+        <button class="btn" disabled="@(!WorkspaceState.HasWorkspace)" @onclick="ContinueInvestigation">Continue</button>
+        <button class="btn" @onclick="StartNew">Start Building</button>
+        <button class="btn" @onclick="GoToImport">Import Repository</button>
+        <button class="btn btn-danger" @onclick="ConfirmReset">Reset EngineOS...</button>
+    </div>
+
+    <section class="recent-projects">
+        <h3>Recent Projects</h3>
+        @if (!WorkspaceState.HasWorkspace)
+        {
+            <p>(None yet)</p>
+        }
+        else
+        {
+            <p>Resume where you left off for project: @WorkspaceState.ActiveWorkspace?.RepositoryPath</p>
+        }
+    </section>
+
+</section>
+
+@code {
+    [Inject]
+    private NavigationManager Nav { get; set; } = null!;
+
+    private void ContinueInvestigation()
+    {
+        // Resume into the last active investigation workspace
+        Nav.NavigateTo("/workspace");
+    }
+
+    private void StartNew()
+    {
+        // Enter Product Discovery Mode (placeholder)
+        _ = JSRuntime.InvokeVoidAsync("alert", "Product Discovery Mode is planned for the next milestone.");
+    }
+
+    private void GoToImport()
+    {
+        Nav.NavigateTo("/repository");
+    }
+
+    private async Task ConfirmReset()
+    {
+        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Reset EngineOS\n\nThis will remove projects, tasks, repository metadata and local state. Your source repositories will not be modified.\n\nProceed?");
+        if (!ok) return;
+        WorkspaceState.ReplaceWorkspace(new EngineeringDiscovery.Core.Domain.Workspace.Workspace());
+        // Persisted file will be overwritten by ReplaceWorkspace
+        Nav.NavigateTo("/");
+    }
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+}

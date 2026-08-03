@@ -17,17 +17,22 @@ namespace EngineeringDiscovery.E2ETests.Tests
         {
             Assert.IsNotNull(Page, "Playwright page must be initialized.");
             var page = Page!;
-            await page.GotoAsync("http://localhost:5005", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+            await page.GotoAsync("http://localhost:5005/repository", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-            // The repository input is on the dashboard (root). Ensure it's present before interacting.
+            // The repository input is present after entering Anchor Mode. Ensure it displays the full path after Browse/typing.
             await page.WaitForSelectorAsync("input.repo-input", new PageWaitForSelectorOptions { Timeout = 15000 });
 
             // Use the solution root as the repository path so the discovery engine can read files.
             var solutionRoot = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", ".."));
             await page.FillAsync("input.repo-input", solutionRoot);
-            // Ensure Blazor processes the change (bind on change) by blurring the input
+            // Ensure Blazor processes the change by blurring the input
             await page.PressAsync("input.repo-input", "Tab");
-            await page.ClickAsync("text=Import Repository");
+
+            // Wait for repository analysis to show ready state or for the import button to become enabled
+            await page.WaitForSelectorAsync("button.btn:not([disabled])", new PageWaitForSelectorOptions { Timeout = 15000 });
+
+            // Click the enabled import button (label may be "Ready to Import" or "Import Repository")
+            await page.ClickAsync("button.btn:not([disabled])");
 
             // Wait for an element that indicates import completed or discovery started
             await page.WaitForSelectorAsync("text=Engineering Model", new PageWaitForSelectorOptions { Timeout = 30000 });

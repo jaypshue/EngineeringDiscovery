@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:blazor="clr-namespace:Microsoft.AspNetCore.Components.WebView.Maui;assembly=Microsoft.AspNetCore.Components.WebView.Maui"
+             xmlns:web="clr-namespace:EngineeringDiscovery.Web.Components;assembly=EngineeringDiscovery.Web"
+             x:Class="EngineeringDiscovery.Desktop.MainPage">
+    <Grid>
+        <blazor:BlazorWebView HostPage="wwwroot/index.html">
+            <blazor:BlazorWebView.RootComponents>
+                <!-- Use the existing App component from the Web project as the root component -->
+                <blazor:RootComponent Selector="#app" ComponentType="typeof(web.App)" />
+            </blazor:BlazorWebView.RootComponents>
+        </blazor:BlazorWebView>
+    </Grid>
+</ContentPage>

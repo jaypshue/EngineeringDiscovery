@@ -4,8 +4,11 @@
 
 <PageTitle>Repository</PageTitle>
 
-<h2>Repository</h2>
-<p>Repository view placeholder — renders repository explorer in future.</p>
+<h2>Repository Import</h2>
+<p>Opens the existing Repository Import workflow.</p>
+<div>
+    <WorkspaceHost Role="EngineeringDiscovery.Core.Domain.Models.EngineeringRole.Developer" />
+</div>
 
 @code {
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
