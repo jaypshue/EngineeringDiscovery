@@ -74,7 +74,6 @@
 
     public GraphWorkspace()
     {
-        Console.WriteLine("================GraphWorkspace()====================");
     }
 
     protected override void OnInitialized()
@@ -107,9 +106,9 @@
             {
                 await _graphModule.InvokeVoidAsync("init", "cy", elements, dotNetRef, viewState);
             }
-            catch (JSException jsEx)
+            catch (JSException)
             {
-                Console.Error.WriteLine($"Graph init JSException: {jsEx.Message}");
+                // Graph initialization failed in JS; ensure view state exists but do not emit debug traces.
                 WorkspaceState.GraphViewState ??= new EngineeringDiscovery.Web.Services.GraphViewState();
                 WorkspaceState.GraphViewState.SelectedNode = null;
             }
@@ -134,7 +133,7 @@
     [JSInvokable]
     public void OnGraphInitError(string message)
     {
-        Console.Error.WriteLine($"Graph init error: {message}");
+        // JS reported an initialization error; nothing to log here in production.
     }
 
     [JSInvokable]

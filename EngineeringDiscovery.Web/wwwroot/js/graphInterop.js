@@ -29,7 +29,7 @@ function safeLog(msg) {
 }
 
 function safeError(msg, err) {
-    try { console.error('[graphInterop] ' + msg, err); } catch { }
+    try { /* JS console error suppressed in production: '[graphInterop] ' + msg */ } catch { }
 }
 
 function buildStyle() {

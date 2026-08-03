@@ -220,18 +220,6 @@ namespace EngineeringDiscovery.Web.Services
 
                 ActiveWorkspace.Touch();
 
-                // Trace save for debugging propagation issues
-                try
-                {
-                    var traceDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppFolderName);
-                    if (!Directory.Exists(traceDir)) Directory.CreateDirectory(traceDir);
-                    var tracePath = Path.Combine(traceDir, "propagation_trace.log");
-                    var brief = ActiveWorkspace.CurrentTask?.Brief;
-                    var msg = $"{DateTime.UtcNow:o} WorkspaceState.Save invoked. Objective='{brief?.Objective}' Notes='{brief?.Notes}' Implementation='{brief?.ImplementationThoughts}'\n";
-                    File.AppendAllText(tracePath, msg);
-                }
-                catch { }
-
                 var dto = ToDto(ActiveWorkspace);
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var json = JsonSerializer.Serialize(dto, options);
@@ -519,7 +507,13 @@ namespace EngineeringDiscovery.Web.Services
                         Objective = workspace.CurrentTask.Brief.Objective,
                         Notes = workspace.CurrentTask.Brief.Notes,
                         ImplementationThoughts = workspace.CurrentTask.Brief.ImplementationThoughts,
-                        LastUpdatedUtc = workspace.CurrentTask.Brief.LastUpdatedUtc
+                        LastUpdatedUtc = workspace.CurrentTask.Brief.LastUpdatedUtc,
+                        EngineeringContext = new EngineeringDiscovery.Web.Services.Persistence.EngineeringContextDto
+                        {
+                            ProjectIds = workspace.CurrentTask.Brief.Context?.ProjectIds?.ToArray() ?? Array.Empty<string>(),
+                            NamespaceIds = workspace.CurrentTask.Brief.Context?.NamespaceIds?.ToArray() ?? Array.Empty<string>(),
+                            TypeIds = workspace.CurrentTask.Brief.Context?.TypeIds?.ToArray() ?? Array.Empty<string>()
+                        }
                     }
                 };
             }
@@ -537,30 +531,35 @@ namespace EngineeringDiscovery.Web.Services
                 };
             }
 
-            // Serialize EngineeringContext into DTO if available
-            if (workspace.CurrentTask?.Brief?.Context is not null)
+            // Serialize EngineeringContext into DTO when a CurrentTask is present.
+            // Ensure the Brief and EngineeringContext DTO objects exist so round-trip persistence is stable.
+            if (dto.CurrentTask is not null)
             {
-                dto.CurrentTask ??= new EngineeringDiscovery.Web.Services.Persistence.CurrentTaskDto
-                {
-                    Title = workspace.CurrentTask.Title,
-                    Description = workspace.CurrentTask.Description,
-                    Goal = workspace.CurrentTask.Goal,
-                    Status = workspace.CurrentTask.Status.ToString()
-                };
-
                 dto.CurrentTask.Brief ??= new EngineeringDiscovery.Web.Services.Persistence.EngineeringBriefDto
                 {
-                    Objective = workspace.CurrentTask.Brief.Objective,
-                    Notes = workspace.CurrentTask.Brief.Notes,
-                    ImplementationThoughts = workspace.CurrentTask.Brief.ImplementationThoughts,
-                    LastUpdatedUtc = workspace.CurrentTask.Brief.LastUpdatedUtc
+                    Objective = workspace.CurrentTask?.Brief.Objective ?? string.Empty,
+                    Notes = workspace.CurrentTask?.Brief.Notes ?? string.Empty,
+                    ImplementationThoughts = workspace.CurrentTask?.Brief.ImplementationThoughts ?? string.Empty,
+                    LastUpdatedUtc = workspace.CurrentTask?.Brief.LastUpdatedUtc ?? DateTime.UtcNow
                 };
+
+                // Populate EngineeringContext arrays defensively; avoid nulls in the DTO shape.
+                var projectIds = Array.Empty<string>();
+                var namespaceIds = Array.Empty<string>();
+                var typeIds = Array.Empty<string>();
+
+                if (workspace.CurrentTask?.Brief?.Context is not null)
+                {
+                    projectIds = workspace.CurrentTask.Brief.Context.ProjectIds?.ToArray() ?? Array.Empty<string>();
+                    namespaceIds = workspace.CurrentTask.Brief.Context.NamespaceIds?.ToArray() ?? Array.Empty<string>();
+                    typeIds = workspace.CurrentTask.Brief.Context.TypeIds?.ToArray() ?? Array.Empty<string>();
+                }
 
                 dto.CurrentTask.Brief.EngineeringContext = new EngineeringDiscovery.Web.Services.Persistence.EngineeringContextDto
                 {
-                    ProjectIds = workspace.CurrentTask.Brief.Context.ProjectIds.ToArray(),
-                    NamespaceIds = workspace.CurrentTask.Brief.Context.NamespaceIds.ToArray(),
-                    TypeIds = workspace.CurrentTask.Brief.Context.TypeIds.ToArray()
+                    ProjectIds = projectIds,
+                    NamespaceIds = namespaceIds,
+                    TypeIds = typeIds
                 };
             }
 
