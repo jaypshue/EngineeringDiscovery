@@ -143,6 +143,22 @@
     private string ContextQuery { get; set; } = string.Empty;
     private string[] ContextResults { get; set; } = Array.Empty<string>();
     private string SelectedContextKind { get; set; } = "Type";
+    private string? SelectedProjectOption { get; set; }
+    private string? SelectedNamespaceOption { get; set; }
+    private string? SelectedTypeOption { get; set; }
+
+    private IEnumerable<string> ProjectOptions => WorkspaceState.ActiveWorkspace?.Investigation is null
+        ? Enumerable.Empty<string>()
+        : (WorkspaceState.ActiveWorkspace.Investigation.TypeObservations?.Select(t => t.Project).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase) ?? Enumerable.Empty<string>());
+
+    private IEnumerable<string> NamespaceOptions => WorkspaceState.ActiveWorkspace?.Investigation is null
+        ? Enumerable.Empty<string>()
+        : (WorkspaceState.ActiveWorkspace.Investigation.NamespaceObservations?.Select(n => n.NamespaceName).Where(nm => !string.IsNullOrWhiteSpace(nm)).Distinct(StringComparer.OrdinalIgnoreCase)
+            ?? WorkspaceState.ActiveWorkspace.Investigation.TypeObservations?.Select(t => t.Namespace).Where(nm => !string.IsNullOrWhiteSpace(nm)).Distinct(StringComparer.OrdinalIgnoreCase) ?? Enumerable.Empty<string>());
+
+    private IEnumerable<string> TypeOptions => WorkspaceState.ActiveWorkspace?.Investigation is null
+        ? Enumerable.Empty<string>()
+        : (WorkspaceState.ActiveWorkspace.Investigation.TypeObservations?.Select(t => t.QualifiedName ?? (string.IsNullOrWhiteSpace(t.Namespace) ? t.TypeName : t.Namespace + "." + t.TypeName)).Where(q => !string.IsNullOrWhiteSpace(q)).Distinct(StringComparer.OrdinalIgnoreCase) ?? Enumerable.Empty<string>());
 
     protected override void OnInitialized()
     {
@@ -186,6 +202,27 @@
 
             b.Touch();
         });
+    }
+
+    private void AddProjectFromSelect()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedProjectOption) || ActiveTask is null) return;
+        WorkspaceState.AddContext("Project", SelectedProjectOption!);
+        SelectedProjectOption = null;
+    }
+
+    private void AddNamespaceFromSelect()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedNamespaceOption) || ActiveTask is null) return;
+        WorkspaceState.AddContext("Namespace", SelectedNamespaceOption!);
+        SelectedNamespaceOption = null;
+    }
+
+    private void AddTypeFromSelect()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedTypeOption) || ActiveTask is null) return;
+        WorkspaceState.AddContext("Type", SelectedTypeOption!);
+        SelectedTypeOption = null;
     }
 
     private void RemoveProject(string id)
