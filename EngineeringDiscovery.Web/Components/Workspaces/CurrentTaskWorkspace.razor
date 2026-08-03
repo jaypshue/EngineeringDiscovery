@@ -1,4 +1,5 @@
 @using EngineeringDiscovery.Core.Domain.CurrentTask
+@using EngineeringDiscovery.Web.Services
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 
 <section class="workspace workspace--current-task">
@@ -137,6 +138,30 @@
                                 </div>
                             }
                         </div>
+                    <div class="advisor">
+                        <h6>Engineering Advisor</h6>
+                        <label>
+                            Ask a question
+                            <input @bind="AdvisorQuestion" placeholder="e.g., Why was type X recommended?" />
+                        </label>
+                        <button class="btn" @onclick="AskAdvisor">Ask</button>
+
+                        @if (AdvisorLastResponse is not null)
+                        {
+                            <div class="advisor-response">
+                                <h5>Engineering Evidence</h5>
+                                <ul>
+                                    @foreach (var e in AdvisorLastResponse.Evidence)
+                                    {
+                                        <li><strong>@e.Title</strong>: @e.Detail</li>
+                                    }
+                                </ul>
+
+                                <h5>Advisor Interpretation</h5>
+                                <div>@AdvisorLastResponse.Interpretation</div>
+                            </div>
+                        }
+                    </div>
                 </div>
             </section>
         </section>
@@ -287,6 +312,17 @@
         if (ActiveTask is null) return;
         // Recommendations are types; add them as Type context
         WorkspaceState.AddContext("Type", qualifiedName);
+    }
+
+    // Simple advisor interaction model: ask a question and display response modal (rudimentary)
+    private string AdvisorQuestion { get; set; } = string.Empty;
+    private AdvisorResponse? AdvisorLastResponse { get; set; }
+
+    private void AskAdvisor()
+    {
+        if (string.IsNullOrWhiteSpace(AdvisorQuestion)) return;
+        AdvisorLastResponse = WorkspaceState.AskAdvisor(AdvisorQuestion);
+        AdvisorQuestion = string.Empty;
     }
 
     private void CompleteTask()

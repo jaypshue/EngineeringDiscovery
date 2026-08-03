@@ -24,6 +24,7 @@ namespace EngineeringDiscovery.Web.Services
         private readonly ILogger<WorkspaceState>? _logger;
         private readonly EngineeringRecommendationService _recommendationService = new();
         private readonly EngineeringInsightService _insightService = new();
+        private readonly EngineeringAdvisorService _advisorService = new();
 
         public WorkspaceState(ILogger<WorkspaceState>? logger = null)
         {
@@ -184,6 +185,11 @@ namespace EngineeringDiscovery.Web.Services
         public IEnumerable<EngineeringInsight> GetInsights()
         {
             return _insightService.GetInsights(ActiveWorkspace ?? null);
+        }
+
+        public AdvisorResponse AskAdvisor(string question)
+        {
+            return _advisorService.Ask(question, ActiveWorkspace ?? null);
         }
 
         public void ImportRepository(string repositoryPath)
