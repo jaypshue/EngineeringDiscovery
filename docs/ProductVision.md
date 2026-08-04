@@ -18,6 +18,8 @@ It coordinates them.
 
 EngineOS provides the shared engineering workspace where humans, AI partners, and engineering systems collaborate throughout the lifetime of a software project.
 
+Evidence Collection is a first-class capability of EngineOS. Human engineers should not be required to manually inspect engineering artifacts that EngineOS can observe directly.
+
 ---
 
 # Continuous Recovery Principle

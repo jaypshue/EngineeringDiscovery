@@ -7,9 +7,8 @@
 <PageTitle>Welcome — EngineOS</PageTitle>
 
 <section class="welcome-workspace">
-    <h1>EngineOS</h1>
+    <h1>EngineOS — Home View</h1>
     <p>Begin with an idea or with existing software.</p>
-    <p><strong>What are you working on today?</strong></p>
 
     <div class="welcome-actions">
         <button class="btn" disabled="@(!WorkspaceState.HasWorkspace)" @onclick="ContinueInvestigation">Continue</button>
@@ -18,17 +17,70 @@
         <button class="btn btn-danger" @onclick="ConfirmReset">Reset EngineOS...</button>
     </div>
 
-    <section class="recent-projects">
-        <h3>Recent Projects</h3>
-        @if (!WorkspaceState.HasWorkspace)
-        {
+    @if (!WorkspaceState.HasWorkspace)
+    {
+        <section class="recent-projects">
+            <h3>Recent Projects</h3>
             <p>(None yet)</p>
-        }
-        else
-        {
-            <p>Resume where you left off for project: @WorkspaceState.ActiveWorkspace?.RepositoryPath</p>
-        }
-    </section>
+            <p>You can import a repository to begin an investigation.</p>
+        </section>
+    }
+    else
+    {
+        <section class="home-projection">
+            <h3>Current Engineering Workspace</h3>
+            <dl>
+                <dt>Repository</dt>
+                <dd>@(WorkspaceState.ActiveWorkspace?.RepositoryPath ?? "(unknown)")</dd>
+                <dt>Last Built</dt>
+                <dd>@(WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f") ?? "(never)")</dd>
+                <dt>Workspace Freshness</dt>
+                <dd>@WorkspaceState.GetFreshnessStatus()</dd>
+            </dl>
+
+            <h3>Current Investigation</h3>
+            @if (WorkspaceState.ActiveWorkspace?.Investigation is null)
+            {
+                <p class="muted">No investigation has been produced by discovery yet.</p>
+            }
+            else
+            {
+                <InvestigationSummary Investigation="WorkspaceState.ActiveWorkspace.Investigation" />
+            }
+
+            <h3>Current Activity</h3>
+            @if (WorkspaceState.CurrentActivity is null)
+            {
+                <p class="muted">No active engineering activity.</p>
+            }
+            else
+            {
+                <div class="activity-projection">
+                    <p><strong>Title:</strong> @WorkspaceState.CurrentActivity.Title</p>
+                    <p><strong>Status:</strong> @WorkspaceState.CurrentActivity.Status</p>
+                    <p><strong>Intent:</strong></p>
+                    @if (WorkspaceState.CurrentActivity.Intent?.Any() ?? false)
+                    {
+                        <ul>
+                            @foreach (var it in WorkspaceState.CurrentActivity.Intent)
+                            {
+                                <li>@it</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="muted">(none)</p>
+                    }
+
+                    <p><strong>Current Observation:</strong> @(WorkspaceState.CurrentActivity.CurrentObservation?.Description ?? "(none)")</p>
+                    <p><strong>Current Hypothesis:</strong> @(WorkspaceState.CurrentActivity.CurrentHypothesis?.Description ?? "(none)")</p>
+                    <p><strong>Current Evidence Request:</strong> @(WorkspaceState.CurrentActivity.CurrentEvidenceRequest?.Target ?? "(none)")</p>
+                    <p><strong>Recovered Understanding (most recent):</strong> @(WorkspaceState.CurrentActivity.CurrentRecoveredUnderstanding?.Statement ?? "(none)")</p>
+                </div>
+            }
+        </section>
+    }
 
 </section>
 
@@ -38,7 +90,7 @@
 
     private void ContinueInvestigation()
     {
-        // Resume into the last active investigation workspace
+        // Resume into the last active investigation view
         Nav.NavigateTo("/workspace");
     }
 

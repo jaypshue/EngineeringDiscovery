@@ -81,6 +81,27 @@ namespace EngineeringDiscovery.Wpf
 
             var main = _host.Services.GetRequiredService<MainWindow>();
             main.Show();
+
+            // Schedule EngineOS presentation evidence collection once the UI is idle.
+            // This is the first Evidence Collector (presentation-layer only).
+            try
+            {
+                _ = main.Dispatcher.BeginInvoke(new Action(async () =>
+                {
+                    try
+                    {
+                        await EngineeringDiscovery.Wpf.Services.EngineOSEvidenceCollector.CollectAsync(main).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"EngineOS EvidenceCollector error: {ex}");
+                    }
+                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to schedule EvidenceCollector: {ex}");
+            }
         }
 
         protected override async void OnExit(ExitEventArgs e)

@@ -9,6 +9,7 @@ namespace EngineeringDiscovery.Wpf.Services
     /// </summary>
     public sealed class WpfViewStateStore : IViewStateStore
     {
+        // Evidence collector may leverage this view-state store in a future iteration.
         private readonly Dictionary<string, object?> _store = new();
         private readonly object _lock = new();
 

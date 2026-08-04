@@ -20,7 +20,7 @@ namespace EngineeringDiscovery.E2ETests.Tests
             await page.GotoAsync("http://localhost:5005", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
             var content = await page.ContentAsync();
-            Assert.IsTrue(content.Contains("Dashboard") || content.Contains("Engineering Workspace"), "Expected top-level workspace UI to be present.");
+            Assert.IsTrue(content.Contains("Home View") || content.Contains("Engineering Workspace"), "Expected top-level view UI to be present.");
         }
     }
 }

@@ -1,6 +1,6 @@
 docs/FutureIdeas.md
 
-## Architect Dashboard
+## Home View
 
 - Engineering workspace health
 - Context coverage
