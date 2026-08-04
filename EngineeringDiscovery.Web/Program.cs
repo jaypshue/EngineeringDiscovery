@@ -1,4 +1,6 @@
 using EngineeringDiscovery.Web.Components;
+using EngineeringDiscovery.Core.Services;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,15 +10,35 @@ builder.Services.AddRazorComponents()
 // WorkspaceState is the canonical domain state owner (Core). Presentation services must provide
 // view-state storage via IViewStateStore. Register the Core WorkspaceState and the presentation
 // view-state store implementation below.
+// Register persistence implementation and WorkspaceState. WorkspaceState constructor no longer performs I/O;
+// hosts must explicitly load persisted workspace and call ReplaceWorkspace.
+builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+
+// Core services for current-task workflow
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ITimeProvider, EngineeringDiscovery.Core.Services.SystemTimeProvider>();
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ICurrentTaskService, EngineeringDiscovery.Core.Services.CurrentTaskService>();
+
+// Presentation services (implemented in Web project)
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringAdvisorService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringInsightService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringRecommendationService>();
 // Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
 builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
 
 var app = builder.Build();
 
-// After building services, seed CurrentTaskState and InvestigationState from persisted workspace if present
-var workspaceState = app.Services.GetRequiredService<EngineeringDiscovery.Core.Services.WorkspaceState>();
-// No seeding required: UI reads/writes via WorkspaceState directly
+// After building services, explicitly load persisted workspace (if any) and initialize WorkspaceState.
+using (var scope = app.Services.CreateScope())
+{
+    var persistence = scope.ServiceProvider.GetRequiredService<IWorkspacePersistence>();
+    var workspaceState = scope.ServiceProvider.GetRequiredService<EngineeringDiscovery.Core.Services.WorkspaceState>();
+    var loaded = persistence.LoadAsync().GetAwaiter().GetResult();
+    if (loaded is not null)
+    {
+        workspaceState.ReplaceWorkspace(loaded);
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

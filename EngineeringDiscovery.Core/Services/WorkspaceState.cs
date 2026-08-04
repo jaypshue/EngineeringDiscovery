@@ -15,22 +15,19 @@ namespace EngineeringDiscovery.Core.Services
     // Core-owned WorkspaceState - single source of truth for application state
     public sealed class WorkspaceState
     {
-        private const string AppFolderName = "EngineeringDiscovery";
-        private const string WorkspaceFileName = "workspace.json";
-        private readonly string _workspaceFilePath;
+        private readonly IWorkspacePersistence _persistence;
         private readonly ILogger<WorkspaceState>? _logger;
+        private readonly IRepoFingerprintService _fingerprintService;
 
-        public WorkspaceState(ILogger<WorkspaceState>? logger = null)
+        public WorkspaceState(IWorkspacePersistence persistence, IRepoFingerprintService fingerprintService, ILogger<WorkspaceState>? logger = null)
         {
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+            _fingerprintService = fingerprintService ?? throw new ArgumentNullException(nameof(fingerprintService));
             _logger = logger;
 
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(localAppData, AppFolderName);
-            if (!Directory.Exists(appFolder)) Directory.CreateDirectory(appFolder);
-
-            _workspaceFilePath = Path.Combine(appFolder, WorkspaceFileName);
-
-            ActiveWorkspace = LoadWorkspace();
+            // Do not perform I/O in constructor per ED-205 rule. Hosts/tests must explicitly load persisted
+            // workspace and call ReplaceWorkspace to populate canonical state.
+            ActiveWorkspace = null;
         }
 
         public Workspace? ActiveWorkspace { get; private set; }
@@ -50,27 +47,25 @@ namespace EngineeringDiscovery.Core.Services
             RefreshRequired
         }
 
-        // Determine model freshness based on last built timestamp and repository fingerprint
+        // Determine model freshness by delegating to IRepoFingerprintService
         public EngineeringModelFreshness GetFreshnessStatus()
         {
             try
             {
                 if (ActiveWorkspace is null) return EngineeringModelFreshness.Unknown;
                 if (ActiveWorkspace.Investigation is null) return EngineeringModelFreshness.Unknown;
-                if (!string.IsNullOrWhiteSpace(ActiveWorkspace.RepositoryPath))
+                if (string.IsNullOrWhiteSpace(ActiveWorkspace.RepositoryPath)) return EngineeringModelFreshness.Unknown;
+
+                // Host-provided service evaluates freshness according to configured policy
+                var task = _fingerprintService.EvaluateFreshnessAsync(ActiveWorkspace.RepositoryPath, ActiveWorkspace.LastBuiltUtc, ActiveWorkspace.RepositoryFingerprint);
+                var result = task.GetAwaiter().GetResult();
+                return result switch
                 {
-                    // If LastBuiltUtc is not set, require build
-                    if (ActiveWorkspace.LastBuiltUtc == null) return EngineeringModelFreshness.RefreshRequired;
-
-                    // Very simple heuristic: if repository fingerprint differs, recommend refresh
-                    var fingerprint = ComputeRepositoryFingerprint(ActiveWorkspace.RepositoryPath ?? string.Empty);
-                    if (fingerprint is null) return EngineeringModelFreshness.Unknown;
-                    if (!string.Equals(fingerprint, ActiveWorkspace.RepositoryFingerprint, StringComparison.Ordinal)) return EngineeringModelFreshness.RefreshRecommended;
-
-                    return EngineeringModelFreshness.Current;
-                }
-
-                return EngineeringModelFreshness.Unknown;
+                    ModelFreshness.Current => EngineeringModelFreshness.Current,
+                    ModelFreshness.RefreshRecommended => EngineeringModelFreshness.RefreshRecommended,
+                    ModelFreshness.RefreshRequired => EngineeringModelFreshness.RefreshRequired,
+                    _ => EngineeringModelFreshness.Unknown,
+                };
             }
             catch
             {
@@ -78,68 +73,21 @@ namespace EngineeringDiscovery.Core.Services
             }
         }
 
-        private Workspace? LoadWorkspace()
-        {
-            try
-            {
-                if (!File.Exists(_workspaceFilePath)) return null;
-                var json = File.ReadAllText(_workspaceFilePath);
-                var ws = JsonSerializer.Deserialize<Workspace>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                return ws;
-            }
-            catch
-            {
-                // Swallow errors in load for PoC. Logging can be added via adapters if needed.
-                return null;
-            }
-        }
-
+        // Persistence delegated to IWorkspacePersistence implementation supplied by host
         public void Save()
         {
             try
             {
-                var json = JsonSerializer.Serialize(ActiveWorkspace, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_workspaceFilePath, json);
+                _persistence.SaveAsync(ActiveWorkspace).GetAwaiter().GetResult();
             }
             catch
             {
-                // Ignore save failures for PoC; host may provide logging adapters.
+                // Ignore save failures; host logging can report if desired.
             }
         }
 
-        // Register persistence hooks for legacy UI state holders (CurrentTaskState etc.) using reflection to avoid
-        // introducing a hard dependency on UI projects. This method wires the UI state's OnChange to persist
-        // the corresponding Core ActiveWorkspace state.
-        public void RegisterPersistenceHooks(object? currentTaskState, object? investigationState)
-        {
-            try
-            {
-                if (currentTaskState is not null)
-                {
-                    var evt = currentTaskState.GetType().GetEvent("OnChange");
-                    if (evt != null)
-                    {
-                        Action handler = () =>
-                        {
-                            try
-                            {
-                                var activeTaskProp = currentTaskState.GetType().GetProperty("ActiveTask");
-                                var activeTask = activeTaskProp?.GetValue(currentTaskState);
-                                if (ActiveWorkspace is null) ActiveWorkspace = new Workspace();
-                                var wsCurrentTaskProp = typeof(Workspace).GetProperty("CurrentTask");
-                                wsCurrentTaskProp?.SetValue(ActiveWorkspace, activeTask);
-                                Save();
-                                NotifyStateChanged();
-                            }
-                            catch { }
-                        };
-
-                        evt.AddEventHandler(currentTaskState, handler);
-                    }
-                }
-            }
-            catch { }
-        }
+        // Presentation wiring removed from Core in ED-205. Hosts should implement persistence adapters
+        // and subscribe to presentation events outside of WorkspaceState.
 
         private void NotifyStateChanged()
         {
@@ -157,7 +105,7 @@ namespace EngineeringDiscovery.Core.Services
         public void ReplaceWorkspace(Workspace workspace)
         {
             ActiveWorkspace = workspace;
-            Save();
+            // Do not perform persistence here; persistence is the responsibility of workflow services.
             NotifyStateChanged();
         }
 
@@ -169,80 +117,8 @@ namespace EngineeringDiscovery.Core.Services
             NotifyStateChanged();
         }
 
-        // ----- Backwards-compatibility helpers for UI layers that previously lived in Web project -----
-        public void UpdateBrief(Action<EngineeringDiscovery.Core.Domain.CurrentTask.EngineeringBrief> update)
-        {
-            try
-            {
-                var brief = ActiveWorkspace?.CurrentTask?.Brief;
-                if (brief is null) return;
-                update(brief);
-                Save();
-                NotifyStateChanged();
-            }
-            catch { }
-        }
-
-        public void BeginTask(string title, string description, string goal)
-        {
-            try
-            {
-                if (ActiveWorkspace is null) ActiveWorkspace = new Workspace();
-                ActiveWorkspace.CurrentTask = new CurrentTask(title, description, goal);
-                Save();
-                NotifyStateChanged();
-            }
-            catch { }
-        }
-
-        public void CompleteTask()
-        {
-            try
-            {
-                if (ActiveWorkspace?.CurrentTask is null) return;
-                ActiveWorkspace.CurrentTask.Complete();
-                ActiveWorkspace.CurrentTask = null;
-                Save();
-                NotifyStateChanged();
-            }
-            catch { }
-        }
-
-        public void AddContext(string kind, string id)
-        {
-            try
-            {
-                var ctx = ActiveWorkspace?.CurrentTask?.Brief?.Context;
-                if (ctx is null) return;
-                switch (kind)
-                {
-                    case "Project": ctx.AddProject(id); break;
-                    case "Namespace": ctx.AddNamespace(id); break;
-                    case "Type": ctx.AddType(id); break;
-                    default: break;
-                }
-                Save();
-                NotifyStateChanged();
-            }
-            catch { }
-        }
-
-        public IEnumerable<string> GetTypeRecommendations()
-        {
-            // Placeholder: UI previously displayed recommendations produced by web services.
-            return Enumerable.Empty<string>();
-        }
-
-        public IEnumerable<EngineeringInsight> GetInsights()
-        {
-            return Enumerable.Empty<EngineeringInsight>();
-        }
-
-        public string AskAdvisor(string question)
-        {
-            // Stubbed advisor - hosts can implement richer behavior in UI services.
-            return string.Empty;
-        }
+        // Backwards-compatibility helpers removed. Presentation and workflow responsibilities
+        // have been migrated to presentation services and ICurrentTaskService respectively.
 
         // Compute a simple repository fingerprint
         public string? ComputeRepositoryFingerprint(string repositoryPath)

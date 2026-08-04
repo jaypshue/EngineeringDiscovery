@@ -14,7 +14,8 @@ namespace EngineeringDiscovery.Core.Tests
         public void EngineeringContext_RoundTrips_Via_WorkspaceState()
         {
             // Arrange
-            var ws1 = new WorkspaceState();
+            var persistence = new EngineeringDiscovery.Core.Services.InMemoryWorkspacePersistence();
+            var ws1 = new WorkspaceState(persistence, new EngineeringDiscovery.Core.Services.TestRepoFingerprintService());
 
             var workspace = new Workspace
             {
@@ -35,8 +36,10 @@ namespace EngineeringDiscovery.Core.Tests
             // Act
             ws1.Save();
 
-            // Create a fresh WorkspaceState which will read the persisted file
-            var ws2 = new WorkspaceState();
+            // Create a fresh WorkspaceState and explicitly initialize from persistence
+            var ws2 = new WorkspaceState(persistence, new EngineeringDiscovery.Core.Services.TestRepoFingerprintService());
+            var loaded2 = persistence.LoadAsync().GetAwaiter().GetResult();
+            if (loaded2 is not null) ws2.ReplaceWorkspace(loaded2);
 
             // Assert
             Assert.NotNull(ws2.ActiveWorkspace);

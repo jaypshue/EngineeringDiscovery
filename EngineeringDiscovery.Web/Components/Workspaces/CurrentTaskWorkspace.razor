@@ -1,5 +1,6 @@
 @using EngineeringDiscovery.Core.Domain.CurrentTask
 @using EngineeringDiscovery.Web.Services
+@using EngineeringDiscovery.Core.Services
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 
 <section class="workspace workspace--current-task">
@@ -119,7 +120,7 @@
                     </div>
                         <div class="recommendations">
                             <h6>Recommendations</h6>
-                            @foreach (var rec in WorkspaceState.GetTypeRecommendations())
+                            @foreach (var rec in RecommendationService.RecommendTypes(WorkspaceState.ActiveWorkspace))
                             {
                                 <div class="recommendation">
                                     <span>@rec</span>
@@ -129,7 +130,7 @@
                         </div>
                         <div class="insights">
                             <h6>Engineering Insights</h6>
-                            @foreach (var ins in WorkspaceState.GetInsights())
+                            @foreach (var ins in InsightService.GetInsights(WorkspaceState.ActiveWorkspace))
                             {
                                 <div class="insight">
                                     <strong>@ins.Subject</strong>
@@ -171,6 +172,16 @@
 @code {
     [Inject]
     private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+
+    [Inject]
+    private ICurrentTaskService CurrentTaskService { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.EngineeringInsightService InsightService { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.EngineeringRecommendationService RecommendationService { get; set; } = null!;
+
     [Inject]
     private EngineeringDiscovery.Web.Services.EngineeringAdvisorService AdvisorService { get; set; } = null!;
 
@@ -233,7 +244,7 @@
     {
         if (ActiveTask is null) return;
 
-        WorkspaceState.UpdateBrief(b =>
+        CurrentTaskService.UpdateBriefAsync(b =>
         {
             switch (SelectedContextKind)
             {
@@ -249,56 +260,57 @@
             }
 
             b.Touch();
-        });
+        }).GetAwaiter().GetResult();
     }
 
     private void AddProjectFromSelect()
     {
         if (string.IsNullOrWhiteSpace(SelectedProjectOption) || ActiveTask is null) return;
-        WorkspaceState.AddContext("Project", SelectedProjectOption!);
+        CurrentTaskService.AddContextAsync("Project", SelectedProjectOption!).GetAwaiter().GetResult();
         SelectedProjectOption = null;
     }
 
     private void AddNamespaceFromSelect()
     {
         if (string.IsNullOrWhiteSpace(SelectedNamespaceOption) || ActiveTask is null) return;
-        WorkspaceState.AddContext("Namespace", SelectedNamespaceOption!);
+        CurrentTaskService.AddContextAsync("Namespace", SelectedNamespaceOption!).GetAwaiter().GetResult();
         SelectedNamespaceOption = null;
     }
 
     private void AddTypeFromSelect()
     {
         if (string.IsNullOrWhiteSpace(SelectedTypeOption) || ActiveTask is null) return;
-        WorkspaceState.AddContext("Type", SelectedTypeOption!);
+        CurrentTaskService.AddContextAsync("Type", SelectedTypeOption!).GetAwaiter().GetResult();
         SelectedTypeOption = null;
     }
 
     private void RemoveProject(string id)
     {
         if (ActiveTask is null) return;
-        WorkspaceState.UpdateBrief(b => { b.Context.RemoveProject(id); b.Touch(); });
+        CurrentTaskService.UpdateBriefAsync(b => { b.Context.RemoveProject(id); b.Touch(); }).GetAwaiter().GetResult();
     }
 
     private void RemoveNamespace(string id)
     {
         if (ActiveTask is null) return;
-        WorkspaceState.UpdateBrief(b => { b.Context.RemoveNamespace(id); b.Touch(); });
+        CurrentTaskService.UpdateBriefAsync(b => { b.Context.RemoveNamespace(id); b.Touch(); }).GetAwaiter().GetResult();
     }
 
     private void RemoveType(string id)
     {
         if (ActiveTask is null) return;
-        WorkspaceState.UpdateBrief(b => { b.Context.RemoveType(id); b.Touch(); });
+        CurrentTaskService.UpdateBriefAsync(b => { b.Context.RemoveType(id); b.Touch(); }).GetAwaiter().GetResult();
     }
 
 
-    private void StartTask()
+    private async Task StartTask()
     {
         ErrorMessage = null;
 
         try
         {
-            WorkspaceState.BeginTask(Title, Description, Goal);
+                // Use WorkspaceState for now; host will be wired to call ICurrentTaskService in a later iteration.
+                await CurrentTaskService.BeginTaskAsync(Title, Description, Goal);
             Title = string.Empty;
             Description = string.Empty;
             Goal = string.Empty;
@@ -313,7 +325,7 @@
     {
         if (ActiveTask is null) return;
         // Recommendations are types; add them as Type context
-        WorkspaceState.AddContext("Type", qualifiedName);
+        CurrentTaskService.AddContextAsync("Type", qualifiedName).GetAwaiter().GetResult();
     }
 
     // Simple advisor interaction model: ask a question and display response modal (rudimentary)
@@ -327,9 +339,9 @@
         AdvisorQuestion = string.Empty;
     }
 
-    private void CompleteTask()
+    private async Task CompleteTask()
     {
-        WorkspaceState.CompleteTask();
+        await CurrentTaskService.CompleteTaskAsync();
     }
 
     private void OnCurrentTaskChanged()
@@ -362,16 +374,14 @@
     {
         if (ActiveTask is null) return;
 
-        // Update via WorkspaceState to keep Workspace as single source of truth
-        WorkspaceState.UpdateBrief(b =>
+        // Update via CurrentTaskService to keep workflow and persistence centralized
+        CurrentTaskService.UpdateBriefAsync(b =>
         {
             b.Objective = BriefObjective ?? string.Empty;
             b.Notes = BriefNotes ?? string.Empty;
             b.ImplementationThoughts = BriefImplementation ?? string.Empty;
             b.Touch();
-        });
-
-        // WorkspaceState.UpdateBrief already persisted changes; nothing more to do here
+        }).GetAwaiter().GetResult();
     }
 
     public void Dispose()

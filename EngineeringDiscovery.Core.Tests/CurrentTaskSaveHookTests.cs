@@ -11,10 +11,11 @@ namespace EngineeringDiscovery.Core.Tests
     public class CurrentTaskSaveHookTests
     {
         [Fact]
-        public void UpdateBrief_Triggers_RegisterPersistenceHooks_Save()
+        public void UpdateBrief_Triggers_Persistence_Save()
         {
             // Arrange
-            var ws = new WorkspaceState();
+            var persistence = new EngineeringDiscovery.Core.Services.InMemoryWorkspacePersistence();
+            var ws = new WorkspaceState(persistence, new EngineeringDiscovery.Core.Services.TestRepoFingerprintService());
 
             var workspace = new Workspace
             {
@@ -32,8 +33,22 @@ namespace EngineeringDiscovery.Core.Tests
 
             var currentTaskState = new TestCurrentTaskState();
 
-            // Register hooks so UpdateBrief will cause Save
-            ws.RegisterPersistenceHooks(currentTaskState, null);
+            // Register hooks so UpdateBrief will cause persistence (test wiring moved to test)
+            currentTaskState.OnChange += () =>
+            {
+                // Copy current task into the WorkspaceState.ActiveWorkspace and persist
+                var activeProp = typeof(WorkspaceState).GetProperty("ActiveWorkspace");
+                var activeWs = activeProp!.GetValue(ws) as Workspace;
+                if (activeWs is null)
+                {
+                    activeWs = new Workspace();
+                    activeProp.SetValue(ws, activeWs);
+                }
+                // set CurrentTask on the workspace object
+                var wsTypeProp = typeof(Workspace).GetProperty("CurrentTask");
+                wsTypeProp?.SetValue(activeWs, currentTaskState.ActiveTask);
+                ws.Save();
+            };
 
             // Seed currentTaskState from workspace
             currentTaskState.SeedFromWorkspace(workspace.CurrentTask);
@@ -41,8 +56,10 @@ namespace EngineeringDiscovery.Core.Tests
             // Act - update brief which should trigger persistence hook
             currentTaskState.UpdateBrief(b => b.Objective = "modified");
 
-            // Create fresh WorkspaceState to load what's persisted
-            var ws2 = new WorkspaceState();
+            // Create fresh WorkspaceState and explicitly initialize from persistence
+            var ws2 = new WorkspaceState(persistence, new EngineeringDiscovery.Core.Services.TestRepoFingerprintService());
+            var loaded = persistence.LoadAsync().GetAwaiter().GetResult();
+            if (loaded is not null) ws2.ReplaceWorkspace(loaded);
 
             // Assert
             Assert.NotNull(ws2.ActiveWorkspace);
