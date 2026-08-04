@@ -79,10 +79,20 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         // Minimal activity-owned collections for ED-300
         public List<string> Intent { get; set; }
         public List<EngineeringObservation> Observations { get; set; }
-        public List<string> RecoveredUnderstanding { get; set; }
+        public List<EngineeringRecoveredUnderstanding> RecoveredUnderstanding { get; set; }
         public List<EngineeringHypothesis> HypothesisSpace { get; set; }
         public List<EngineeringEvidenceRequest> EvidenceRequests { get; set; }
         public List<EngineeringEvidence> Evidence { get; set; }
+
+        // Convenience: current recovered understanding (most recent)
+        public EngineeringRecoveredUnderstanding? CurrentRecoveredUnderstanding => RecoveredUnderstanding.Count > 0 ? RecoveredUnderstanding[^1] : null;
+
+        public void AddRecoveredUnderstanding(EngineeringRecoveredUnderstanding r)
+        {
+            if (r is null) return;
+            RecoveredUnderstanding.Add(r);
+            UpdatedUtc = DateTime.UtcNow;
+        }
 
         // Convenience: current observation (most recent)
         public EngineeringObservation? CurrentObservation => Observations.Count > 0 ? Observations[^1] : null;

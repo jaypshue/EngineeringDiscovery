@@ -43,6 +43,13 @@ namespace EngineeringDiscovery.Core.Domain.Activity
             AddEvidenceRequest(er);
 
             // No initial evidence yet; evidence will be added in ED-304 when available.
+            // initial recovered understanding
+            var ru = new EngineeringRecoveredUnderstanding
+            {
+                Statement = "The engineering workflow for this product is being discovered through implementation.",
+                Confidence = 100
+            };
+            AddRecoveredUnderstanding(ru);
         }
     }
 }

@@ -51,6 +51,11 @@ namespace EngineeringDiscovery.Core.Services
         // ED-304: project evidence collection (read-only)
         public System.Collections.Generic.List<EngineeringEvidence>? CurrentEvidence => CurrentActivity?.Evidence;
 
+        // ED-305: project recovered understanding (read-only)
+        public System.Collections.Generic.List<EngineeringRecoveredUnderstanding>? CurrentRecoveredUnderstanding => CurrentActivity?.RecoveredUnderstanding;
+
+        public EngineeringRecoveredUnderstanding? CurrentRecoveredUnderstandingItem => CurrentActivity?.CurrentRecoveredUnderstanding;
+
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 
         public event Action? OnChange;

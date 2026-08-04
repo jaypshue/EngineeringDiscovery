@@ -84,6 +84,13 @@
                     <TextBlock Text="Evidence" FontWeight="Bold" Margin="0,8,0,0" />
                     <TextBlock Text="Collected Evidence Count:" FontWeight="Bold" Margin="0,6,0,0" />
                     <TextBlock Text="{Binding CurrentEvidenceCount}" />
+                    <Separator Margin="0,12" />
+                    <TextBlock Text="Recovered Understanding" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding CurrentRecoveredUnderstandingStatement}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="Confidence: " FontWeight="Bold" />
+                        <TextBlock Text="{Binding CurrentRecoveredUnderstandingConfidence}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

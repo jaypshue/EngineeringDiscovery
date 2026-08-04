@@ -65,5 +65,7 @@ namespace EngineeringDiscovery.Wpf.ViewModels
     public int CurrentEvidenceRequestExpectedInformationGain { get; private set; }
     public int CurrentEvidenceRequestExpectedConfidenceIncrease { get; private set; }
     public int CurrentEvidenceCount { get; private set; }
+    public string CurrentRecoveredUnderstandingStatement { get; private set; } = string.Empty;
+    public int CurrentRecoveredUnderstandingConfidence { get; private set; }
     }
 }
