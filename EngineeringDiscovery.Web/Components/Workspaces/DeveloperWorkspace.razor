@@ -8,7 +8,7 @@
     public EngInv.Investigation? Investigation { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private IEnumerable<Finding> Findings => (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)?.Findings ?? Enumerable.Empty<Finding>();
 

@@ -68,12 +68,12 @@
 
             <div class="freshness">
                 <h5>Engineering Model</h5>
-                @if (freshness == EngineeringDiscovery.Web.Services.WorkspaceState.EngineeringModelFreshness.Current)
+                @if (freshness == EngineeringDiscovery.Core.Services.WorkspaceState.EngineeringModelFreshness.Current)
                 {
                     <p class="freshness--current">? Current</p>
                     <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
                 }
-                else if (freshness == EngineeringDiscovery.Web.Services.WorkspaceState.EngineeringModelFreshness.RefreshRecommended)
+                else if (freshness == EngineeringDiscovery.Core.Services.WorkspaceState.EngineeringModelFreshness.RefreshRecommended)
                 {
                     <p class="freshness--stale">? Repository Changed — Refresh Recommended</p>
                     <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
@@ -119,7 +119,7 @@
     public EngineeringRole Role { get; set; }
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
     // InvestigationState and CurrentTaskState deprecated - UI should use WorkspaceState directly
 
     [Inject]

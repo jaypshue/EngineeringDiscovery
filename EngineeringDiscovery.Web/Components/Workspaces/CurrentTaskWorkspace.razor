@@ -170,7 +170,9 @@
 
 @code {
     [Inject]
-    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    [Inject]
+    private EngineeringDiscovery.Web.Services.EngineeringAdvisorService AdvisorService { get; set; } = null!;
 
     private CurrentTask? ActiveTask => WorkspaceState.ActiveWorkspace?.CurrentTask;
 
@@ -321,7 +323,7 @@
     private void AskAdvisor()
     {
         if (string.IsNullOrWhiteSpace(AdvisorQuestion)) return;
-        AdvisorLastResponse = WorkspaceState.AskAdvisor(AdvisorQuestion);
+        AdvisorLastResponse = AdvisorService.Ask(AdvisorQuestion, WorkspaceState.ActiveWorkspace);
         AdvisorQuestion = string.Empty;
     }
 

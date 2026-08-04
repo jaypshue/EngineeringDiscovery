@@ -3,6 +3,7 @@ using System.IO;
 using EngineeringDiscovery.Core.Domain.CurrentTask;
 using EngineeringDiscovery.Core.Domain.Workspace;
 using EngineeringDiscovery.Web.Services;
+using EngineeringDiscovery.Core.Services;
 using Xunit;
 
 namespace EngineeringDiscovery.Core.Tests
@@ -13,7 +14,7 @@ namespace EngineeringDiscovery.Core.Tests
         public void EngineeringContext_RoundTrips_Via_WorkspaceState()
         {
             // Arrange
-            var ws1 = new WorkspaceState(null);
+            var ws1 = new WorkspaceState();
 
             var workspace = new Workspace
             {
@@ -35,7 +36,7 @@ namespace EngineeringDiscovery.Core.Tests
             ws1.Save();
 
             // Create a fresh WorkspaceState which will read the persisted file
-            var ws2 = new WorkspaceState(null);
+            var ws2 = new WorkspaceState();
 
             // Assert
             Assert.NotNull(ws2.ActiveWorkspace);

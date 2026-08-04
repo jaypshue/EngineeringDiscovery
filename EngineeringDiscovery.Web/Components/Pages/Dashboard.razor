@@ -39,7 +39,7 @@
     private string? ViewModelProject { get; set; } = "(none)";
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
 

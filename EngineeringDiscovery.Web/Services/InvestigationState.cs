@@ -6,10 +6,14 @@ namespace EngineeringDiscovery.Web.Services
 {
     public class InvestigationState
     {
-        public Investigation? Investigation { get; private set; }
+        private readonly EngineeringDiscovery.Core.Services.IViewStateStore _viewStateStore;
 
-        // Persisted view state for the graph workspace
-        public GraphViewState? GraphViewState { get; set; }
+        public InvestigationState(EngineeringDiscovery.Core.Services.IViewStateStore viewStateStore)
+        {
+            _viewStateStore = viewStateStore;
+        }
+
+        public Investigation? Investigation { get; private set; }
 
         public event Action? OnChange;
 
@@ -23,6 +27,17 @@ namespace EngineeringDiscovery.Web.Services
         {
             Investigation = null;
             NotifyStateChanged();
+        }
+
+        // Adapter over IViewStateStore — presentation-only storage.
+        public GraphViewState? GetGraphViewState(string key)
+        {
+            return _viewStateStore.Get(key) as GraphViewState;
+        }
+
+        public void SetGraphViewState(string key, GraphViewState? state)
+        {
+            _viewStateStore.Set(key, state);
         }
 
         private void NotifyStateChanged() => OnChange?.Invoke();

@@ -5,15 +5,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-// WorkspaceState is now the single owner of application state
-// (CurrentTaskState and InvestigationState are deprecated for state ownership)
-// Workspace state: persistent single workspace
-builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.WorkspaceState>();
+// WorkspaceState is the canonical domain state owner (Core). Presentation services must provide
+// view-state storage via IViewStateStore. Register the Core WorkspaceState and the presentation
+// view-state store implementation below.
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+// Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
+builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
 
 var app = builder.Build();
 
 // After building services, seed CurrentTaskState and InvestigationState from persisted workspace if present
-var workspaceState = app.Services.GetRequiredService<EngineeringDiscovery.Web.Services.WorkspaceState>();
+var workspaceState = app.Services.GetRequiredService<EngineeringDiscovery.Core.Services.WorkspaceState>();
 // No seeding required: UI reads/writes via WorkspaceState directly
 
 // Configure the HTTP request pipeline.

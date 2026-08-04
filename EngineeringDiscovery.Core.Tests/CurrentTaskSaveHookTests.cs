@@ -3,6 +3,7 @@ using System.IO;
 using EngineeringDiscovery.Core.Domain.CurrentTask;
 using EngineeringDiscovery.Core.Domain.Workspace;
 using EngineeringDiscovery.Web.Services;
+using EngineeringDiscovery.Core.Services;
 using Xunit;
 
 namespace EngineeringDiscovery.Core.Tests
@@ -13,7 +14,7 @@ namespace EngineeringDiscovery.Core.Tests
         public void UpdateBrief_Triggers_RegisterPersistenceHooks_Save()
         {
             // Arrange
-            var ws = new WorkspaceState(null);
+            var ws = new WorkspaceState();
 
             var workspace = new Workspace
             {
@@ -29,7 +30,7 @@ namespace EngineeringDiscovery.Core.Tests
             Assert.NotNull(prop);
             prop!.SetValue(ws, workspace);
 
-            var currentTaskState = new CurrentTaskState();
+            var currentTaskState = new TestCurrentTaskState();
 
             // Register hooks so UpdateBrief will cause Save
             ws.RegisterPersistenceHooks(currentTaskState, null);
@@ -41,7 +42,7 @@ namespace EngineeringDiscovery.Core.Tests
             currentTaskState.UpdateBrief(b => b.Objective = "modified");
 
             // Create fresh WorkspaceState to load what's persisted
-            var ws2 = new WorkspaceState(null);
+            var ws2 = new WorkspaceState();
 
             // Assert
             Assert.NotNull(ws2.ActiveWorkspace);
@@ -56,6 +57,28 @@ namespace EngineeringDiscovery.Core.Tests
                 if (File.Exists(path)) File.Delete(path);
             }
             catch { }
+        }
+
+        // Local test double to avoid depending on presentation project types
+        private class TestCurrentTaskState
+        {
+            public CurrentTask? ActiveTask { get; private set; }
+            public event Action? OnChange;
+
+            public void SeedFromWorkspace(CurrentTask? task)
+            {
+                ActiveTask = task;
+                NotifyStateChanged();
+            }
+
+            public void UpdateBrief(Action<EngineeringBrief> update)
+            {
+                if (ActiveTask is null) return;
+                update(ActiveTask.Brief);
+                NotifyStateChanged();
+            }
+
+            private void NotifyStateChanged() => OnChange?.Invoke();
         }
     }
 }

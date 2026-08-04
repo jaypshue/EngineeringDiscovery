@@ -13,7 +13,7 @@
         (Investigation ?? WorkspaceState.ActiveWorkspace?.Investigation)?.Findings?.Cast<object>().ToList() ?? new List<object>();
 
     [Inject]
-    private EngineeringDiscovery.Web.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     private int FindingCount => Findings.Count;
 
