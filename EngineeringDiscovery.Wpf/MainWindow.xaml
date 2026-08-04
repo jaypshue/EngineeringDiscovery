@@ -41,9 +41,10 @@
 
             <GridSplitter Grid.Column="1" Grid.Row="0" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True" />
 
-            <Border Grid.Column="2" Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Margin="4">
+            <Border x:Name="CenterBorder" Grid.Column="2" Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Margin="4">
                 <!-- Primary content area: bind to ActivityViewModel projection -->
                 <StackPanel Margin="12" DataContext="{Binding Activity}">
+                    <TextBlock FontSize="48" Foreground="Red" Text="HELLO ENGINEOS" />
                     <TextBlock Text="Current Activity" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
                     <TextBlock Text="{Binding Type}" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock Text="Status" FontWeight="Bold" Margin="0,8,0,0" />
@@ -104,9 +105,9 @@
                 <TextBlock Text="Output Window" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Border>
 
-            <StatusBar DockPanel.Dock="Bottom" Grid.Column="0" Grid.ColumnSpan="3">
+            <!--<StatusBar DockPanel.Dock="Bottom" Grid.Column="0" Grid.ColumnSpan="3">
                 <TextBlock Text="Ready" />
-            </StatusBar>
+            </StatusBar>-->
         </Grid>
     </DockPanel>
 </Window>

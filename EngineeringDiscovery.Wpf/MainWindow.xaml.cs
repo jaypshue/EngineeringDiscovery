@@ -9,6 +9,61 @@ namespace EngineeringDiscovery.Wpf
         {
             InitializeComponent();
             DataContext = vm;
+
+            // Instrument center Border child for runtime composition investigation (ED-307)
+            this.Loaded += MainWindow_Loaded;
+            this.ContentRendered += MainWindow_ContentRendered;
+            this.Dispatcher.BeginInvoke(new System.Action(() => LogCenterBorderState("ApplicationIdle (scheduled)")), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+
+        private object? _initialChildRef;
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            LogCenterBorderState("Loaded");
+        }
+
+        private void MainWindow_ContentRendered(object? sender, System.EventArgs e)
+        {
+            LogCenterBorderState("ContentRendered");
+        }
+
+        private void LogCenterBorderState(string phase)
+        {
+            try
+            {
+                var border = this.CenterBorder;
+                if (border == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ED-307] {phase}: CenterBorder is null");
+                    return;
+                }
+
+                var child = border.Child;
+                var childType = child?.GetType().FullName ?? "(null)";
+                var refHash = child is null ? "(null)" : child.GetHashCode().ToString();
+                var childCount = 0;
+                if (child is System.Windows.Controls.Panel p)
+                {
+                    childCount = p.Children.Count;
+                }
+
+                var changed = false;
+                if (_initialChildRef == null && child != null)
+                {
+                    _initialChildRef = child;
+                }
+                else if (_initialChildRef != null && !ReferenceEquals(_initialChildRef, child))
+                {
+                    changed = true;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[ED-307] {phase}: CenterBorder.Child Type={childType}, Hash={refHash}, ChildCount={childCount}, Changed={changed}");
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ED-307] LogCenterBorderState error: {ex}");
+            }
         }
     }
 }
