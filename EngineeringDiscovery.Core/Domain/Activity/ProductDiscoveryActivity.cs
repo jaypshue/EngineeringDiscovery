@@ -31,6 +31,16 @@ namespace EngineeringDiscovery.Core.Domain.Activity
                 Confidence = 100
             };
             AddHypothesis(h);
+
+            // initial evidence request
+            var er = new EngineeringEvidenceRequest
+            {
+                Target = "Identify the engineering workflow used to build EngineOS.",
+                Reason = "Understanding the workflow provides the highest expected information gain for Product Discovery.",
+                ExpectedInformationGain = 100,
+                ExpectedConfidenceIncrease = 100
+            };
+            AddEvidenceRequest(er);
         }
     }
 }

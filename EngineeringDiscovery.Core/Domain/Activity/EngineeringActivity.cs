@@ -66,6 +66,7 @@ namespace EngineeringDiscovery.Core.Domain.Activity
             Observations = new List<EngineeringObservation>();
             RecoveredUnderstanding = new List<string>();
             HypothesisSpace = new List<EngineeringHypothesis>();
+            EvidenceRequests = new List<EngineeringEvidenceRequest>();
         }
 
         public Guid Id { get; set; }
@@ -80,6 +81,7 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         public List<EngineeringObservation> Observations { get; set; }
         public List<string> RecoveredUnderstanding { get; set; }
         public List<EngineeringHypothesis> HypothesisSpace { get; set; }
+        public List<EngineeringEvidenceRequest> EvidenceRequests { get; set; }
 
         // Convenience: current observation (most recent)
         public EngineeringObservation? CurrentObservation => Observations.Count > 0 ? Observations[^1] : null;
@@ -91,6 +93,15 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         {
             if (h is null) return;
             HypothesisSpace.Add(h);
+            UpdatedUtc = DateTime.UtcNow;
+        }
+
+        public EngineeringEvidenceRequest? CurrentEvidenceRequest => EvidenceRequests.Count > 0 ? EvidenceRequests[^1] : null;
+
+        public void AddEvidenceRequest(EngineeringEvidenceRequest r)
+        {
+            if (r is null) return;
+            EvidenceRequests.Add(r);
             UpdatedUtc = DateTime.UtcNow;
         }
 

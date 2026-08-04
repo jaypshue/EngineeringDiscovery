@@ -42,6 +42,12 @@ namespace EngineeringDiscovery.Core.Services
         // ED-302: convenience access to the hypothesis space for the current activity
         public System.Collections.Generic.List<EngineeringHypothesis>? CurrentHypothesisSpace => CurrentActivity?.HypothesisSpace;
 
+        // ED-303: project current evidence request (read-only)
+        public EngineeringEvidenceRequest? CurrentEvidenceRequest => CurrentActivity?.CurrentEvidenceRequest;
+
+        // ED-303: convenience access to the evidence requests for the current activity
+        public System.Collections.Generic.List<EngineeringEvidenceRequest>? CurrentEvidenceRequests => CurrentActivity?.EvidenceRequests;
+
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 
         public event Action? OnChange;

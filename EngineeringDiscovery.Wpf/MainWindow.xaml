@@ -68,6 +68,18 @@
                         <TextBlock Text="  Confidence: " FontWeight="Bold" Margin="12,0,0,0" />
                         <TextBlock Text="{Binding CurrentHypothesisConfidence}" />
                     </StackPanel>
+                    <Separator Margin="0,12" />
+                    <TextBlock Text="Current Evidence Request" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="Target" FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding CurrentEvidenceRequestTarget}" TextWrapping="Wrap" />
+                    <TextBlock Text="Reason" FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding CurrentEvidenceRequestReason}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="Expected Information Gain: " FontWeight="Bold" />
+                        <TextBlock Text="{Binding CurrentEvidenceRequestExpectedInformationGain}" />
+                        <TextBlock Text="  Expected Confidence Increase: " FontWeight="Bold" Margin="12,0,0,0" />
+                        <TextBlock Text="{Binding CurrentEvidenceRequestExpectedConfidenceIncrease}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
