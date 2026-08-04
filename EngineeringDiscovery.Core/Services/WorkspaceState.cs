@@ -48,6 +48,9 @@ namespace EngineeringDiscovery.Core.Services
         // ED-303: convenience access to the evidence requests for the current activity
         public System.Collections.Generic.List<EngineeringEvidenceRequest>? CurrentEvidenceRequests => CurrentActivity?.EvidenceRequests;
 
+        // ED-304: project evidence collection (read-only)
+        public System.Collections.Generic.List<EngineeringEvidence>? CurrentEvidence => CurrentActivity?.Evidence;
+
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 
         public event Action? OnChange;

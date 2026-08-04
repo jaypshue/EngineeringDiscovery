@@ -82,6 +82,7 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         public List<string> RecoveredUnderstanding { get; set; }
         public List<EngineeringHypothesis> HypothesisSpace { get; set; }
         public List<EngineeringEvidenceRequest> EvidenceRequests { get; set; }
+        public List<EngineeringEvidence> Evidence { get; set; }
 
         // Convenience: current observation (most recent)
         public EngineeringObservation? CurrentObservation => Observations.Count > 0 ? Observations[^1] : null;
@@ -102,6 +103,13 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         {
             if (r is null) return;
             EvidenceRequests.Add(r);
+            UpdatedUtc = DateTime.UtcNow;
+        }
+
+        public void AddEvidence(EngineeringEvidence e)
+        {
+            if (e is null) return;
+            Evidence.Add(e);
             UpdatedUtc = DateTime.UtcNow;
         }
 

@@ -41,6 +41,8 @@ namespace EngineeringDiscovery.Core.Domain.Activity
                 ExpectedConfidenceIncrease = 100
             };
             AddEvidenceRequest(er);
+
+            // No initial evidence yet; evidence will be added in ED-304 when available.
         }
     }
 }
