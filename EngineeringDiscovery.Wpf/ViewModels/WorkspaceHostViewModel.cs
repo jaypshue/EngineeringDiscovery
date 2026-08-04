@@ -10,13 +10,16 @@ public partial class WorkspaceHostViewModel : ObservableObject, IDisposable
     private readonly WorkspaceState _workspaceState;
     private bool _disposed;
 
-    public WorkspaceHostViewModel(WorkspaceState workspaceState)
+    public WorkspaceHostViewModel(WorkspaceState workspaceState, EngineeringDiscovery.Wpf.Services.RepositorySelectionService repoSelection)
     {
         _workspaceState = workspaceState ?? throw new ArgumentNullException(nameof(workspaceState));
         Title = "Workspace Host";
 
         // Subscribe to Core state changes
         _workspaceState.OnChange += WorkspaceState_OnChange;
+
+        // Subscribe to repository selection interaction changes (startup flow)
+        repoSelection.StateChanged += RepoSelection_StateChanged;
 
         // Initialize projection
         RefreshProjection();
@@ -48,6 +51,24 @@ public partial class WorkspaceHostViewModel : ObservableObject, IDisposable
         // Project lightweight UI properties from the core state without copying domain objects
         // Example: raise PropertyChanged for UI bindings that read directly from WorkspaceState.ActiveWorkspace
         OnPropertyChanged(nameof(RepositoryPath));
+    }
+
+    private void RepoSelection_StateChanged()
+    {
+        // Marshal to UI thread if necessary
+        if (System.Windows.Application.Current is null)
+        {
+            RefreshProjection();
+            return;
+        }
+
+        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            RefreshProjection();
+            return;
+        }
+
+        System.Windows.Application.Current.Dispatcher.BeginInvoke((Action)RefreshProjection, DispatcherPriority.Normal);
     }
 
     public string? RepositoryPath => _workspaceState.ActiveWorkspace?.RepositoryPath;

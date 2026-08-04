@@ -32,6 +32,9 @@ namespace EngineeringDiscovery.Core.Services
 
         public Workspace? ActiveWorkspace { get; private set; }
 
+        // ED-300: expose a convenience accessor for the current activity
+        public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity => ActiveWorkspace?.CurrentActivity;
+
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 
         public event Action? OnChange;

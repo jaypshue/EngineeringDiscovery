@@ -1,77 +1,226 @@
 # Product Vision
 
-> *"EngineeringDiscovery should eventually become capable of improving software projects using the same engineering process that was used to build EngineeringDiscovery itself."*
+> *"EngineOS should eventually become capable of improving software projects using the same engineering process that was used to build EngineOS itself."*
+
+---
+
+# What is EngineOS?
+
+EngineOS is the operating system for an engineering effort.
+
+It does not replace IDEs.
+
+It does not replace source control.
+
+It does not replace AI.
+
+It coordinates them.
+
+EngineOS provides the shared engineering workspace where humans, AI partners, and engineering systems collaborate throughout the lifetime of a software project.
+
+---
+
+# Continuous Recovery Principle
+
+Continuous Recovery proceeds by requesting the single highest-value piece of evidence that will most increase engineering understanding.
+
+---
+
+# The Steward Principle
+
+**EngineOS is the steward of the engineering workspace.**
+
+Human engineers and AI partners contribute observations, implementations, reviews, and decisions.
+
+Engineering systems contribute evidence.
+
+EngineOS validates, records, and maintains the canonical engineering state.
+
+---
+
+# The Four Roles
+
+Successful engineering requires four distinct responsibilities.
+
+## Human Engineers contribute intent.
+
+Humans decide:
+
+- what should be built
+- business priorities
+- tradeoffs
+- product direction
+- final approval
+
+Humans remain responsible for engineering decisions.
+
+---
+
+## AI Partners contribute reasoning.
+
+AI assists by providing:
+
+- implementation guidance
+- architectural analysis
+- engineering reviews
+- explanations
+- recommendations
+
+AI accelerates engineering.
+
+It does not own engineering.
+
+---
+
+## Engineering Systems contribute evidence.
+
+Systems continuously provide objective facts.
+
+Examples include:
+
+- Git
+- Visual Studio
+- Build
+- Unit Tests
+- Playwright
+- CI/CD
+- Performance Benchmarks
+- Repository Providers
+
+Systems do not make decisions.
+
+They provide evidence.
+
+---
+
+## EngineOS contributes understanding.
+
+EngineOS continuously maintains:
+
+- engineering context
+- engineering history
+- engineering state
+- engineering memory
+- engineering recommendations
+
+EngineOS coordinates engineering.
 
 ---
 
 # Mission
 
-EngineeringDiscovery exists to help software engineers understand, improve, and continuously evolve software systems through a repeatable engineering workflow.
+EngineOS exists to help software engineers understand, improve, and continuously evolve software systems through a repeatable engineering workflow.
 
 It is not a static analysis tool.
 
 It is not an AI coding assistant.
 
-It is an Engineering Intelligence Platform that combines repository understanding, engineering knowledge, planning, implementation guidance, and continuous architectural learning.
+It is an Engineering Intelligence Platform.
 
-The objective is not to replace engineers.
+Its objective is not to replace engineers.
 
-The objective is to help engineers make consistently better engineering decisions.
+Its objective is to help engineers make consistently better engineering decisions.
 
 ---
 
-# Engineering Discovery Product Principle #1
+# Engineering Principle #1
 
-Engineers don't need help reading code.
+Engineers do not need help reading code.
 
 They need help understanding systems.
 
 ---
 
+# Engineering Principle #2
 
-# The Problem
+Understanding precedes implementation.
 
-Software projects rarely fail because developers cannot write code.
-
-They fail because teams lose understanding.
-
-Over time...
-
-- architecture drifts
-- technical debt accumulates
-- knowledge disappears
-- documentation becomes outdated
-- onboarding slows
-- priorities become reactive
-
-Modern AI coding assistants accelerate implementation but have little understanding of the repository as an engineering system.
-
-EngineeringDiscovery exists to provide that understanding.
+Implementation without understanding creates technical debt.
 
 ---
 
-# Engineering Philosophy
+# Engineering Principle #3
 
-Software should not begin with coding.
+Engineering decisions require evidence.
 
-Software should begin with understanding.
+Recommendations become engineering state only after sufficient evidence has been collected.
 
-Every engineering decision should be based on an objective model of the repository rather than assumptions or tribal knowledge.
+---
 
-EngineeringDiscovery continuously builds and refines that engineering model throughout the lifetime of the project.
+# The Shared Engineering Workspace
 
-The engineering model becomes the source of truth.
+The shared workspace is the canonical representation of an engineering effort.
+
+It remembers what humans should not have to remember.
+
+Examples include:
+
+- current milestone
+- current task
+- engineering roadmap
+- architecture decisions
+- engineering journal
+- repository understanding
+- implementation progress
+- test coverage
+- verification status
+- engineering evidence
+
+The workspace belongs to EngineOS.
+
+Participants contribute to it.
+
+EngineOS maintains it.
+
+---
+
+# Engineering Events
+
+Engineering progresses through events.
+
+Examples include:
+
+- Milestone Started
+- Task Selected
+- Architecture Reviewed
+- Evidence Submitted
+- Tests Passed
+- Screenshot Verified
+- Commit Created
+- Milestone Completed
+
+The engineering workspace is the current projection of those events.
+
+---
+
+# Evidence
+
+Engineering confidence comes from evidence.
+
+Examples include:
+
+- successful build
+- passing tests
+- Playwright verification
+- screenshots
+- architectural review
+- human approval
+
+Work is not considered complete simply because it has been implemented.
+
+Work becomes engineering knowledge after it has been verified.
 
 ---
 
 # Core Workflow
 
-```
+EngineOS supports two equal starting points.
+
+## Discover Existing Software
+
+Discover the engineering behind an existing system.
+
 Repository
-
-↓
-
-Repository Loading
 
 ↓
 
@@ -79,19 +228,11 @@ Engineering Discovery
 
 ↓
 
-Observation Normalization
-
-↓
-
-Observation Enrichment
-
-↓
-
 Engineering Model
 
 ↓
 
-Engineering Assessment
+Assessment
 
 ↓
 
@@ -103,26 +244,45 @@ Implementation
 
 ↓
 
-Review
-
-↓
-
 Updated Engineering Model
-
-↓
-
-Next Roadmap
-```
-
-The workflow never truly ends.
-
-Every completed milestone increases understanding of the repository and improves future recommendations.
 
 ---
 
-# Engineering Model
+## Begin Engineering Workflow
 
-EngineeringDiscovery builds an objective representation of a software system.
+Discover the engineering workflow behind EngineOS—and use it to build your own.
+
+Vision
+
+↓
+
+Architecture
+
+↓
+
+Milestones
+
+↓
+
+Implementation
+
+↓
+
+Evidence
+
+↓
+
+Engineering State
+
+↓
+
+Continuous Improvement
+
+---
+
+# The Engineering Model
+
+EngineOS builds an objective representation of a software system.
 
 The model contains engineering facts.
 
@@ -131,187 +291,56 @@ Examples include:
 - projects
 - namespaces
 - types
-- members
 - dependencies
 - relationships
 - metrics
 - architecture
 - repository structure
 
-Engineering Rules operate on this model.
-
-AI implementation guidance is derived from this model.
-
-The model—not the source code—is the primary knowledge representation.
+Engineering reasoning is performed against the engineering model rather than directly against source code.
 
 ---
 
-# AI's Role
+# Continuous Learning
 
-AI is an implementation partner.
+Every completed milestone increases future engineering understanding.
 
-It is not the architect.
+Every engineering review improves future recommendations.
 
-EngineeringDiscovery determines:
+Every verified implementation improves the engineering model.
 
-- what should be built
-- why it should be built
-- where it belongs
-- how it fits into the existing architecture
-
-AI assists with:
-
-- implementation
-- explanation
-- review
-- documentation
-- refinement
-
-The engineering model remains the authoritative source of truth.
+The engineering process becomes continuously more intelligent.
 
 ---
 
 # Long-Term Vision
 
-EngineeringDiscovery should eventually guide software projects through the same engineering process used to build EngineeringDiscovery itself.
+EngineOS should eventually guide software projects through the same engineering process used to build EngineOS itself.
 
-After repository ingestion the platform should be capable of:
+The platform should become capable of:
 
-- understanding the repository
+- understanding a software system
 - assessing engineering health
-- producing a prioritized roadmap
-- guiding implementation
-- reviewing completed work
-- updating its understanding
-- generating the next roadmap
+- generating roadmaps
+- coordinating AI partners
+- validating engineering evidence
+- maintaining engineering memory
+- continuously improving engineering understanding
 
-The workflow becomes continuous rather than project-based.
-
----
-
-# Engineering Mentor
-
-EngineeringDiscovery should become an engineering mentor.
-
-Rather than simply reporting findings, it should explain:
-
-- what should change
-- why the change matters
-- how it should be implemented
-- how the implementation affects the architecture
-
-Developers should learn engineering principles while improving software.
-
----
-
-# Repository Independence
-
-EngineeringDiscovery should never be limited to C#.
-
-Repository Providers translate repository-specific technologies into a common engineering vocabulary.
-
-Supported providers may eventually include:
-
-- C#
-- Java
-- Kotlin
-- TypeScript
-- JavaScript
-- Python
-- Go
-- Rust
-
-EngineeringDiscovery reasons about engineering concepts rather than programming languages.
-
----
-
-# Continuous Improvement
-
-EngineeringDiscovery is intentionally never "finished."
-
-Every improvement to the platform increases its ability to guide future software projects.
-
-EngineeringDiscovery is both:
-
-- the first repository analyzed by the platform
-- the first project developed using the platform
-
-The engineering process used to build EngineeringDiscovery becomes the engineering process offered to every future project.
-
----
-
-# Future Workflow
-
-A typical engagement should resemble the following:
-
-```
-Ingest Repository
-
-↓
-
-Build Engineering Model
-
-↓
-
-Generate Roadmap
-
-↓
-
-Select Milestone
-
-↓
-
-Prepare Implementation Context
-
-↓
-
-Launch Development Environment
-
-↓
-
-Guide AI Implementation
-
-↓
-
-Review Completed Work
-
-↓
-
-Update Engineering Model
-
-↓
-
-Generate Next Milestone
-```
-
-The engineer remains in control.
-
-EngineeringDiscovery provides understanding, guidance, and continuity.
-
----
-
-# Guiding Principles
-
-- Understanding precedes implementation.
-- Engineering facts precede engineering judgments.
-- Every architectural decision should be traceable.
-- AI assists engineering—it does not replace it.
-- Repository understanding improves continuously.
-- The roadmap is a living engineering artifact.
-- Every completed milestone increases future engineering intelligence.
-- The engineering model is the source of truth.
+Every project benefits from the experience accumulated across previous projects.
 
 ---
 
 # Success
 
-EngineeringDiscovery succeeds when engineers can approach an unfamiliar repository and confidently answer:
+EngineOS succeeds when engineers can confidently answer:
 
 - What is this system?
 - Why was it built this way?
-- What should be improved next?
-- How should that improvement be implemented?
-- How does today's work improve tomorrow's roadmap?
+- What should happen next?
+- Why is that the next priority?
+- What evidence supports this decision?
+- How does today's work improve tomorrow's engineering understanding?
 
 The ultimate goal is not faster coding.
 

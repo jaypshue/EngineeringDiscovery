@@ -1,0 +1,32 @@
+<UserControl x:Class="EngineeringDiscovery.Wpf.WelcomeWorkspace"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="600">
+    <Grid Background="Transparent" Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="600">
+            <TextBlock Text="Welcome to Engineering Discovery" FontSize="26" FontWeight="Bold" TextAlignment="Center" Margin="0,0,0,12" />
+            <TextBlock Text="Discover and navigate large engineering repositories with a desktop-first experience." TextAlignment="Center" Margin="0,0,0,20" TextWrapping="Wrap" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <StackPanel.Resources>
+                    <Style TargetType="Button">
+                        <Setter Property="Margin" Value="6,0" />
+                    </Style>
+                </StackPanel.Resources>
+                <Button Content="Import Repository" Width="160" Height="40" Command="{Binding OpenRepositoryCommand}" />
+                <Button Content="Open Recent" Width="120" Height="40" Command="{Binding NewInvestigationCommand}" />
+            </StackPanel>
+
+            <TextBlock Text="Or paste a repository path into the top-right input to get started." FontStyle="Italic" Foreground="Gray" Margin="0,12,0,0" TextAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</UserControl>

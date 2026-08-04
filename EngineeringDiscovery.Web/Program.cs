@@ -14,6 +14,8 @@ builder.Services.AddRazorComponents()
 // hosts must explicitly load persisted workspace and call ReplaceWorkspace.
 builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+// Production repo fingerprint service
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.FileRepoFingerprintService>();
 
 // Core services for current-task workflow
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ITimeProvider, EngineeringDiscovery.Core.Services.SystemTimeProvider>();
@@ -25,6 +27,8 @@ builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringInsig
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringRecommendationService>();
 // Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
 builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
+// Repository selection interaction service (presentation-owned)
+builder.Services.AddScoped<EngineeringDiscovery.Web.Services.IRepositorySelectionService, EngineeringDiscovery.Web.Services.RepositorySelectionService>();
 
 var app = builder.Build();
 

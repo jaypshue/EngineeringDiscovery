@@ -12,6 +12,7 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
             RepositoryPath = string.Empty;
             Investigation = null;
             CurrentTask = null;
+            CurrentActivity = null;
             // SelectedRole will be set via the property initializer
             CreatedUtc = DateTime.UtcNow;
             LastModifiedUtc = CreatedUtc;
@@ -36,6 +37,9 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
         public DateTime CreatedUtc { get; private set; }
 
         public DateTime LastModifiedUtc { get; private set; }
+
+        // ED-300: Activity support (single active activity for initial scope)
+        public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity { get; set; }
 
         // Freshness metadata
         // The time the Engineering Model (Investigation) was last built for this workspace

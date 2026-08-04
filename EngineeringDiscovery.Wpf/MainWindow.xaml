@@ -35,13 +35,22 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Column="0" Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Margin="4">
+                <!-- Left pane reserved for Repository Explorer (placeholder) -->
                 <TextBlock Text="Repository Explorer" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Border>
 
             <GridSplitter Grid.Column="1" Grid.Row="0" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True" />
 
             <Border Grid.Column="2" Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Margin="4">
-                <TextBlock Text="Workspace Host" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <!-- Primary content area: bind to ActivityViewModel projection -->
+                <StackPanel Margin="12" DataContext="{Binding Activity}">
+                    <TextBlock Text="Current Activity" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding Type}" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Text="Status" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding Status}" />
+                    <TextBlock Text="Intent" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding Intent}" TextWrapping="Wrap" />
+                </StackPanel>
             </Border>
 
             <GridSplitter Grid.Column="3" Grid.Row="0" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True" />
