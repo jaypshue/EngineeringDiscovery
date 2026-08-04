@@ -50,6 +50,24 @@
                     <TextBlock Text="{Binding Status}" />
                     <TextBlock Text="Intent" FontWeight="Bold" Margin="0,8,0,0" />
                     <TextBlock Text="{Binding Intent}" TextWrapping="Wrap" />
+                    <Separator Margin="0,12" />
+                    <TextBlock Text="Current Observation" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding CurrentObservationDescription}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="Source: " FontWeight="Bold" />
+                        <TextBlock Text="{Binding CurrentObservationSource}" />
+                        <TextBlock Text="  Confidence: " FontWeight="Bold" Margin="12,0,0,0" />
+                        <TextBlock Text="{Binding CurrentObservationConfidence}" />
+                    </StackPanel>
+                    <Separator Margin="0,12" />
+                    <TextBlock Text="Current Hypothesis" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding CurrentHypothesisDescription}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="Status: " FontWeight="Bold" />
+                        <TextBlock Text="{Binding CurrentHypothesisStatus}" />
+                        <TextBlock Text="  Confidence: " FontWeight="Bold" Margin="12,0,0,0" />
+                        <TextBlock Text="{Binding CurrentHypothesisConfidence}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

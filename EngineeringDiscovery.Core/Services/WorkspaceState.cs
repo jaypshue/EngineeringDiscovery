@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using EngineeringDiscovery.Core.Domain.CurrentTask;
 using System.Text.Json;
 using EngineeringDiscovery.Core.Domain.Workspace;
+using EngineeringDiscovery.Core.Domain.Activity;
 using Microsoft.Extensions.Logging;
 
 namespace EngineeringDiscovery.Core.Services
@@ -34,6 +35,12 @@ namespace EngineeringDiscovery.Core.Services
 
         // ED-300: expose a convenience accessor for the current activity
         public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity => ActiveWorkspace?.CurrentActivity;
+
+        // ED-302: project current hypothesis (read-only projection)
+        public EngineeringHypothesis? CurrentHypothesis => CurrentActivity?.CurrentHypothesis;
+
+        // ED-302: convenience access to the hypothesis space for the current activity
+        public System.Collections.Generic.List<EngineeringHypothesis>? CurrentHypothesisSpace => CurrentActivity?.HypothesisSpace;
 
         public bool HasWorkspace => ActiveWorkspace is not null && !ActiveWorkspace.IsEmpty();
 

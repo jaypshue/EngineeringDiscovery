@@ -65,6 +65,7 @@ namespace EngineeringDiscovery.Core.Domain.Activity
             Intent = new List<string>();
             Observations = new List<EngineeringObservation>();
             RecoveredUnderstanding = new List<string>();
+            HypothesisSpace = new List<EngineeringHypothesis>();
         }
 
         public Guid Id { get; set; }
@@ -78,9 +79,20 @@ namespace EngineeringDiscovery.Core.Domain.Activity
         public List<string> Intent { get; set; }
         public List<EngineeringObservation> Observations { get; set; }
         public List<string> RecoveredUnderstanding { get; set; }
+        public List<EngineeringHypothesis> HypothesisSpace { get; set; }
 
         // Convenience: current observation (most recent)
         public EngineeringObservation? CurrentObservation => Observations.Count > 0 ? Observations[^1] : null;
+
+        // Hypothesis convenience
+        public EngineeringHypothesis? CurrentHypothesis => HypothesisSpace.Count > 0 ? HypothesisSpace[^1] : null;
+
+        public void AddHypothesis(EngineeringHypothesis h)
+        {
+            if (h is null) return;
+            HypothesisSpace.Add(h);
+            UpdatedUtc = DateTime.UtcNow;
+        }
 
         public void AddObservation(EngineeringObservation obs)
         {
