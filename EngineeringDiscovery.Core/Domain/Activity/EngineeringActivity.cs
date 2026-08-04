@@ -64,9 +64,10 @@ namespace EngineeringDiscovery.Core.Domain.Activity
             UpdatedUtc = CreatedUtc;
             Intent = new List<string>();
             Observations = new List<EngineeringObservation>();
-            RecoveredUnderstanding = new List<string>();
+            RecoveredUnderstanding = new List<EngineeringRecoveredUnderstanding>();
             HypothesisSpace = new List<EngineeringHypothesis>();
             EvidenceRequests = new List<EngineeringEvidenceRequest>();
+            Evidence = new List<EngineeringEvidence>();
         }
 
         public Guid Id { get; set; }
