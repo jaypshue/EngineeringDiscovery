@@ -1,26 +1,28 @@
 @page "/"
+@layout Layout.PublicLayout
 
 <PageTitle>EngineOS — Welcome</PageTitle>
 
-<section class="public-welcome">
-    <div class="hero">
-        <h1>EngineOS</h1>
-        <p class="subtitle">Engineering is understanding.</p>
-        <p class="lead">Understand existing software. Build new software. Become an AI-empowered software developer.</p>
-        <div class="hero-actions">
-            <a class="btn btn-primary" href="/engineos">Launch EngineOS</a>
+<section class="public-welcome" style="text-align:center;">
+    <div class="hero" style="padding:72px 24px;max-width:960px;margin:0 auto;text-align:center">
+        <h1 style="font-size:56px;margin:0 0 8px 0">EngineOS</h1>
+        <p class="subtitle" style="font-size:22px;margin:0 0 22px 0;color:var(--muted)">Engineering is understanding.</p>
+        <p class="lead" style="font-size:18px;margin:0 0 28px 0;line-height:1.5;max-width:800px;margin-left:auto;margin-right:auto">Understand existing software. Build new software. Become an AI-empowered software developer.</p>
+        <h2 style="margin-top:36px">Where does your engineering begin?</h2>
+        <div class="hero-actions" style="display:flex;gap:12px;justify-content:center;margin-top:18px">
+            <a class="btn btn-primary" href="/engineos">Explore EngineOS →</a>
             <a class="btn" href="/vision">Learn More</a>
         </div>
     </div>
 
-    <nav class="public-nav">
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/vision">Vision</a></li>
-            <li><a href="/corporate">Corporate Engineering</a></li>
-            <li><a href="/free-range">Free Range Engineering</a></li>
-            <li><a href="/learn">Learn</a></li>
-            <li><a href="/roadmap">Roadmap</a></li>
-        </ul>
-    </nav>
+    <section class="features" style="max-width:980px;margin:40px auto 0;display:flex;flex-direction:column;gap:28px;align-items:center">
+        <div style="display:flex;gap:28px;justify-content:center;width:100%;max-width:980px">
+            <JourneyCard Title="Corporate Engineering" Description="Recover understanding from existing software." Emoji="🏢" Href="/corporate" Bullets="@(new[]{ "Import repositories", "Discover architecture", "Understand engineering intent", "Become productive in minutes" })" />
+            <JourneyCard Title="Free Range Engineering" Description="Transform an idea into working software." Emoji="🌲" Href="/free-range" Bullets="@(new[]{ "Product discovery", "Architecture planning", "Engineering discovery", "Build with confidence" })" />
+        </div>
+
+        <div style="width:420px">
+            <JourneyCard Title="Learn" Description="Understand the technologies introduced by AI." Emoji="📚" Href="/learn" Compact="true" />
+        </div>
+    </section>
 </section>

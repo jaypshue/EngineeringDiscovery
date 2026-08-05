@@ -1,0 +1,9 @@
+@* FeatureCard is deprecated. Use JourneyCard instead. Keep this file as a thin wrapper for compatibility. *@
+<JourneyCard Title="@Title" Description="@Description" Emoji="@Emoji" Href="@Href" />
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string Emoji { get; set; } = "";
+    [Parameter] public string Href { get; set; } = "#";
+}

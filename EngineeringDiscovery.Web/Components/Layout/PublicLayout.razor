@@ -1,0 +1,18 @@
+@namespace EngineeringDiscovery.Web.Components.Layout
+@inherits LayoutComponentBase
+
+<header style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid rgba(255,255,255,0.03);background:linear-gradient(90deg,#071025,#0b1220)">
+    <div style="font-weight:700;font-size:1.1rem">EngineOS</div>
+    <nav style="display:flex;gap:18px;align-items:center">
+        <a href="/" style="color:var(--text);text-decoration:none">Home</a>
+        <a href="/vision" style="color:var(--text);text-decoration:none">Vision</a>
+        <a href="/corporate" style="color:var(--text);text-decoration:none">Corporate</a>
+        <a href="/free-range" style="color:var(--text);text-decoration:none">Free Range</a>
+        <a href="/learn" style="color:var(--text);text-decoration:none">Learn</a>
+        <a href="/roadmap" style="color:var(--text);text-decoration:none">Roadmap</a>
+    </nav>
+</header>
+
+<main style="padding:48px 20px;max-width:1200px;margin:0 auto">
+    @Body
+</main>

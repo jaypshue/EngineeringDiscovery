@@ -1,0 +1,29 @@
+<div class="journey-card" style="background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:28px;border-radius:14px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 30px rgba(0,0,0,0.4);min-height:@(Compact?100:220)px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .18s ease,box-shadow .18s ease">
+    <div>
+        <div class="journey-emoji" style="font-size:32px">@Emoji</div>
+        <h3 style="margin:12px 0 8px 0">@Title</h3>
+        <p style="color:var(--muted);margin:0;line-height:1.4">@Description</p>
+
+        @if (Bullets?.Any() ?? false)
+        {
+            <ul style="margin-top:12px;color:var(--muted);padding-left:18px">
+                @foreach(var b in Bullets)
+                {
+                    <li>@b</li>
+                }
+            </ul>
+        }
+    </div>
+    <div style="text-align:right;margin-top:14px">
+        <a class="btn" href="@Href">Explore →</a>
+    </div>
+</div>
+
+@code{
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string Emoji { get; set; } = string.Empty;
+    [Parameter] public string Href { get; set; } = "#";
+    [Parameter] public IEnumerable<string>? Bullets { get; set; }
+    [Parameter] public bool Compact { get; set; } = false;
+}
