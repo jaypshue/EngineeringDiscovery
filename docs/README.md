@@ -1,227 +1,204 @@
-# Engineering Discovery
+# EngineOS
 
-> **Engineering Discovery discovers engineering.**
->
-> It captures the knowledge hidden inside a software system and uses it to guide developers through their work, helping them think like architects.
+> **EngineOS helps engineers understand existing software and confidently build new software with AI.**
 
----
+EngineOS is an engineering platform built around a simple philosophy:
 
-# Overview
+> **Understanding comes before implementation.**
 
-Engineering Discovery is a language-agnostic engineering reasoning platform.
-
-Rather than treating source code as a collection of files, it transforms software systems into a **Digital Engineering Twin**—a living engineering model that captures the structure, relationships, behavior, and accumulated knowledge of a codebase.
-
-The platform begins with understanding.
-
-Language providers discover engineering facts from source code. Those facts are transformed into a shared engineering model that is progressively enriched through analysis, architectural reasoning, implementation planning, development guidance, and engineering review.
-
-The result is a persistent body of engineering knowledge that grows alongside the software itself.
-
-Engineering Discovery is designed to help developers understand unfamiliar systems, accelerate onboarding, improve architectural consistency, and ultimately guide engineering work rather than simply analyze source code.
+Whether you're joining an existing engineering team or starting with a brand new idea, EngineOS guides you through engineering work one decision at a time.
 
 ---
 
 # Vision
 
-Modern software organizations possess an enormous amount of engineering knowledge.
+Modern AI can generate code.
 
-Most of that knowledge is never documented.
+Professional engineers must still understand it.
 
-It exists inside source code, design decisions, experienced developers, code reviews, architecture discussions, and years of accumulated engineering experience.
+Understanding architecture.
 
-Engineering Discovery exists to capture that knowledge.
+Understanding intent.
 
-Its long-term vision is to become a **Virtual Engineering Team Lead**—a system that understands both the software and the engineering work being performed.
+Understanding tradeoffs.
 
-Rather than replacing developers, Engineering Discovery prepares them.
+Understanding why software is built the way it is.
 
-It explains architecture.
+EngineOS exists to bridge that gap.
 
-It identifies risk.
-
-It recommends where to begin.
-
-It provides implementation guidance.
-
-It reviews completed work.
-
-Most importantly, it helps developers develop architectural thinking through guided engineering workflows.
+Rather than replacing engineers, EngineOS helps engineers develop architectural thinking through guided engineering workflows.
 
 ---
 
-# The Digital Engineering Twin
+# Two Engineering Journeys
 
-The Digital Engineering Twin is the heart of Engineering Discovery.
+EngineOS supports two complementary engineering journeys.
 
-It is a language-independent engineering model representing how a software system is constructed and how its components relate to one another.
+## 🏢 Corporate Engineering
 
-Today the model captures engineering concepts such as:
+You already have software.
 
-- Projects
-- Namespaces
-- Types
-- Members
-- Relationships
+EngineOS helps you recover understanding.
 
-Over time the model is enriched with additional engineering knowledge including:
+```
+Repository
+      ↓
+Engineering Twin
+      ↓
+Knowledge Graph
+      ↓
+Architecture
+      ↓
+Engineering Intent
+      ↓
+Confident Development
+```
 
-- Architectural boundaries
-- Dependency analysis
+Corporate Engineering is designed for onboarding, legacy modernization, architecture recovery, and engineering productivity.
+
+---
+
+## 🌲 Free Range Engineering
+
+You have an idea.
+
+EngineOS helps you engineer it before writing code.
+
+```
+Idea
+      ↓
+Product Discovery
+      ↓
+Architecture
+      ↓
+Engineering Plan
+      ↓
+Implementation
+      ↓
+Production Application
+```
+
+Free Range Engineering emphasizes understanding before implementation.
+
+The goal is not to generate code immediately.
+
+The goal is to engineer the product first.
+
+---
+
+# The Engineering Twin
+
+The Engineering Twin is the heart of EngineOS.
+
+It is a living engineering representation of a software project.
+
+Unlike source code alone, the Engineering Twin captures engineering knowledge that grows throughout the lifetime of the software.
+
+Over time it evolves to include:
+
+- Repository structure
+- Architecture
+- Engineering intent
+- Knowledge Graph
 - Engineering metrics
-- Risk analysis
 - Technology identification
 - Development history
+- Product Discovery
 - Engineering recommendations
 - Organizational knowledge
 
-The Digital Engineering Twin becomes the single source of truth for every engineering activity.
+The Engineering Twin becomes the shared source of truth for both engineers and AI.
 
 ---
 
-# The Investigation
+# Product Philosophy
 
-An Investigation is the persistent engineering knowledge model for a software system.
+EngineOS is built around one principle:
 
-Unlike traditional reverse engineering reports, an Investigation is never considered complete.
+> **Understand first. Build second.**
 
-It continuously evolves as additional engineering knowledge is discovered.
+Every workflow begins with understanding.
 
-Every engineering activity contributes to the same Investigation.
+Corporate Engineering begins with understanding an existing system.
 
-No knowledge is discarded.
+Free Range Engineering begins with understanding a new product.
 
-No phase starts from scratch.
-
-Instead, every phase builds upon the understanding established by previous work.
-
-The Investigation is a living engineering asset.
+Both journeys ultimately converge on architecture, engineering intent, and implementation.
 
 ---
 
-# Engineering Workflow
+# Learning
 
-Engineering Discovery is organized around engineering work rather than repositories.
+Modern AI continuously introduces new technologies, frameworks, and architectural patterns.
 
-Developers rarely begin their day asking,
+EngineOS helps engineers understand those technologies while they are building software.
 
-> "What repository should I explore?"
+Learning is not a separate activity.
 
-Instead they ask,
-
-> "How do I complete today's work?"
-
-Engineering Discovery is designed to answer that question.
-
-Each work item is supported by an engineering workflow that progressively enriches understanding while guiding implementation.
-
-```text
-Understand
-      ↓
-Investigate
-      ↓
-Plan
-      ↓
-Implement
-      ↓
-Verify
-      ↓
-Review
-      ↓
-Capture Knowledge
-```
-
-Every phase contributes additional knowledge back into the Investigation.
-
-The system becomes smarter as engineering work is completed.
+Learning becomes part of the engineering workflow itself.
 
 ---
 
-# Design Philosophy
-
-Engineering Discovery is built upon several architectural principles.
+# Design Principles
 
 ## Engineering before AI
 
-Artificial Intelligence is most valuable when grounded in accurate engineering knowledge.
+AI produces the greatest value when grounded in accurate engineering knowledge.
 
-Engineering Discovery first builds a trustworthy understanding of the software before applying AI reasoning.
-
----
-
-## Domain-first architecture
-
-The engineering model defines the application.
-
-Infrastructure exists to support the domain—not the other way around.
+EngineOS builds understanding before applying AI reasoning.
 
 ---
 
-## One shared engineering model
+## One Engineering Model
 
-Every engineering role contributes to the same Investigation.
+Every engineering activity contributes to the same Engineering Twin.
 
-Architects, developers, reviewers, planners, and future AI assistants collaborate through a shared understanding rather than maintaining disconnected artifacts.
-
----
-
-## Progressive enrichment
-
-Knowledge accumulates.
-
-Every discovery, analysis, implementation, review, and recommendation strengthens the Digital Engineering Twin.
+Knowledge is accumulated rather than recreated.
 
 ---
 
-## Language independence
+## Progressive Understanding
+
+Engineering knowledge grows over time.
+
+Every discovery, implementation, review, and architectural decision enriches the Engineering Twin.
+
+---
+
+## Language Independence
 
 Programming languages are implementation details.
 
-Language providers discover engineering facts.
-
-The Engineering Model represents engineering concepts.
-
-Engineering intelligence reasons over those concepts independent of the originating language.
+EngineOS reasons about engineering concepts rather than language syntax.
 
 ---
 
-# Long-Term Direction
+# Long-Term Vision
 
-Engineering Discovery is evolving toward an Engineering Work Platform.
+EngineOS is evolving into a complete engineering platform.
 
 Future capabilities include:
 
+- Corporate Engineering
+- Free Range Engineering
+- Knowledge Graph
+- Product Discovery
 - Engineering Intelligence
-- Ticket-centered engineering workspaces
-- Architectural recommendations
-- Guided implementation
-- Automated engineering reviews
-- Risk analysis
-- Knowledge capture
-- Virtual Engineering Team Lead
-
-The goal is not simply to analyze software.
-
-The goal is to guide engineers through software development using a continually evolving understanding of the system itself.
+- Architecture Recovery
+- AI Engineering
+- Learning
+- Guided Implementation
+- Engineering Reviews
+- Engineering Recommendations
 
 ---
 
-# Summary
+# Mission
 
-Engineering Discovery is not a Java tool.
+EngineOS helps engineers understand existing software and confidently build new software with AI.
 
-It is not a .NET tool.
+Every engineering journey begins with understanding.
 
-It is not a source code browser.
+Every engineering journey contributes to the Engineering Twin.
 
-It is not an AI code generator.
-
-Engineering Discovery discovers engineering.
-
-It transforms source code into engineering knowledge.
-
-It captures that knowledge in a Digital Engineering Twin.
-
-It uses that knowledge to guide developers through engineering work.
-
-Ultimately, Engineering Discovery exists to help software engineers think like architects.
+Ultimately, EngineOS exists to help software engineers think like architects.
