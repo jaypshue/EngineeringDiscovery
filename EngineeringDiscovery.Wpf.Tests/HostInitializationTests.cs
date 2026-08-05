@@ -16,7 +16,14 @@ namespace EngineeringDiscovery.Wpf.Tests
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
+                    // Test-friendly persistence and fingerprint services
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IWorkspacePersistence, EngineeringDiscovery.Core.Services.InMemoryWorkspacePersistence>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.TestRepoFingerprintService>();
+
                     services.AddSingleton<WorkspaceState>();
+                    // WPF-specific services required by view models
+                    services.AddSingleton<RepositorySelectionService>();
+                    services.AddSingleton<ActivityViewModel>();
 
                     services.AddSingleton<IWindowManager, WindowManager>();
                     services.AddSingleton<IDialogService, DialogService>();

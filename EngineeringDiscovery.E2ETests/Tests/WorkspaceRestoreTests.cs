@@ -19,8 +19,17 @@ namespace EngineeringDiscovery.E2ETests.Tests
             var page = Page!;
             await page.GotoAsync("http://localhost:5005", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-            var content = await page.ContentAsync();
-            Assert.IsTrue(content.Contains("Home View") || content.Contains("Engineering Workspace"), "Expected top-level view UI to be present.");
+            // Verify user-visible recovery: ensure a link or button exists that lets the user continue working
+            var canContinue = false;
+            try
+            {
+                if (await page.QuerySelectorAsync("text=Start Building") != null) canContinue = true;
+                if (await page.QuerySelectorAsync("text=Free Range") != null) canContinue = true;
+                if (await page.QuerySelectorAsync("text=Open Workspace") != null) canContinue = true;
+            }
+            catch { }
+
+            Assert.IsTrue(canContinue, "User should be able to continue working from the landing page.");
         }
     }
 }

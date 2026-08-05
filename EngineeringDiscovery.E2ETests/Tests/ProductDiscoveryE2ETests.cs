@@ -7,6 +7,7 @@ using NUnit.Framework;
 namespace EngineeringDiscovery.E2ETests.Tests
 {
     [TestFixture]
+    [Ignore("ED-307 Reset: replaced by StableProductDiscoveryTests")]
     public class ProductDiscoveryE2ETests : TestInfrastructure.TestBase
     {
         private readonly string[] cannedAnswers = new[]
