@@ -29,39 +29,56 @@ namespace EngineeringDiscovery.Core.Services
 
             // Build a concise prompt per guidance. The model should return a single concise question.
             var prompt = BuildPrompt(model);
+            // If API key is not configured, gracefully fall back to deterministic behavior by returning empty.
+            if (string.IsNullOrWhiteSpace(_apiKey)) return string.Empty;
 
-            // Basic OpenAI call using the completions endpoint (text-davinci-003) as a first pass.
+            // Use the current OpenAI Chat Completions API (/v1/chat/completions).
+            // No streaming, no function calling. Request a single completion (one message) and return the assistant content.
             var request = new
             {
-                model = "text-davinci-003",
-                prompt = prompt,
+                model = "gpt-3.5-turbo",
+                messages = new[] { new { role = "user", content = prompt } },
                 max_tokens = 80,
                 temperature = 0.0,
-                n = 1,
-                stop = (string?)null
+                n = 1
             };
 
             var reqJson = JsonSerializer.Serialize(request);
-            using var httpReq = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/completions");
-            httpReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-            httpReq.Content = new StringContent(reqJson, Encoding.UTF8, "application/json");
 
-            var resp = await _http.SendAsync(httpReq).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-
-            var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(body);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+            try
             {
-                var first = choices[0];
-                if (first.TryGetProperty("text", out var text))
-                {
-                    return text.GetString()?.Trim() ?? string.Empty;
-                }
-            }
+                using var httpReq = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
+                httpReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+                httpReq.Content = new StringContent(reqJson, Encoding.UTF8, "application/json");
 
-            return string.Empty;
+                var resp = await _http.SendAsync(httpReq).ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    // Graceful fallback: do not throw, return empty so orchestrator can use deterministic fallback
+                    return string.Empty;
+                }
+
+                var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                // Chat completions return choices[].message.content
+                if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                {
+                    var first = choices[0];
+                    if (first.TryGetProperty("message", out var message) && message.TryGetProperty("content", out var content))
+                    {
+                        return content.GetString()?.Trim() ?? string.Empty;
+                    }
+                }
+
+                return string.Empty;
+            }
+            catch
+            {
+                // Preserve graceful fallback semantics: on any error return empty so the orchestrator uses deterministic fallback.
+                return string.Empty;
+            }
         }
 
         private string BuildPrompt(EngineeringModel model)
