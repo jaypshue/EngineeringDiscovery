@@ -6,11 +6,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Basic tokens for colors, typography, and control styles -->
-                <ResourceDictionary Source="Resources/Colors.xaml" />
-                <ResourceDictionary Source="Resources/Typography.xaml" />
-                <ResourceDictionary Source="Resources/Controls.xaml" />
-                <ResourceDictionary Source="Themes/Light.xaml" />
+                <!-- EngineOS dark theme -->
+                <ResourceDictionary Source="Resources/DarkTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <DataTemplate x:Key="WelcomeTemplate" DataType="{x:Type vm:MainWindowViewModel}">
                 <local:WelcomeWorkspace />

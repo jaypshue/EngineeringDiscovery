@@ -16,37 +16,39 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="2*" />
-            <RowDefinition Height="3*" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
             <TextBlock Text="EngineOS" Style="{StaticResource WelcomeTitle}" />
             <TextBlock Text="Engineering is understanding." Style="{StaticResource WelcomeSubtitle}" />
+            <TextBlock Text="Where does your engineering begin?" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
         </StackPanel>
 
-        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Width="800">
+        <Grid Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Width="880">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="32" />
+                <ColumnDefinition Width="40" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Style="{StaticResource CardStyle}">
-                <StackPanel>
+                <StackPanel Margin="8">
                     <TextBlock Text="Corporate Engineering" Foreground="{StaticResource PrimaryTextBrush}" FontWeight="Bold" FontSize="18" />
-                    <TextBlock Text="Join an existing engineering effort." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,8" />
-                    <TextBlock Text="Recover understanding from an existing codebase and accelerate development." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                    <Button Style="{StaticResource PrimaryButton}" Name="CorporateButton">Open Repository</Button>
+                    <TextBlock Text="Join an existing engineering effort." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,12" />
+                    <TextBlock Text="Recover understanding from an existing codebase and accelerate development." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,18" />
+                    <Button Style="{StaticResource PrimaryButton}" Name="CorporateButton" HorizontalAlignment="Left" Click="CorporateButton_Click">Open Repository</Button>
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="2" Style="{StaticResource CardStyle}">
-                <StackPanel>
+                <StackPanel Margin="8">
                     <TextBlock Text="Free Range Engineering" Foreground="{StaticResource PrimaryTextBrush}" FontWeight="Bold" FontSize="18" />
-                    <TextBlock Text="Start with an idea." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,8" />
-                    <TextBlock Text="Discover the product, architecture, and implementation before writing code." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                    <Button Style="{StaticResource PrimaryButton}" Name="FreeRangeButton">Start Building</Button>
+                    <TextBlock Text="Independent product development." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,12" />
+                    <TextBlock Text="Discover the product, architecture, and implementation before writing code." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,18" />
+                    <Button Style="{StaticResource PrimaryButton}" Name="FreeRangeButton" HorizontalAlignment="Right" Click="FreeRangeButton_Click">Start Building</Button>
                 </StackPanel>
             </Border>
         </Grid>
