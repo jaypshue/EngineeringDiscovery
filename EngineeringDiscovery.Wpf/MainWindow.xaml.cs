@@ -14,6 +14,16 @@ namespace EngineeringDiscovery.Wpf
             this.Loaded += MainWindow_Loaded;
             this.ContentRendered += MainWindow_ContentRendered;
             this.Dispatcher.BeginInvoke(new System.Action(() => LogCenterBorderState("ApplicationIdle (scheduled)")), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
+            // Show WelcomeView in HostContent on startup
+            this.Loaded += (s, e) =>
+            {
+                try
+                {
+                    HostContent.Content = new Views.WelcomeView();
+                }
+                catch { }
+            };
         }
 
         private object? _initialChildRef;
@@ -32,14 +42,7 @@ namespace EngineeringDiscovery.Wpf
         {
             try
             {
-                var border = this.CenterBorder;
-                if (border == null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[ED-307] {phase}: CenterBorder is null");
-                    return;
-                }
-
-                var child = border.Child;
+                var child = (this.FindName("CenterBorder") as System.Windows.Controls.Border)?.Child;
                 var childType = child?.GetType().FullName ?? "(null)";
                 var refHash = child is null ? "(null)" : child.GetHashCode().ToString();
                 var childCount = 0;

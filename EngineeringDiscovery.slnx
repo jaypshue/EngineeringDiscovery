@@ -3,7 +3,6 @@
   <Project Path="EngineeringDiscovery.Core.Tests/EngineeringDiscovery.Core.Tests.csproj" />
   <Project Path="EngineeringDiscovery.Core/EngineeringDiscovery.Core.csproj" />
   <Project Path="EngineeringDiscovery.Web/EngineeringDiscovery.Web.csproj" Id="2d7c362a-d701-43a1-aba2-f05fc5559919" />
-  <Project Path="EngineeringDiscovery.Wpf.Baseline/EngineeringDiscovery.Wpf.Baseline.csproj" Id="5399a624-8f7c-42c0-8000-ae8ae8c4e432" />
   <Project Path="EngineeringDiscovery.Wpf.Tests/EngineeringDiscovery.Wpf.Tests.csproj" />
   <Project Path="EngineeringDiscovery.Wpf/EngineeringDiscovery.Wpf.csproj" />
 </Solution>
