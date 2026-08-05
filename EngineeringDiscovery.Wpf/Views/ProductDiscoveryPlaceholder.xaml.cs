@@ -36,7 +36,41 @@ namespace EngineeringDiscovery.Wpf.Views
                     idea = tb.Text ?? string.Empty;
                 }
 
-                win.HostContent.Content = new ProductDefinitionView(idea);
+                // Create a new EngineeringModel via the orchestrator, then navigate to ProductDefinitionView with model id
+                var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                if (sp != null)
+                {
+                    var orchestrator = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator)) as EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator;
+                    if (orchestrator != null)
+                    {
+                        var model = orchestrator.CreateModelAsync(idea).GetAwaiter().GetResult();
+                        win.HostContent.Content = new ProductDefinitionView(model.Id);
+                        return;
+                    }
+                }
+
+                // Fallback: if orchestrator not available, create a temporary GUID-based model and navigate
+                if (Guid.TryParse(idea, out var parsedGuid))
+                {
+                    win.HostContent.Content = new ProductDefinitionView(parsedGuid);
+                }
+                else
+                {
+                    // Create a temporary EngineeringModel via repository directly as a last resort
+                    var sp2 = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                    var repo = sp2?.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringModelRepository)) as EngineeringDiscovery.Core.Services.IEngineeringModelRepository;
+                    if (repo != null)
+                    {
+                        var temp = new EngineeringDiscovery.Core.Domain.EngineeringModel.EngineeringModel { OriginalIdea = idea };
+                        repo.CreateAsync(temp).GetAwaiter().GetResult();
+                        win.HostContent.Content = new ProductDefinitionView(temp.Id);
+                    }
+                    else
+                    {
+                        // As a last-possible fallback, navigate to a ProductDefinitionView with Guid.Empty
+                        win.HostContent.Content = new ProductDefinitionView(Guid.Empty);
+                    }
+                }
             }
         }
     }

@@ -15,6 +15,7 @@ namespace EngineeringDiscovery.Wpf
         }
 
         private IHost? _host;
+        public static IServiceProvider? ServiceProvider { get; private set; }
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -63,6 +64,9 @@ namespace EngineeringDiscovery.Wpf
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator, EngineeringDiscovery.Core.Services.EnginerringConversationOrchestrator>();
                 })
                 .Build();
+
+            // Expose service provider for views that are constructed manually
+            ServiceProvider = _host.Services;
 
             await _host.StartAsync();
 

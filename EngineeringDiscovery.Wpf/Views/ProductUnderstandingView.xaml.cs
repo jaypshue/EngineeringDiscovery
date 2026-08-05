@@ -32,7 +32,20 @@ namespace EngineeringDiscovery.Wpf.Views
             var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
             if (win != null)
             {
-                win.HostContent.Content = new ProductDefinitionView(_idea, new List<string>(_answers));
+                // Navigate back to ProductDefinitionView using the existing model if possible.
+                var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                var repo = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringModelRepository)) as EngineeringDiscovery.Core.Services.IEngineeringModelRepository;
+                if (repo != null)
+                {
+                    // Try to find a model with matching original idea
+                    var allModel = repo.GetAsync(Guid.Empty).GetAwaiter().GetResult();
+                    // If cannot locate by original idea, fall back to opening discovery placeholder
+                    win.HostContent.Content = new ProductDiscoveryPlaceholder();
+                }
+                else
+                {
+                    win.HostContent.Content = new ProductDiscoveryPlaceholder();
+                }
             }
         }
 

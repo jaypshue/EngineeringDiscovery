@@ -1,91 +1,115 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Collections.Generic;
-
-// Fully qualify WPF types below to avoid ambiguity with System.Windows.Forms types
+using EngineeringDiscovery.Core.Domain.EngineeringModel;
 
 namespace EngineeringDiscovery.Wpf.Views
 {
     public partial class ProductDefinitionView : System.Windows.Controls.UserControl
     {
-        private readonly List<string> _questions = new()
-        {
-            "Who will use this product?",
-            "What problem are they trying to solve?",
-            "What outcome are they expecting?",
-            "When will they use it?",
-            "Why is the current approach insufficient?"
-        };
+        private readonly Guid _modelId;
+        private EngineeringQuestion? _currentQuestion;
+        private readonly EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator? _orchestrator;
 
-        private int _currentIndex = 0;
-        private string _idea = string.Empty;
-        private readonly List<string> _answers;
-
-        public ProductDefinitionView(string idea, List<string>? answers = null)
+        public ProductDefinitionView(Guid modelId)
         {
             InitializeComponent();
-            _idea = idea ?? string.Empty;
-            IdeaTextBlock.Text = _idea;
+            _modelId = modelId;
 
-            // Initialize answers list with provided values or empty placeholders
-            if (answers != null && answers.Count == _questions.Count)
+            // Resolve orchestrator from the host service provider exposed on App
+            _orchestrator = EngineeringDiscovery.Wpf.App.ServiceProvider?.GetService(typeof(EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator)) as EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator;
+
+            Loaded += async (s, e) => await InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            if (_orchestrator == null)
             {
-                _answers = new List<string>(answers);
+                // No orchestrator available; show empty state
+                IdeaTextBlock.Text = string.Empty;
+                QuestionTextBlock.Text = "(orchestrator unavailable)";
+                PreviousButton.IsEnabled = true;
+                return;
+            }
+
+            var model = await _orchestrator.GetModelAsync(_modelId).ConfigureAwait(false);
+            // Populate original idea
+            _ = System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                IdeaTextBlock.Text = model?.OriginalIdea ?? string.Empty;
+            }));
+
+            await LoadNextQuestionAsync().ConfigureAwait(false);
+        }
+
+        private async Task LoadNextQuestionAsync()
+        {
+            if (_orchestrator == null) return;
+
+            var next = await _orchestrator.GetNextQuestionAsync(_modelId).ConfigureAwait(false);
+            _currentQuestion = next;
+
+            await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_currentQuestion != null)
+                {
+                    QuestionTextBlock.Text = _currentQuestion.Question;
+                    AnswerTextBox.Text = string.Empty;
+                    PreviousButton.IsEnabled = true; // allow returning to discovery
+                }
+                else
+                {
+                    QuestionTextBlock.Text = "(no more questions)";
+                }
+            }));
+        }
+
+        private async void ContinueButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (_orchestrator == null) return;
+            if (_currentQuestion == null) return;
+
+            var answer = AnswerTextBox.Text ?? string.Empty;
+            await _orchestrator.SubmitAnswerAsync(_modelId, _currentQuestion.Id, answer).ConfigureAwait(false);
+
+            // Request next question
+            var next = await _orchestrator.GetNextQuestionAsync(_modelId).ConfigureAwait(false);
+            if (next != null)
+            {
+                _currentQuestion = next;
+                await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    QuestionTextBlock.Text = _currentQuestion.Question;
+                    AnswerTextBox.Text = string.Empty;
+                }));
             }
             else
             {
-                _answers = new List<string>(_questions.Count);
-                for (int i = 0; i < _questions.Count; i++) _answers.Add(string.Empty);
-            }
+                // Discovery complete — navigate to ProductUnderstandingView using the model
+                var model = await _orchestrator.GetModelAsync(_modelId).ConfigureAwait(false);
+                var answers = model?.Conversation.Where(c => c.Speaker == "Engineer").Select(c => c.Message).ToList()
+                              ?? new List<string>();
 
-            ShowQuestion();
-        }
-
-        private void ShowQuestion()
-        {
-            if (_currentIndex < 0) _currentIndex = 0;
-            if (_currentIndex >= _questions.Count) _currentIndex = _questions.Count - 1;
-            QuestionTextBlock.Text = _questions[_currentIndex];
-            // Restore any in-memory answer for this question
-            AnswerTextBox.Text = _answers[_currentIndex] ?? string.Empty; // placeholder logic; in future answers will persist
-            PreviousButton.IsEnabled = _currentIndex > 0;
-        }
-
-        private void ContinueButton_Click(object sender, System.Windows.RoutedEventArgs e)
-        {
-            // Save current answer
-            _answers[_currentIndex] = AnswerTextBox.Text ?? string.Empty;
-
-            // Placeholder: advance to next question
-            if (_currentIndex < _questions.Count - 1)
-            {
-                _currentIndex++;
-                ShowQuestion();
-            }
-            else
-            {
-                // All questions answered — navigate to Product Understanding view
                 var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
                 if (win != null)
                 {
-                    win.HostContent.Content = new ProductUnderstandingView(_idea, new List<string>(_answers));
+                    await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        win.HostContent.Content = new ProductUnderstandingView(model?.OriginalIdea ?? string.Empty, answers);
+                    }));
                 }
             }
         }
 
         private void PreviousButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            if (_currentIndex > 0)
+            // Return to initial discovery screen
+            var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
+            if (win != null)
             {
-                _currentIndex--;
-                ShowQuestion();
-            }
-            else
-            {
-                // Navigate back to the initial ProductDiscoveryPlaceholder view
-                var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
-                if (win != null)
-                {
-                    win.HostContent.Content = new ProductDiscoveryPlaceholder();
-                }
+                win.HostContent.Content = new ProductDiscoveryPlaceholder();
             }
         }
     }
