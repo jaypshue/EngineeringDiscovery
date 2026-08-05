@@ -19,7 +19,14 @@ namespace EngineeringDiscovery.Wpf.Views
 
             if (win != null)
             {
-                win.HostContent.Content = new EngineeringWorkspace();
+                // Navigate into the Product Definition flow and pass the entered idea
+                var idea = string.Empty;
+                if (FindName("IdeaText") is System.Windows.Controls.TextBox tb)
+                {
+                    idea = tb.Text ?? string.Empty;
+                }
+
+                win.HostContent.Content = new ProductDefinitionView(idea);
             }
         }
     }
