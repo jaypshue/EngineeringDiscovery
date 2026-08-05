@@ -55,6 +55,9 @@ namespace EngineeringDiscovery.Wpf
 
                     // Main window
                     services.AddSingleton<MainWindow>();
+
+                    // Register EngineeringModel repository in Core via interface
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringModelRepository, EngineeringDiscovery.Core.Services.InMemoryEngineeringModelRepository>();
                 })
                 .Build();
 
