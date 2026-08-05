@@ -58,6 +58,9 @@ namespace EngineeringDiscovery.Wpf
 
                     // Register EngineeringModel repository in Core via interface
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringModelRepository, EngineeringDiscovery.Core.Services.InMemoryEngineeringModelRepository>();
+
+                    // Register EnginerringConversationOrchestrator
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator, EngineeringDiscovery.Core.Services.EnginerringConversationOrchestrator>();
                 })
                 .Build();
 
