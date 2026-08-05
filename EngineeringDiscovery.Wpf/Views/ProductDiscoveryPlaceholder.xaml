@@ -3,21 +3,58 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
-             Height="400" Width="600">
-    <Grid Background="Transparent" Margin="24">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="720">
-            <TextBlock Text="Free Range Engineering" FontSize="28" FontWeight="Bold" Foreground="White" TextAlignment="Center" />
-            <TextBlock Text="Build software the same way you would if you had an experienced technical lead." Margin="0,8,0,18" Foreground="#FFB0C4DE" TextAlignment="Center" />
+             mc:Ignorable="d">
+    <Grid Background="Transparent" Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-            <TextBlock Text="Begin Product Discovery" FontSize="16" FontWeight="SemiBold" Margin="0,12,0,8" />
+        <!-- Main content scrolls if window is small so Continue button stays visible -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel HorizontalAlignment="Center" Margin="0,8" Width="720">
+                <TextBlock Text="Free Range Engineering" FontSize="26" FontWeight="Bold" Foreground="White" TextAlignment="Center" />
+                <TextBlock Text="Build software the same way you would if you had an experienced technical lead." Margin="0,6,0,12" Foreground="#FFB0C4DE" TextAlignment="Center" />
 
-            <TextBlock Text="What would you like to build?" FontWeight="Bold" Margin="0,6,0,6" />
-            <TextBox x:Name="IdeaText" AcceptsReturn="True" Height="160" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                <TextBlock Text="Begin Product Discovery" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,6" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                <Button x:Name="ContinueButton" Content="Continue →" Width="140" Height="38" Click="ContinueButton_Click" />
+                <TextBlock Text="What would you like to build?" FontWeight="Bold" Margin="0,4,0,4" />
+                <Grid>
+                    <TextBox x:Name="IdeaText" AcceptsReturn="True" MinHeight="80" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                    <TextBlock Text="Briefly describe your product idea (one or two sentences)..."
+                               Foreground="#FF949BA6"
+                               Margin="6"
+                               IsHitTestVisible="False"
+                               VerticalAlignment="Top"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=IdeaText}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
             </StackPanel>
-        </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action row: remains visible at bottom -->
+        <Border Grid.Row="1" Background="Transparent" Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- spacer column keeps button at right -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="ContinueButton" Content="Continue →" Width="140" Height="38" Click="ContinueButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

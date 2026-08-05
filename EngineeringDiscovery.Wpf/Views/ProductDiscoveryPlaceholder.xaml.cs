@@ -10,6 +10,16 @@ namespace EngineeringDiscovery.Wpf.Views
             {
                 continueButton.Click += ContinueButton_Click;
             }
+
+            // Focus the idea textbox when the view loads so the user can start typing immediately.
+            Loaded += (s, e) =>
+            {
+                if (FindName("IdeaText") is System.Windows.Controls.TextBox tb)
+                {
+                    tb.Focus();
+                    System.Windows.Input.Keyboard.Focus(tb);
+                }
+            };
         }
 
         private void ContinueButton_Click(object sender, System.Windows.RoutedEventArgs e)
