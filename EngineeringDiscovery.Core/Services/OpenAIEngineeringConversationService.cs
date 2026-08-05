@@ -33,11 +33,16 @@ namespace EngineeringDiscovery.Core.Services
             if (string.IsNullOrWhiteSpace(_apiKey)) return string.Empty;
 
             // Use the current OpenAI Chat Completions API (/v1/chat/completions).
-            // No streaming, no function calling. Request a single completion (one message) and return the assistant content.
+            // No streaming, no function calling. Send a system message that defines EngineOS behavior, then the user prompt.
+            var system = BuildSystemPrompt();
             var request = new
             {
                 model = "gpt-3.5-turbo",
-                messages = new[] { new { role = "user", content = prompt } },
+                messages = new[]
+                {
+                    new { role = "system", content = system },
+                    new { role = "user", content = prompt }
+                },
                 max_tokens = 80,
                 temperature = 0.0,
                 n = 1
@@ -122,6 +127,17 @@ namespace EngineeringDiscovery.Core.Services
             }
 
             sb.AppendLine("Ask exactly one concise engineering question (one sentence). Respond with the question only.");
+            return sb.ToString();
+        }
+
+        private string BuildSystemPrompt()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("You are EngineOS, an experienced engineering lead performing product discovery.");
+            sb.AppendLine("Your role is to help an engineer better understand their product idea by asking exactly one concise engineering question.");
+            sb.AppendLine("Always ask only one question. Do not provide designs, recommendations, implementation details, code, or architectures.");
+            sb.AppendLine("Do not invent requirements or jump ahead. The question should reduce uncertainty about the product and be the single most valuable next question.");
+            sb.AppendLine("Respond with the question only, as a single sentence. Do not add commentary, lists, or bullets.");
             return sb.ToString();
         }
     }

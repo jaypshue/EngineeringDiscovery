@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
+using System.Linq;
 using NUnit.Framework;
 
 namespace EngineeringDiscovery.E2ETests.TestInfrastructure
@@ -29,7 +30,19 @@ namespace EngineeringDiscovery.E2ETests.TestInfrastructure
             try { if (File.Exists(WorkspaceFilePath)) File.Delete(WorkspaceFilePath); } catch { }
 
             // Start the Blazor app for each test to ensure a clean process and state
-            var projectPath = Path.Combine(SolutionRoot, "EngineeringDiscovery.Web", "EngineeringDiscovery.Web.csproj");
+            // Discover web project dynamically to support different project names (EngineOS.Web, EngineeringDiscovery.Web, etc.)
+            string projectPath = string.Empty;
+            try
+            {
+                var projects = Directory.EnumerateFiles(SolutionRoot, "*.csproj", SearchOption.AllDirectories);
+                // Prefer projects with "web" in the filename
+                var webProject = projects.FirstOrDefault(p => Path.GetFileName(p).ToLowerInvariant().Contains("web"));
+                projectPath = webProject ?? projects.FirstOrDefault() ?? string.Empty;
+            }
+            catch
+            {
+                projectPath = Path.Combine(SolutionRoot, "EngineeringDiscovery.Web", "EngineeringDiscovery.Web.csproj");
+            }
             var startInfo = new ProcessStartInfo("dotnet", $"run --project \"{projectPath}\" --urls http://localhost:5005")
             {
                 WorkingDirectory = SolutionRoot,

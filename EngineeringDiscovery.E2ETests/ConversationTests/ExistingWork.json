@@ -1,0 +1,11 @@
+{
+  "idea": "I have an existing project and want EngineOS to help me understand it.",
+  "answers": [
+    "Existing web project",
+    "Maintain features",
+    "Refactor for testability",
+    "Improve performance",
+    "CI/CD integration",
+    "Database schema migration"
+  ]
+}

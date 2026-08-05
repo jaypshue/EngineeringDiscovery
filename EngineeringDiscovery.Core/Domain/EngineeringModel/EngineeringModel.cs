@@ -11,6 +11,43 @@ namespace EngineeringDiscovery.Core.Domain.EngineeringModel
         Archived
     }
 
+    public enum DiscoveryStatus
+    {
+        Unknown,
+        Partial,
+        Complete
+    }
+
+    public sealed class DiscoveryCategory
+    {
+        public DiscoveryCategory()
+        {
+            Name = string.Empty;
+            Status = DiscoveryStatus.Unknown;
+            Confidence = 0.0;
+            SupportingFacts = new List<EngineeringFact>();
+            ExpectedQuestion = string.Empty;
+        }
+
+        public string Name { get; set; }
+
+        public DiscoveryStatus Status { get; set; }
+
+        public double Confidence { get; set; }
+
+        public List<EngineeringFact> SupportingFacts { get; }
+
+        // Optional mapping to the seeded question that would primarily satisfy this category
+        public string ExpectedQuestion { get; set; }
+    }
+
+    public enum DiscoveryState
+    {
+        Discovering,
+        Coaching,
+        Ready
+    }
+
     public sealed class EngineeringFact
     {
         public EngineeringFact()
@@ -65,6 +102,7 @@ namespace EngineeringDiscovery.Core.Domain.EngineeringModel
             OriginalIdea = string.Empty;
             Status = EngineeringStatus.Initializing;
             Confidence = 0.0;
+            OverallDiscoveryReadiness = 0.0;
         }
 
         public Guid Id { get; init; }
@@ -82,5 +120,11 @@ namespace EngineeringDiscovery.Core.Domain.EngineeringModel
         public List<Domain.Activity.EngineeringDecision> Decisions { get; } = new();
 
         public List<ConversationEntry> Conversation { get; } = new();
+
+        // Discovery categories projection representing areas of engineering knowledge
+        public List<DiscoveryCategory> DiscoveryCategories { get; } = new();
+
+        // Computed overall readiness (0.0 - 100.0)
+        public double OverallDiscoveryReadiness { get; set; }
     }
 }

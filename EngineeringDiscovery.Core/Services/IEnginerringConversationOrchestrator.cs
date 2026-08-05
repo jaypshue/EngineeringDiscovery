@@ -14,5 +14,12 @@ namespace EngineeringDiscovery.Core.Services
         Task<EngineeringQuestion?> GetNextQuestionAsync(Guid modelId);
 
         Task SubmitAnswerAsync(Guid modelId, Guid questionId, string answer);
+
+        // Discovery readiness helpers
+        Task<bool> IsDiscoveryReadyAsync(Guid modelId);
+
+        Task<DiscoveryState> GetDiscoveryStateAsync(Guid modelId);
+
+        Task<string> GetReadinessSummaryAsync(Guid modelId);
     }
 }
