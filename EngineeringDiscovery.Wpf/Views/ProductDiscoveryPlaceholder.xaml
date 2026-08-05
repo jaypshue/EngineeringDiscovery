@@ -5,13 +5,19 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              Height="400" Width="600">
-    <!-- Test placeholder: dark red background with centered white text -->
-    <Grid Background="#FF8B0000">
-        <TextBlock Text="FREE RANGE PLACEHOLDER"
-                   Foreground="#FFFFFFFF"
-                   FontSize="48"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
+    <Grid Background="Transparent" Margin="24">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="720">
+            <TextBlock Text="Free Range Engineering" FontSize="28" FontWeight="Bold" Foreground="White" TextAlignment="Center" />
+            <TextBlock Text="Build software the same way you would if you had an experienced technical lead." Margin="0,8,0,18" Foreground="#FFB0C4DE" TextAlignment="Center" />
+
+            <TextBlock Text="Begin Product Discovery" FontSize="16" FontWeight="SemiBold" Margin="0,12,0,8" />
+
+            <TextBlock Text="What would you like to build?" FontWeight="Bold" Margin="0,6,0,6" />
+            <TextBox x:Name="IdeaText" AcceptsReturn="True" Height="160" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button x:Name="ContinueButton" Content="Continue →" Width="140" Height="38" Click="ContinueButton_Click" />
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </UserControl>
