@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../EngineeringDiscovery.Core/EngineeringDiscovery.Core.csproj" />
-    <ProjectReference Include="../EngineeringDiscovery.Web/EngineeringDiscovery.Web.csproj" />
+    <ProjectReference Include="..\EngineeringDiscovery.Web\EngineOS.Web.csproj" />
   </ItemGroup>
 
 </Project>

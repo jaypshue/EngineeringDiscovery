@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- Preserve original logical root namespace to avoid breaking generated component types after project rename -->
+    <RootNamespace>EngineeringDiscovery.Web</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

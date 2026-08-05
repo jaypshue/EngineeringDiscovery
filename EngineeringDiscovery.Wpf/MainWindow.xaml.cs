@@ -26,6 +26,32 @@ namespace EngineeringDiscovery.Wpf
             };
         }
 
+        // Developer navigation menu handlers (temporary)
+        private void NavigateToWelcome_Click(object sender, RoutedEventArgs e)
+        {
+            HostContent.Content = new Views.WelcomeView();
+        }
+
+        private void NavigateToCorporate_Click(object sender, RoutedEventArgs e)
+        {
+            HostContent.Content = new Views.EngineeringWorkspace();
+        }
+
+        private void NavigateToFreeRange_Click(object sender, RoutedEventArgs e)
+        {
+            HostContent.Content = new Views.ProductDiscoveryPlaceholder();
+        }
+
+        private void NavigateToKnowledgeGraph_Click(object sender, RoutedEventArgs e)
+        {
+            HostContent.Content = new Views.KnowledgeGraphPlaceholder();
+        }
+
+        private void NavigateToInspector_Click(object sender, RoutedEventArgs e)
+        {
+            HostContent.Content = new Views.InspectorPlaceholder();
+        }
+
         private object? _initialChildRef;
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

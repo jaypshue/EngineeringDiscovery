@@ -5,7 +5,13 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              Height="400" Width="600">
-    <Grid>
-        <TextBlock Text="Product Discovery (Placeholder)" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" FontWeight="Bold" />
+    <!-- Test placeholder: dark red background with centered white text -->
+    <Grid Background="#FF8B0000">
+        <TextBlock Text="FREE RANGE PLACEHOLDER"
+                   Foreground="#FFFFFFFF"
+                   FontSize="48"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
     </Grid>
 </UserControl>

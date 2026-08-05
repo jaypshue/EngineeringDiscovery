@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EngineeringDiscovery.Core\EngineeringDiscovery.Core.csproj" />
-    <ProjectReference Include="..\EngineeringDiscovery.Web\EngineeringDiscovery.Web.csproj" />
+    <ProjectReference Include="..\EngineeringDiscovery.Web\EngineOS.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

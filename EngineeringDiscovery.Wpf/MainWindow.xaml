@@ -14,6 +14,14 @@
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="View" />
+            <MenuItem Header="Navigate">
+                <MenuItem Header="Welcome" Click="NavigateToWelcome_Click" />
+                <MenuItem Header="Corporate Workspace" Click="NavigateToCorporate_Click" />
+                <MenuItem Header="Free Range Workspace" Click="NavigateToFreeRange_Click" />
+                <Separator />
+                <MenuItem Header="Knowledge Graph (Placeholder)" Click="NavigateToKnowledgeGraph_Click" />
+                <MenuItem Header="Inspector (Placeholder)" Click="NavigateToInspector_Click" />
+            </MenuItem>
             <MenuItem Header="Help" />
         </Menu>
         <ToolBar DockPanel.Dock="Top">
