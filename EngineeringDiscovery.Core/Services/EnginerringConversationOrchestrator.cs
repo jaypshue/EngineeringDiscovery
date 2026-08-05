@@ -9,10 +9,12 @@ namespace EngineeringDiscovery.Core.Services
     public class EnginerringConversationOrchestrator : IEnginerringConversationOrchestrator
     {
         private readonly IEngineeringModelRepository _repository;
+        private readonly IEngineeringConversationService? _conversationService;
 
-        public EnginerringConversationOrchestrator(IEngineeringModelRepository repository)
+        public EnginerringConversationOrchestrator(IEngineeringModelRepository repository, IEngineeringConversationService? conversationService = null)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _conversationService = conversationService;
         }
 
         public async Task<EngineeringModel> CreateModelAsync(string idea)
@@ -42,7 +44,19 @@ namespace EngineeringDiscovery.Core.Services
             var model = await _repository.GetAsync(modelId).ConfigureAwait(false);
             if (model == null) return null;
 
-            // Deterministic rule: return the highest priority open question (lowest Priority value)
+            // If an external conversation service is available, request a question from it.
+            if (_conversationService != null)
+            {
+                var questionText = await _conversationService.GetNextQuestionAsync(model).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(questionText))
+                {
+                    // Create a transient EngineeringQuestion to represent the service-provided question
+                    var eq = new EngineeringQuestion { Question = questionText, Reason = "AI generated", Priority = int.MaxValue };
+                    return eq;
+                }
+            }
+
+            // Fallback deterministic rule: return the highest priority open question (lowest Priority value)
             var q = model.OpenQuestions.OrderBy(qi => qi.Priority).FirstOrDefault();
             return q;
         }

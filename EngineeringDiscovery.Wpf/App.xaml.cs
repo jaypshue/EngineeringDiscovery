@@ -62,6 +62,11 @@ namespace EngineeringDiscovery.Wpf
 
                     // Register EnginerringConversationOrchestrator
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator, EngineeringDiscovery.Core.Services.EnginerringConversationOrchestrator>();
+
+                    // Register AI-backed conversation service and its HttpClient
+                    services.AddHttpClient<EngineeringDiscovery.Core.Services.OpenAIEngineeringConversationService>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringConversationService, EngineeringDiscovery.Core.Services.OpenAIEngineeringConversationService>(sp =>
+                        sp.GetRequiredService<EngineeringDiscovery.Core.Services.OpenAIEngineeringConversationService>());
                 })
                 .Build();
 
