@@ -86,56 +86,84 @@
 
         <!-- Engineering Package region (presentation only) -->
         <Border Grid.Column="0" Grid.Row="1" Margin="0,12,0,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12">
+            <!-- Package header: prominent status banner and compact status editor -->
             <StackPanel>
-                    <DockPanel>
-                    <TextBlock Text="Engineering Package" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" DockPanel.Dock="Left" />
-                    <ComboBox x:Name="PackageStatusComboBox" Width="180" HorizontalAlignment="Right" DockPanel.Dock="Right" SelectedValuePath="Content"
-                              SelectedValue="{Binding Package.Status, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem Content="Draft" />
-                        <ComboBoxItem Content="Collecting Context" />
-                        <ComboBoxItem Content="Ready for Review" />
-                        <ComboBoxItem Content="Ready for Implementation" />
-                    </ComboBox>
+                <DockPanel LastChildFill="True">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <Ellipse x:Name="StatusBadge" Width="18" Height="18" Fill="{StaticResource MutedTextBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Package.Status}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <!-- Engineering State summary (prominent) -->
+                    <StackPanel x:Name="EngineeringStateSummary" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="{Binding EngineeringState.CurrentPhase}" Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock Text="{Binding EngineeringState.CurrentReadiness}" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="{Binding EngineeringState.CurrentRecommendation}" Foreground="{StaticResource SecondaryTextBrush}" />
+                            <Button Content="{Binding EngineeringState.PrimaryActionText}" Command="{Binding EngineeringState.PrimaryActionCommand}" Style="{StaticResource PrimaryButton}" />
+                        </StackPanel>
+                    </StackPanel>
                 </DockPanel>
-                <Grid Margin="0,8,0,0">
+
+                <Grid Margin="8,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2*" />
                         <ColumnDefinition Width="1*" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Left: summary -->
+                    <!-- Left: artifact summary -->
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Status:" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBlock Text="{Binding Package.Status}" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding Package.Purpose}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" />
 
-                        <TextBlock Text="Purpose" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBlock Text="{Binding Package.Purpose}" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,0,8" />
+                        <StackPanel Margin="0,12,0,0">
+                            <TextBlock Text="Context" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
+                            <ItemsControl ItemsSource="{Binding Package.ContextIncluded}" Margin="0,6,0,0">
+                                <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                    <TextBlock x:Name="IncludedGlyph" Text="✓" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,8,0" />
+                                    <TextBlock x:Name="MissingGlyph" Text="○" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,8,0" Visibility="Collapsed" />
+                                    <TextBlock Text="{Binding Text}" Foreground="{StaticResource PrimaryTextBrush}" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Included}" Value="False">
+                                        <Setter TargetName="IncludedGlyph" Property="Visibility" Value="Collapsed" />
+                                        <Setter TargetName="MissingGlyph" Property="Visibility" Value="Visible" />
+                                        <Setter TargetName="MissingGlyph" Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
 
-                        <TextBlock Text="Context Included" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                        <ItemsControl ItemsSource="{Binding Package.ContextIncluded}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                        <TextBlock Text="✓" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,6,0" />
-                                        <TextBlock Text="{Binding Text}" Foreground="{StaticResource PrimaryTextBrush}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="Last Updated" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBlock Text="{Binding Package.LastUpdated}" Foreground="{StaticResource PrimaryTextBrush}" />
+                        <TextBlock Text="{Binding Package.LastUpdated, StringFormat='Updated {0:g}'}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,12,0,0" />
                     </StackPanel>
 
-                    <!-- Right: actions -->
+                    <!-- Right: actions and version info -->
                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                        <Button Style="{StaticResource PrimaryButton}" Content="Preview" Command="{Binding Package.PreviewCommand}" />
+                        <!-- Recommended Action: only one primary action presented at a time, driven by workspace state -->
+                        <Border Background="Transparent" Padding="6" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Recommended Action" Foreground="{StaticResource SecondaryTextBrush}" />
+                                <TextBlock Text="{Binding Package.Status, Converter={StaticResource RecommendedActionConverter}}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryTextBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Primary action button (driven by workspace): binds to a command provided by the workspace via DataContext -->
+                        <Button x:Name="PrimaryActionButton" Style="{StaticResource PrimaryButton}" Content="{Binding PrimaryActionText}" Command="{Binding PrimaryActionCommand}" />
+
                         <Button Style="{StaticResource AccentButton}" Content="Send to Copilot" Margin="0,8,0,0" Command="{Binding Package.SendToCopilotCommand}" />
-                        <TextBlock Text="Version: " Foreground="{StaticResource SecondaryTextBrush}" Margin="0,12,0,0" />
-                        <TextBlock Text="{Binding Package.Version}" Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="" />
-                        <TextBlock Text="" />
-                        <TextBlock Text="" />
+
+                        <StackPanel Margin="0,12,0,0">
+                            <TextBlock Text="Version" Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock Text="{Binding Package.Version}" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
+                            <TextBlock Text="Reviewed" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" />
+                            <TextBlock Text="{Binding Package.ReviewedVersion}" Foreground="{StaticResource PrimaryTextBrush}" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="NeedsReviewText" Text="⚠ Conversation changed since last review." Foreground="{StaticResource AccentBrush}" Visibility="{Binding Path=Package.Status, Converter={StaticResource NeedsReviewVisibilityConverter}}" Margin="0,12,0,0" />
                     </StackPanel>
                 </Grid>
             </StackPanel>

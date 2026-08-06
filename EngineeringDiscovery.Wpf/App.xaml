@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:EngineeringDiscovery.Wpf"
              xmlns:vm="clr-namespace:EngineeringDiscovery.Wpf.ViewModels">
     <Application.Resources>
-        <ResourceDictionary>
+        <ResourceDictionary xmlns:converters="clr-namespace:EngineeringDiscovery.Wpf.Converters">
             <ResourceDictionary.MergedDictionaries>
                 <!-- EngineOS palette (base tokens) -->
                 <ResourceDictionary Source="Resources/Colors.xaml" />
@@ -16,6 +16,9 @@
             <DataTemplate x:Key="WelcomeTemplate" DataType="{x:Type vm:MainWindowViewModel}">
                 <local:WelcomeWorkspace />
             </DataTemplate>
+            <!-- Converters -->
+            <converters:NeedsReviewVisibilityConverter x:Key="NeedsReviewVisibilityConverter" />
+            <converters:RecommendedActionConverter x:Key="RecommendedActionConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

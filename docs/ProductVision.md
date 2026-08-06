@@ -22,6 +22,22 @@ Evidence Collection is a first-class capability of EngineOS. Human engineers sho
 
 ---
 
+# The Engine
+
+EngineOS is a continuously running engineering discovery engine.
+
+It continuously observes engineering activity, collects evidence, maintains engineering understanding, and coordinates the engineering workflow.
+
+The Engineering Workspace is the primary interface to the engine.
+
+The Engineering Model is the engine's current understanding of the software system.
+
+Engineering Packages are the engine's implementation artifacts.
+
+The engine continuously improves its understanding as engineering progresses.
+
+---
+
 # Mission
 
 EngineOS exists to help software engineers understand, improve, and continuously evolve software systems through a repeatable engineering workflow.

@@ -77,6 +77,13 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         // ReviewedVersion: when Version == ReviewedVersion the package may be considered reviewed/current
         public int ReviewedVersion { get; private set; } = 0;
 
+        private DateTime? _reviewedTimestamp;
+        public DateTime? ReviewedTimestamp { get => _reviewedTimestamp; private set { if (_reviewedTimestamp != value) { _reviewedTimestamp = value; OnPropertyChanged(nameof(ReviewedTimestamp)); } } }
+
+        // Additional status constants for workflow
+        public const string StatusImplementationPending = "Implementation Pending";
+        public const string StatusImplementationIncorporated = "Implementation Incorporated";
+
         public ICommand PreviewCommand { get; }
         public ICommand SendToCopilotCommand { get; }
         public ICommand ChangeStatusCommand { get; }
@@ -117,6 +124,48 @@ namespace EngineeringDiscovery.Wpf.ViewModels
                 // Treat collection membership changes as meaningful
                 OnPackageContentChanged();
             };
+        }
+
+        // Public workflow operations invoked by the workspace (placeholder implementations)
+        public void Generate()
+        {
+            // Simulate generation: treat as meaningful content change
+            OnPackageContentChanged();
+            // After generation, mark ready for review
+            Status = StatusReadyForReview;
+            LastUpdated = DateTime.UtcNow;
+        }
+
+        public void Approve()
+        {
+            // Record review metadata and transition to Ready for Implementation
+            ReviewedVersion = Version;
+            ReviewedTimestamp = DateTime.UtcNow;
+            IsDirty = false;
+            Status = StatusReadyForImplementation;
+            LastUpdated = DateTime.UtcNow;
+        }
+
+        public void MarkImplementationPending()
+        {
+            Status = StatusImplementationPending;
+            LastUpdated = DateTime.UtcNow;
+        }
+
+        public void IncorporateImplementation()
+        {
+            Status = StatusImplementationIncorporated;
+            LastUpdated = DateTime.UtcNow;
+            // mark as not dirty
+            IsDirty = false;
+        }
+
+        public void Regenerate()
+        {
+            // Re-generate package: create a new meaningful content update and make it ready for review
+            OnPackageContentChanged();
+            Status = StatusReadyForReview;
+            LastUpdated = DateTime.UtcNow;
         }
 
         private void ContextItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)

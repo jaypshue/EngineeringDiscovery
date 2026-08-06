@@ -1,7 +1,8 @@
-using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using EngineeringDiscovery.Core.Services;
+using System;
 
 namespace EngineeringDiscovery.Wpf.ViewModels
 {
@@ -12,6 +13,12 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         public WorkspaceConversationViewModel Conversation { get; }
 
         public EngineeringPackageViewModel Package { get; }
+
+        // PrimaryAction exposed for binding: workspace determines the available primary action and command
+        public string PrimaryActionText { get; private set; } = string.Empty;
+        public ICommand? PrimaryActionCommand { get; private set; }
+
+        public EngineeringStateViewModel EngineeringState { get; private set; }
 
         public EngineeringWorkspaceViewModel(IEngineeringPartner partner)
         {
@@ -26,6 +33,12 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
             // Subscribe to conversation change events to coordinate package lifecycle
             Conversation.MessagesChanged += HandleConversationMessagesChanged;
+
+            // Initialize the primary action binding
+            UpdatePrimaryAction();
+
+            // Create and expose EngineeringState projection
+            EngineeringState = new EngineeringStateViewModel(Conversation, Package);
         }
 
         private async Task InitializeAsync()
@@ -77,6 +90,48 @@ namespace EngineeringDiscovery.Wpf.ViewModels
                     }
                 }
             }
+
+            // Update recommended action when conversation changes
+            UpdatePrimaryAction();
+        }
+
+        private void UpdatePrimaryAction()
+        {
+            // Determine recommended action and primary action command based on current package status
+            var status = Package.Status;
+            if (status == EngineeringPackageViewModel.StatusDraft)
+            {
+                PrimaryActionText = "Generate Package";
+                PrimaryActionCommand = new RelayCommand(_ => Package.Generate());
+            }
+            else if (status == EngineeringPackageViewModel.StatusCollecting)
+            {
+                PrimaryActionText = "Collect Context";
+                PrimaryActionCommand = null;
+            }
+            else if (status == EngineeringPackageViewModel.StatusReadyForReview)
+            {
+                PrimaryActionText = "Approve Package";
+                PrimaryActionCommand = new RelayCommand(_ => { Package.Approve(); UpdatePrimaryAction(); });
+            }
+            else if (status == EngineeringPackageViewModel.StatusReadyForImplementation)
+            {
+                PrimaryActionText = "Send to Copilot";
+                PrimaryActionCommand = new RelayCommand(_ => { /* workspace-level send handled by Package command */ });
+            }
+            else if (status == EngineeringPackageViewModel.StatusNeedsReview)
+            {
+                PrimaryActionText = "Regenerate Package";
+                PrimaryActionCommand = new RelayCommand(_ => { Package.Regenerate(); UpdatePrimaryAction(); });
+            }
+            else
+            {
+                PrimaryActionText = "Generate Package";
+                PrimaryActionCommand = new RelayCommand(_ => Package.Generate());
+            }
+
+            OnPropertyChanged(nameof(PrimaryActionText));
+            OnPropertyChanged(nameof(PrimaryActionCommand));
         }
     }
 }
