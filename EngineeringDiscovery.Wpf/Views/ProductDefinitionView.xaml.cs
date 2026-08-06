@@ -97,6 +97,7 @@ namespace EngineeringDiscovery.Wpf.Views
                 {
                     await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
                     {
+                        // Discovery completes: show ProductUnderstandingView, but do not route back into Product Discovery startup path
                         win.HostContent.Content = new ProductUnderstandingView(model?.OriginalIdea ?? string.Empty, answers);
                     }));
                 }
@@ -109,7 +110,8 @@ namespace EngineeringDiscovery.Wpf.Views
             var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
             if (win != null)
             {
-                win.HostContent.Content = new ProductDiscoveryPlaceholder();
+                // Return to the central Engineering Workspace instead of ProductDiscoveryPlaceholder
+                win.HostContent.Content = new EngineeringWorkspace();
             }
         }
     }

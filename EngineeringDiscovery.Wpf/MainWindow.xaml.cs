@@ -39,7 +39,8 @@ namespace EngineeringDiscovery.Wpf
 
         private void NavigateToFreeRange_Click(object sender, RoutedEventArgs e)
         {
-            HostContent.Content = new Views.ProductDiscoveryPlaceholder();
+            // Legacy Product Discovery removed from startup path — navigate to EngineeringWorkspace instead
+            HostContent.Content = new Views.EngineeringWorkspace();
         }
 
         private void NavigateToKnowledgeGraph_Click(object sender, RoutedEventArgs e)

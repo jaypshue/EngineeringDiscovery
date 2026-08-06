@@ -11,8 +11,8 @@
     <p>Begin with an idea or with existing software.</p>
 
     <div class="welcome-actions">
-        <button class="btn" disabled="@(!WorkspaceState.HasWorkspace)" @onclick="ContinueInvestigation">Continue</button>
-        <button class="btn" @onclick="StartNew">Start Building</button>
+        <input placeholder="What are you working on today?" @bind="openingStatement" class="input" />
+        <button class="btn" @onclick="StartEngineeringPartner">Continue</button>
         <button class="btn" @onclick="GoToImport">Import Repository</button>
         <button class="btn btn-danger" @onclick="ConfirmReset">Reset EngineOS...</button>
     </div>
@@ -87,6 +87,22 @@
 @code {
     [Inject]
     private NavigationManager Nav { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Core.Services.IEngineeringPartner EngineeringPartner { get; set; } = null!;
+
+    private string openingStatement = string.Empty;
+
+    private async Task StartEngineeringPartner()
+    {
+        if (string.IsNullOrWhiteSpace(openingStatement)) return;
+        // Start a new engineering partner session and navigate to the workspace view
+        var model = await EngineeringPartner.StartSessionAsync(openingStatement);
+        if (model != null)
+        {
+            Nav.NavigateTo($"/workspace");
+        }
+    }
 
     private void ContinueInvestigation()
     {

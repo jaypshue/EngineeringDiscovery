@@ -28,6 +28,25 @@ namespace EngineeringDiscovery.Core.Services
 
             // Persist a working copy for the session
             await _repository.CreateAsync(model).ConfigureAwait(false);
+
+            // If a conversation service is available, request an initial partner reply and record it
+            if (_conversationService != null)
+            {
+                try
+                {
+                    var reply = await _conversationService.GetNextQuestionAsync(model).ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(reply))
+                    {
+                        model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = reply, TimestampUtc = DateTime.UtcNow });
+                        await _repository.UpdateAsync(model).ConfigureAwait(false);
+                    }
+                }
+                catch
+                {
+                    // Swallow errors from the external service to keep startup deterministic without AI
+                }
+            }
+
             return model;
         }
 

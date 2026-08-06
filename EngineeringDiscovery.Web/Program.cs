@@ -14,6 +14,8 @@ builder.Services.AddRazorComponents()
 // hosts must explicitly load persisted workspace and call ReplaceWorkspace.
 builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+// Register EngineeringPartner abstraction
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
 // Production repo fingerprint service
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.FileRepoFingerprintService>();
 

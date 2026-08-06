@@ -4,13 +4,54 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <!-- Test placeholder: dark blue background with centered white text -->
-    <Grid Background="#FF0B3D91">
-        <TextBlock Text="CORPORATE PLACEHOLDER"
-                   Foreground="#FFFFFFFF"
-                   FontSize="48"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
+
+    <!-- Engineering Workspace layout (EP-3)
+         Regions:
+           - Conversation (primary)
+           - Context (summary panel)
+           - Evidence (placeholder panel)
+         The control intentionally contains no engineering logic; it only presents areas where
+         the Engineering Partner's conversation and working memory will be surfaced.
+    -->
+
+    <Grid Background="White">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="360" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Conversation (primary) -->
+        <Border Grid.Column="0" Padding="16" Background="#FFF6F8FA" BorderBrush="#FFE6E9EE" BorderThickness="0,0,1,0">
+            <StackPanel>
+                <TextBlock Text="Conversation" FontSize="20" FontWeight="Bold" Margin="0,0,0,12" />
+                <Border x:Name="PART_Conversation" Background="White" CornerRadius="4" Padding="12" BorderBrush="#FFDDDFE3" BorderThickness="1">
+                    <TextBlock Text="Engineering Partner conversation will appear here and remain visible throughout the session." TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Right rail: Context and Evidence -->
+        <StackPanel Grid.Column="1" Margin="0" Background="#FFF9FAFB" Orientation="Vertical">
+            <!-- Context panel -->
+            <GroupBox Header="Context" Margin="0,0,0,12">
+                <StackPanel x:Name="PART_Context" Margin="4">
+                    <TextBlock Text="Current Investigation: (none)" />
+                    <TextBlock Text="Current Understanding: (not available)" Margin="0,6,0,0" />
+                    <TextBlock Text="Working Memory: summary placeholder" Margin="0,6,0,0" />
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Evidence panel -->
+            <GroupBox Header="Evidence">
+                <StackPanel x:Name="PART_Evidence" Margin="4">
+                    <TextBlock Text="Repository" FontWeight="Bold" />
+                    <TextBlock Text="Screenshots" FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="Logs" FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="Files" FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="(Evidence sources will be added incrementally)" Margin="0,12,0,0" FontStyle="Italic" />
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
     </Grid>
+
 </UserControl>

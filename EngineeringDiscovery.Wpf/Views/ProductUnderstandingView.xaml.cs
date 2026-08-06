@@ -40,11 +40,13 @@ namespace EngineeringDiscovery.Wpf.Views
                     // Try to find a model with matching original idea
                     var allModel = repo.GetAsync(Guid.Empty).GetAwaiter().GetResult();
                     // If cannot locate by original idea, fall back to opening discovery placeholder
-                    win.HostContent.Content = new ProductDiscoveryPlaceholder();
+                    // After product understanding navigation, return to Welcome/Workspace rather than Product Discovery
+                    win.HostContent.Content = new EngineeringWorkspace();
                 }
                 else
                 {
-                    win.HostContent.Content = new ProductDiscoveryPlaceholder();
+                    // After product understanding navigation, return to Welcome/Workspace rather than Product Discovery
+                    win.HostContent.Content = new EngineeringWorkspace();
                 }
             }
         }
