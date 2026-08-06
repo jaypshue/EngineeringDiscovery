@@ -20,6 +20,18 @@ namespace EngineeringDiscovery.Wpf.Views
                 var host = win.FindName("HostContent") as System.Windows.Controls.ContentControl ?? win.HostContent as System.Windows.Controls.ContentControl;
                 if (host != null)
                 {
+                    // Create workspace view with its owning view model so the view does not construct VMs in code-behind
+                    var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                    if (sp != null)
+                    {
+                        var partner = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
+                        if (partner != null)
+                        {
+                            host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) };
+                            System.Diagnostics.Debug.WriteLine("[ED-315] Navigated to EngineeringWorkspace with VM");
+                            return;
+                        }
+                    }
                     host.Content = new EngineeringWorkspace();
                     System.Diagnostics.Debug.WriteLine("[ED-315] Navigated to EngineeringWorkspace");
                 }

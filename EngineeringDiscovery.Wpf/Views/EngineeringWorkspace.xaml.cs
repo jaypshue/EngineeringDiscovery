@@ -8,6 +8,7 @@ namespace EngineeringDiscovery.Wpf.Views
         private static int _instanceCounter = 0;
         private readonly int _instanceId;
         private readonly ViewModels.WorkspaceConversationViewModel _conversationVm;
+        // The workspace now expects to be hosted with a view model owning the conversation and package VMs.
 
         public EngineeringWorkspace()
         {
@@ -16,37 +17,10 @@ namespace EngineeringDiscovery.Wpf.Views
 
             Debug.WriteLine($"[ED-EP7] EngineeringWorkspace #{_instanceId} constructor start");
 
-            // Resolve IEngineeringPartner via App.ServiceProvider and attach conversation VM when available
-            var sp = App.ServiceProvider;
-            if (sp == null)
-            {
-                Debug.WriteLine("[ED-EP5.2] App.ServiceProvider is null");
-            }
-            else
-            {
-                Debug.WriteLine("[ED-EP5.2] App.ServiceProvider resolved");
-                var partner = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
-                if (partner == null)
-                {
-                    Debug.WriteLine("[ED-EP5.2] IEngineeringPartner not registered in ServiceProvider");
-                }
-                else
-                {
-                    Debug.WriteLine("[ED-EP5.2] IEngineeringPartner resolved: " + partner.GetType().FullName);
-                    _conversationVm = new ViewModels.WorkspaceConversationViewModel(partner);
-
-                    Debug.WriteLine($"[ED-EP7] WorkspaceConversationViewModel #{_instanceId} created");
-
-                    // Set the DataContext so XAML bindings (Messages, Draft, SendCommand) resolve
-                    this.DataContext = _conversationVm;
-
-                    Debug.WriteLine($"[ED-EP7] DataContext set to WorkspaceConversationViewModel #{_instanceId}");
-
-                    // Initialize conversation session (fire-and-forget, safe)
-                    Debug.WriteLine($"[ED-EP7] Starting InitializeConversationAsync #{_instanceId}");
-                    _ = InitializeConversationAsync();
-                }
-            }
+            // The view is now purely presentation. The host should set DataContext to a workspace view model that
+            // owns both the Conversation VM and the Package VM. If no DataContext is provided, we leave the control
+            // in a neutral state to avoid initialization-time side effects that previously caused UI thread loops.
+            Debug.WriteLine($"[ED-EP7] EngineeringWorkspace #{_instanceId} constructed (no VM creation in code-behind)");
         }
 
         private async System.Threading.Tasks.Task InitializeConversationAsync()
@@ -57,6 +31,9 @@ namespace EngineeringDiscovery.Wpf.Views
                 await _conversationVm.InitializeAsync();
                 ScrollToEnd();
                 Debug.WriteLine($"[ED-EP7] InitializeConversationAsync #{_instanceId} completed");
+                // Inform the host VM that conversation initialization has completed. The host ViewModel should
+                // subscribe to conversation lifecycle and update Package properties as needed. Avoid direct access
+                // to view resources or ViewModel instances from code-behind.
             }
             catch (System.Exception ex)
             {
@@ -78,6 +55,24 @@ namespace EngineeringDiscovery.Wpf.Views
                 ConversationScroll?.ScrollToEnd();
             }
             catch { }
+        }
+
+        private void EngineeringPackage_Preview_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            // Legacy click handler retained for compatibility. Prefer binding to Package.PreviewCommand from XAML.
+            if (this.DataContext is ViewModels.EngineeringWorkspaceViewModel host && host.Package != null)
+            {
+                host.Package.Preview();
+            }
+        }
+
+        private void EngineeringPackage_SendToCopilot_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            // Legacy click handler retained for compatibility. Prefer binding to Package.SendToCopilotCommand from XAML.
+            if (this.DataContext is ViewModels.EngineeringWorkspaceViewModel host && host.Package != null)
+            {
+                host.Package.SendToCopilot();
+            }
         }
     }
 }

@@ -19,9 +19,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _repoSelection = repoSelection ?? throw new ArgumentNullException(nameof(repoSelection));
         Activity = activityViewModel ?? throw new ArgumentNullException(nameof(activityViewModel));
 
-        NewInvestigationCommand = new RelayCommand(() => System.Windows.MessageBox.Show("New Investigation (placeholder)"));
+        NewInvestigationCommand = new RelayCommand(o => System.Windows.MessageBox.Show("New Investigation (placeholder)"));
         OpenRepositoryCommand = new AsyncRelayCommand(async () => await OpenRepositoryAsync());
-        ExitCommand = new RelayCommand(() => System.Windows.Application.Current.Shutdown());
+        ExitCommand = new RelayCommand(o => System.Windows.Application.Current.Shutdown());
 
         // Initialize HasWorkspace based on current state and subscribe to changes
         HasWorkspace = _workspaceState.HasWorkspace;

@@ -6,7 +6,11 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- EngineOS dark theme -->
+                <!-- EngineOS palette (base tokens) -->
+                <ResourceDictionary Source="Resources/Colors.xaml" />
+                <!-- Controls/styles consume the final brushes -->
+                <ResourceDictionary Source="Resources/Controls.xaml" />
+                <!-- Theme overlay (dark theme) applied last to ensure Welcome dark surfaces and text contrast are authoritative -->
                 <ResourceDictionary Source="Resources/DarkTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <DataTemplate x:Key="WelcomeTemplate" DataType="{x:Type vm:MainWindowViewModel}">

@@ -40,14 +40,14 @@ namespace EngineeringDiscovery.Wpf.Views
                 var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
                 if (sp != null)
                 {
-                    var partner = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
-                    if (partner != null)
-                    {
-                        // Start an engineering session using the entered idea and navigate to the EngineeringWorkspace
-                        _ = partner.StartSessionAsync(idea).GetAwaiter().GetResult();
-                        win.HostContent.Content = new EngineeringWorkspace();
-                        return;
-                    }
+                        var partner = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
+                        if (partner != null)
+                        {
+                            // Start an engineering session synchronously for legacy flow, then host workspace with owning VM
+                            _ = partner.StartSessionAsync(idea).GetAwaiter().GetResult();
+                            win.HostContent.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) };
+                            return;
+                        }
                 }
 
                 // Fallback: if EngineeringPartner not available, navigate to EngineeringWorkspace directly
