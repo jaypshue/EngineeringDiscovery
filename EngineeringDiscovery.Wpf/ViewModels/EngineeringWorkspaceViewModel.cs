@@ -23,6 +23,9 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
             // Asynchronously initialize conversation without blocking construction
             _ = InitializeAsync();
+
+            // Subscribe to conversation change events to coordinate package lifecycle
+            Conversation.MessagesChanged += HandleConversationMessagesChanged;
         }
 
         private async Task InitializeAsync()
@@ -53,5 +56,27 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         }
 
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        private void HandleConversationMessagesChanged()
+        {
+            // If the package has been reviewed (ReviewedVersion > 0) and conversation changes, mark Needs Review
+            if (Package.ReviewedVersion > 0 && Package.Version >= Package.ReviewedVersion)
+            {
+                // Transition to Needs Review if not already
+                if (Package.Status != EngineeringPackageViewModel.StatusNeedsReview)
+                {
+                    // Marshal to UI thread
+                    var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                    if (dispatcher != null && !dispatcher.CheckAccess())
+                    {
+                        dispatcher.BeginInvoke(new Action(() => Package.ChangeStatus(EngineeringPackageViewModel.StatusNeedsReview)));
+                    }
+                    else
+                    {
+                        Package.ChangeStatus(EngineeringPackageViewModel.StatusNeedsReview);
+                    }
+                }
+            }
+        }
     }
 }

@@ -20,12 +20,25 @@ namespace EngineeringDiscovery.Wpf.ViewModels
     public class EngineeringPackageViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
+        // Status constants to avoid magic strings
+        public const string StatusDraft = "Draft";
+        public const string StatusCollecting = "Collecting Context";
+        public const string StatusReadyForReview = "Ready for Review";
+        public const string StatusReadyForImplementation = "Ready for Implementation";
+        public const string StatusNeedsReview = "Needs Review";
 
-        private string _status = "Draft";
+        private string _status = StatusDraft;
         public string Status
         {
             get => _status;
-            set { if (_status != value) { _status = value; OnPropertyChanged(nameof(Status)); OnPackageContentChanged(); if (_status == "Ready for Review" || _status == "Ready for Implementation") { IsDirty = false; } } }
+            private set
+            {
+                if (_status != value)
+                {
+                    _status = value;
+                    OnPropertyChanged(nameof(Status));
+                }
+            }
         }
 
         private string _purpose = "(purpose placeholder)";
@@ -51,14 +64,8 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         private bool _isReadyForImplementation = false;
         public bool IsReadyForImplementation { get => _isReadyForImplementation; private set { if (_isReadyForImplementation != value) { _isReadyForImplementation = value; OnPropertyChanged(nameof(IsReadyForImplementation)); } } }
 
-        public ObservableCollection<EngineeringPackageContextItem> ContextIncluded { get; } = new ObservableCollection<EngineeringPackageContextItem>()
-        {
-            new EngineeringPackageContextItem { Text = "Current Investigation", Included = true },
-            new EngineeringPackageContextItem { Text = "Repository", Included = true },
-            new EngineeringPackageContextItem { Text = "Engineering Model", Included = true },
-            new EngineeringPackageContextItem { Text = "Architecture Decisions", Included = true },
-            new EngineeringPackageContextItem { Text = "Evidence", Included = true }
-        };
+        // ContextIncluded is owned and populated by the workspace; package observes the collection for meaningful changes
+        public ObservableCollection<EngineeringPackageContextItem> ContextIncluded { get; } = new ObservableCollection<EngineeringPackageContextItem>();
 
         private DateTime _lastUpdated = DateTime.UtcNow;
         public DateTime LastUpdated
@@ -66,6 +73,9 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             get => _lastUpdated;
             set { if (_lastUpdated != value) { _lastUpdated = value; OnPropertyChanged(nameof(LastUpdated)); } }
         }
+
+        // ReviewedVersion: when Version == ReviewedVersion the package may be considered reviewed/current
+        public int ReviewedVersion { get; private set; } = 0;
 
         public ICommand PreviewCommand { get; }
         public ICommand SendToCopilotCommand { get; }
@@ -76,6 +86,43 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             this.PreviewCommand = new RelayCommand(o => Preview());
             this.SendToCopilotCommand = new RelayCommand(o => SendToCopilot());
             this.ChangeStatusCommand = new RelayCommand(o => ChangeStatus(o as string ?? "Draft"));
+
+            // Observe context changes to mark meaningful package updates
+            ContextIncluded.CollectionChanged += (s, e) =>
+            {
+                // subscribe to new items property changes
+                if (e.NewItems != null)
+                {
+                    foreach (var ni in e.NewItems)
+                    {
+                        if (ni is EngineeringPackageContextItem item)
+                        {
+                            item.PropertyChanged += ContextItem_PropertyChanged;
+                        }
+                    }
+                }
+
+                // unsubscribe removed items
+                if (e.OldItems != null)
+                {
+                    foreach (var oi in e.OldItems)
+                    {
+                        if (oi is EngineeringPackageContextItem item)
+                        {
+                            item.PropertyChanged -= ContextItem_PropertyChanged;
+                        }
+                    }
+                }
+
+                // Treat collection membership changes as meaningful
+                OnPackageContentChanged();
+            };
+        }
+
+        private void ContextItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // Any change to a context item is a meaningful package change
+            OnPackageContentChanged();
         }
 
         private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -107,8 +154,26 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public void ChangeStatus(string status)
         {
-            Status = status;
+            // Change status without treating status change as an engineering content change
+            Status = status ?? StatusDraft;
             LastUpdated = DateTime.UtcNow;
+
+            // If marking as ready, record the reviewed version and clear dirty flag
+            if (status == StatusReadyForReview || status == StatusReadyForImplementation)
+            {
+                ReviewedVersion = Version;
+                IsDirty = false;
+                LastUpdated = DateTime.UtcNow;
+            }
+            else if (status == StatusDraft || status == StatusCollecting)
+            {
+                // no special action
+            }
+            else if (status == StatusNeedsReview)
+            {
+                IsDirty = true;
+                LastUpdated = DateTime.UtcNow;
+            }
         }
 
         private void OnPackageContentChanged()
@@ -117,6 +182,14 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             Version++;
             IsDirty = true;
             LastUpdated = DateTime.UtcNow;
+
+            // If this change makes the Version newer than the reviewed version, mark as Needs Review
+            if (ReviewedVersion > 0 && Version > ReviewedVersion)
+            {
+                Status = StatusNeedsReview;
+                IsDirty = true;
+                LastUpdated = DateTime.UtcNow;
+            }
         }
     }
 

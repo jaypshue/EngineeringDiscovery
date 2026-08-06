@@ -89,16 +89,28 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        // Event raised when the conversation messages change. The WorkspaceViewModel subscribes and
+        // uses this to coordinate package lifecycle (mark Needs Review when appropriate).
+        public event Action? MessagesChanged;
+
         public WorkspaceConversationViewModel(IEngineeringPartner partner)
         {
             _instanceId = System.Threading.Interlocked.Increment(ref _instanceCounter);
             _partner = partner ?? throw new ArgumentNullException(nameof(partner));
             SendCommand = new AsyncRelayCommand(async () => await SendCurrentMessageAsync(), () => !IsSending && !string.IsNullOrWhiteSpace(Draft));
 
+            // Observe own Messages collection for changes and notify the host workspace via an event.
+            Messages.CollectionChanged += (s, e) => OnMessagesChanged();
+
             Debug.WriteLine($"[ED-EP7] WorkspaceConversationViewModel #{_instanceId} created");
         }
 
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        private void OnMessagesChanged()
+        {
+            MessagesChanged?.Invoke();
+        }
 
         public async Task InitializeAsync(string openingStatement = "")
         {
