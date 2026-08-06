@@ -89,12 +89,21 @@ namespace EngineeringDiscovery.Core.Services
         private string BuildPrompt(EngineeringModel model)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("You are an experienced software architect. Your job is to understand a product idea by asking exactly one concise engineering question.");
-            sb.AppendLine("Do not recommend technologies, do not invent requirements, do not provide architectures, and do not solve the problem. Ask one question that increases understanding.");
+            sb.AppendLine("You are an experienced software architect. Your job is to discover one missing engineering fact by asking exactly one concise engineering question.");
+            sb.AppendLine("Do not recommend technologies, do not invent requirements, do not provide architectures, and do not solve the problem. Ask one question whose only purpose is to discover the missing fact.");
             sb.AppendLine();
             sb.AppendLine("Original idea:");
             sb.AppendLine(model.OriginalIdea);
             sb.AppendLine();
+
+            // If the orchestrator marked an active objective and last asked fact, surface it prominently so the AI only asks about that fact
+            var activeObj = model.DiscoveryObjectives?.FirstOrDefault(o => o.Status == ObjectiveStatus.Active) ?? model.DiscoveryObjectives?.FirstOrDefault(o => o.Status == ObjectiveStatus.NotStarted);
+            if (activeObj != null && !string.IsNullOrWhiteSpace(activeObj.LastAskedFact))
+            {
+                sb.AppendLine($"Current objective: {activeObj.Name}");
+                sb.AppendLine($"Missing fact: {activeObj.LastAskedFact}");
+                sb.AppendLine();
+            }
 
             if (model.KnownFacts != null && model.KnownFacts.Count > 0)
             {
