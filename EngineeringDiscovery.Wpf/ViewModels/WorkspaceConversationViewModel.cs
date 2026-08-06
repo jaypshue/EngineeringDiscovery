@@ -45,6 +45,8 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
     public class WorkspaceConversationViewModel : INotifyPropertyChanged
     {
+        private static int _instanceCounter = 0;
+        private readonly int _instanceId;
         private readonly IEngineeringPartner _partner;
 
         public ObservableCollection<ConversationMessage> Messages { get; } = new ObservableCollection<ConversationMessage>();
@@ -89,10 +91,11 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public WorkspaceConversationViewModel(IEngineeringPartner partner)
         {
+            _instanceId = System.Threading.Interlocked.Increment(ref _instanceCounter);
             _partner = partner ?? throw new ArgumentNullException(nameof(partner));
             SendCommand = new AsyncRelayCommand(async () => await SendCurrentMessageAsync(), () => !IsSending && !string.IsNullOrWhiteSpace(Draft));
 
-            Debug.WriteLine("[ED-EP5.1] WorkspaceConversationViewModel created");
+            Debug.WriteLine($"[ED-EP7] WorkspaceConversationViewModel #{_instanceId} created");
         }
 
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -102,9 +105,10 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             if (_initialized) return;
             _initialized = true;
 
-            Debug.WriteLine("[ED-EP5.1] Conversation initialization started");
+            Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} started");
             try
             {
+                Debug.WriteLine($"[ED-EP7] Calling StartSessionAsync from VM #{_instanceId} with openingStatement='{openingStatement}'");
                 var model = await _partner.StartSessionAsync(openingStatement);
                 SessionId = model?.Id ?? Guid.Empty;
 
@@ -120,14 +124,14 @@ namespace EngineeringDiscovery.Wpf.ViewModels
                     Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "Good morning. What are we working on today?", TimestampUtc = DateTime.UtcNow });
                 }
 
-                Debug.WriteLine("[ED-EP5.1] Session created: " + SessionId);
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} Session created: {SessionId}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[ED-EP5.1] Conversation initialization failed: " + ex);
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} failed: " + ex);
                 Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "Hello — the Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns.", TimestampUtc = DateTime.UtcNow });
             }
-            Debug.WriteLine("[ED-EP5.1] Conversation initialization complete");
+            Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} complete");
         }
 
         public async Task SendCurrentMessageAsync()

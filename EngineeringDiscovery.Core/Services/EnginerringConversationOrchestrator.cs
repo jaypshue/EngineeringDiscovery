@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 using EngineeringDiscovery.Core.Domain.EngineeringModel;
 
 namespace EngineeringDiscovery.Core.Services
@@ -68,6 +69,8 @@ namespace EngineeringDiscovery.Core.Services
 
         public async Task<EngineeringQuestion?> GetNextQuestionAsync(Guid modelId)
         {
+            var callTs = DateTime.UtcNow;
+            Debug.WriteLine($"[ED-EP7] Orchestrator.GetNextQuestionAsync called for model {modelId} at {callTs:o}");
             var model = await _repository.GetAsync(modelId).ConfigureAwait(false);
             if (model == null) return null;
             // Determine discovery state
@@ -117,7 +120,9 @@ namespace EngineeringDiscovery.Core.Services
                 var augmented = CreateAugmentedModelWithFocusAndObjective(model, activeObjective);
 
                 // Ask AI for a single candidate question focused strictly on the active objective
+                Debug.WriteLine($"[ED-EP7] Orchestrator calling conversationService.GetNextQuestionAsync for model {modelId}");
                 var questionText = await _conversationService.GetNextQuestionAsync(augmented).ConfigureAwait(false);
+                Debug.WriteLine($"[ED-EP7] Orchestrator received question for model {modelId}: '{questionText ?? "(null)"}'");
                 if (!string.IsNullOrWhiteSpace(questionText))
                 {
                     // Reject if it repeats recently

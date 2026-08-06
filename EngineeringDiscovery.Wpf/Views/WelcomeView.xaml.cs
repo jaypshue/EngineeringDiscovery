@@ -8,8 +8,7 @@ namespace EngineeringDiscovery.Wpf.Views
         {
             InitializeComponent();
             // no-op change to force file update
-            CorporateButton.Click += CorporateButton_Click;
-            FreeRangeButton.Click += FreeRangeButton_Click;
+            // Click handlers are wired in XAML; avoid double-subscription from code-behind
         }
 
         private void CorporateButton_Click(object? sender, RoutedEventArgs e)
@@ -37,7 +36,7 @@ namespace EngineeringDiscovery.Wpf.Views
 
         private void FreeRangeButton_Click(object? sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("[ED-315] FreeRangeButton_Click invoked");
+            System.Diagnostics.Debug.WriteLine("[ED-EP7] FreeRangeButton_Click invoked");
             var win = Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
             if (win != null)
             {
@@ -46,7 +45,7 @@ namespace EngineeringDiscovery.Wpf.Views
                 {
                     // ED-3: Replace startup Product Discovery navigation with the Engineering Workspace
                     host.Content = new EngineeringWorkspace();
-                    System.Diagnostics.Debug.WriteLine("[ED-315] Navigated to EngineeringWorkspace (replacing ProductDiscoveryPlaceholder)");
+                    System.Diagnostics.Debug.WriteLine("[ED-EP7] Navigated to EngineeringWorkspace (replacing ProductDiscoveryPlaceholder)");
                 }
                 else
                 {

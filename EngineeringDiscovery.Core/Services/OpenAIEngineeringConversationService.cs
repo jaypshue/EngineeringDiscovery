@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using EngineeringDiscovery.Core.Domain.EngineeringModel;
+using System.Diagnostics;
 
 namespace EngineeringDiscovery.Core.Services
 {
@@ -25,6 +26,13 @@ namespace EngineeringDiscovery.Core.Services
 
         public async Task<string> GetNextQuestionAsync(EngineeringModel model)
         {
+            // Diagnostic: log stack trace whenever the OpenAI conversation client is invoked
+            try
+            {
+                Debug.WriteLine("[ED-EP7A] OpenAIEngineeringConversationService.GetNextQuestionAsync invoked. StackTrace:\n" + Environment.StackTrace);
+            }
+            catch { }
+
             if (model == null) throw new ArgumentNullException(nameof(model));
 
             // Build a concise prompt per guidance. The model should return a single concise question.

@@ -20,6 +20,7 @@ namespace EngineeringDiscovery.Wpf
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[ED-EP7] MainWindow loaded - setting HostContent to WelcomeView");
                     HostContent.Content = new Views.WelcomeView();
                 }
                 catch { }
