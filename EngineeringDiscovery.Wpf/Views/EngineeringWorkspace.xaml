@@ -25,7 +25,43 @@
             <StackPanel>
                 <TextBlock Text="Conversation" FontSize="20" FontWeight="Bold" Margin="0,0,0,12" />
                 <Border x:Name="PART_Conversation" Background="White" CornerRadius="4" Padding="12" BorderBrush="#FFDDDFE3" BorderThickness="1">
-                    <TextBlock Text="Engineering Partner conversation will appear here and remain visible throughout the session." TextWrapping="Wrap" />
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- conversation history grows -->
+                            <RowDefinition Height="*" />
+                            <!-- fixed input area -->
+                            <RowDefinition Height="56" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Conversation history: professional transcript style -->
+                        <ScrollViewer Grid.Row="0" x:Name="ConversationScroll" VerticalScrollBarVisibility="Auto" Padding="4">
+                        <ItemsControl x:Name="ConversationItems" ItemsSource="{Binding Messages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,6,0,6">
+                                            <TextBlock Text="{Binding Speaker}" FontWeight="SemiBold" Foreground="#FF1F2937" />
+                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="#FF111827" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Fixed input area docked to bottom -->
+                        <Border Grid.Row="1" Background="#FFF" Padding="10" BorderThickness="0,1,0,0" BorderBrush="#FFE6E9EE">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="100" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="InputBox" Grid.Column="0" Height="36" VerticalContentAlignment="Center" AcceptsReturn="False" TextWrapping="NoWrap" HorizontalAlignment="Stretch"
+                                         Text="{Binding Draft, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+                                <Button x:Name="SendButton" Grid.Column="1" Content="Send" Width="80" Height="36" Margin="12,0,0,0" HorizontalAlignment="Left"
+                                        Command="{Binding SendCommand}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
             </StackPanel>
         </Border>
