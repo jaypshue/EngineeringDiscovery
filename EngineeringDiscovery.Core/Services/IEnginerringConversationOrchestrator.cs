@@ -11,7 +11,7 @@ namespace EngineeringDiscovery.Core.Services
 
         Task<EngineeringModel?> GetModelAsync(Guid id);
 
-        Task<EngineeringQuestion?> GetNextQuestionAsync(Guid modelId);
+        Task<EngineeringQuestion?> RespondAsync(Guid modelId);
 
         Task SubmitAnswerAsync(Guid modelId, Guid questionId, string answer);
 

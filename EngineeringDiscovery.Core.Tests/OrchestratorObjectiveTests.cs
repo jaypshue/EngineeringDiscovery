@@ -37,7 +37,7 @@ namespace EngineeringDiscovery.Core.Tests
             await repo.UpdateAsync(model);
 
             // Request next question - should move to Target Users objective
-            var q = await orchestrator.GetNextQuestionAsync(model.Id);
+            var q = await orchestrator.RespondAsync(model.Id);
             Assert.NotNull(q);
             Assert.Equal("Target Users", q.Objective);
         }
@@ -55,7 +55,7 @@ namespace EngineeringDiscovery.Core.Tests
             await repo.UpdateAsync(model);
 
             // Next question should not target Target Users
-            var q = await orchestrator.GetNextQuestionAsync(model.Id);
+            var q = await orchestrator.RespondAsync(model.Id);
             Assert.NotNull(q);
             Assert.NotEqual("Target Users", q.Objective);
         }
@@ -70,7 +70,7 @@ namespace EngineeringDiscovery.Core.Tests
             foreach (var o in model.DiscoveryObjectives) o.Status = ObjectiveStatus.Complete;
             await repo.UpdateAsync(model);
 
-            var q = await orchestrator.GetNextQuestionAsync(model.Id);
+            var q = await orchestrator.RespondAsync(model.Id);
             Assert.Null(q);
 
             var ready = await orchestrator.IsDiscoveryReadyAsync(model.Id);
@@ -88,7 +88,7 @@ namespace EngineeringDiscovery.Core.Tests
             foreach (var o in model.DiscoveryObjectives.Where(o => o.Type == ObjectiveType.Product)) o.Status = ObjectiveStatus.Complete;
             await repo.UpdateAsync(model);
 
-            var q1 = await orchestrator.GetNextQuestionAsync(model.Id);
+            var q1 = await orchestrator.RespondAsync(model.Id);
             // After product objectives done, orchestrator may pick an engineering objective; for this test we assume none are required and discovery completes
             // If a question is returned, consider the model not complete yet
             if (q1 != null)

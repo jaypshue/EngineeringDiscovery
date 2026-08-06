@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Windows;
 using EngineeringDiscovery.Core.Domain.EngineeringModel;
 
 namespace EngineeringDiscovery.Wpf.Views
@@ -16,7 +17,6 @@ namespace EngineeringDiscovery.Wpf.Views
         {
             InitializeComponent();
             _modelId = modelId;
-
             // Resolve orchestrator from the host service provider exposed on App
             _orchestrator = EngineeringDiscovery.Wpf.App.ServiceProvider?.GetService(typeof(EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator)) as EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator;
 
@@ -41,27 +41,28 @@ namespace EngineeringDiscovery.Wpf.Views
                 IdeaTextBlock.Text = model?.OriginalIdea ?? string.Empty;
             }));
 
-            await LoadNextQuestionAsync().ConfigureAwait(false);
+            await LoadNextResponseAsync().ConfigureAwait(false);
         }
 
-        private async Task LoadNextQuestionAsync()
+        private async Task LoadNextResponseAsync()
         {
             if (_orchestrator == null) return;
 
-            var next = await _orchestrator.GetNextQuestionAsync(_modelId).ConfigureAwait(false);
+            var next = await _orchestrator.RespondAsync(_modelId).ConfigureAwait(false);
             _currentQuestion = next;
+            var response = next?.Question ?? string.Empty;
 
             await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (_currentQuestion != null)
+                if (_currentQuestion != null && !string.IsNullOrWhiteSpace(response))
                 {
-                    QuestionTextBlock.Text = _currentQuestion.Question;
+                    QuestionTextBlock.Text = response;
                     AnswerTextBox.Text = string.Empty;
                     PreviousButton.IsEnabled = true; // allow returning to discovery
                 }
                 else
                 {
-                    QuestionTextBlock.Text = "(no more questions)";
+                    QuestionTextBlock.Text = "(no more responses)";
                 }
             }));
         }
@@ -73,38 +74,10 @@ namespace EngineeringDiscovery.Wpf.Views
 
             var answer = AnswerTextBox.Text ?? string.Empty;
             await _orchestrator.SubmitAnswerAsync(_modelId, _currentQuestion.Id, answer).ConfigureAwait(false);
-
-            // Request next question
-            var next = await _orchestrator.GetNextQuestionAsync(_modelId).ConfigureAwait(false);
-            if (next != null)
-            {
-                _currentQuestion = next;
-                await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    QuestionTextBlock.Text = _currentQuestion.Question;
-                    AnswerTextBox.Text = string.Empty;
-                }));
-            }
-            else
-            {
-                // Discovery complete — navigate to ProductUnderstandingView using the model
-                var model = await _orchestrator.GetModelAsync(_modelId).ConfigureAwait(false);
-                var answers = model?.Conversation.Where(c => c.Speaker == "Engineer").Select(c => c.Message).ToList()
-                              ?? new List<string>();
-
-                var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
-                if (win != null)
-                {
-                    await System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        // Discovery completes: show ProductUnderstandingView, but do not route back into Product Discovery startup path
-                        win.HostContent.Content = new ProductUnderstandingView(model?.OriginalIdea ?? string.Empty, answers);
-                    }));
-                }
-            }
+            await LoadNextResponseAsync().ConfigureAwait(false);
         }
 
-        private void PreviousButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void PreviousButton_Click(object sender, RoutedEventArgs e)
         {
             // Return to initial discovery screen
             var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;

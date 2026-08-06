@@ -6,8 +6,9 @@ namespace EngineeringDiscovery.Core.Services
     public interface IEngineeringConversationService
     {
         /// <summary>
-        /// Given the current EngineeringModel, returns exactly one next engineering question as plain text.
+        /// Given the current EngineeringModel, generates the Engineering Partner's next conversational response as plain text.
+        /// The response may be a question, clarification, summary, recommendation, or other conversational reply.
         /// </summary>
-        Task<string> GetNextQuestionAsync(EngineeringModel model);
+        Task<string> RespondAsync(EngineeringModel model);
     }
 }

@@ -52,10 +52,10 @@ namespace EngineeringDiscovery.Core.Tests
             await repo.UpdateAsync(model);
 
             // Now get next question; orchestrator should not ask for PrimaryUser again
-            var next = await orchestrator.GetNextQuestionAsync(model.Id);
-            if (next != null)
+            var response = await orchestrator.RespondAsync(model.Id);
+            if (response != null)
             {
-                Assert.False(next.Question.Contains("PrimaryUser", StringComparison.OrdinalIgnoreCase));
+                Assert.False(response.Question.Contains("PrimaryUser", StringComparison.OrdinalIgnoreCase));
             }
         }
 

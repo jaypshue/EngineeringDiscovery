@@ -67,10 +67,10 @@ namespace EngineeringDiscovery.Core.Services
             return _repository.GetAsync(id);
         }
 
-        public async Task<EngineeringQuestion?> GetNextQuestionAsync(Guid modelId)
+        public async Task<EngineeringQuestion?> RespondAsync(Guid modelId)
         {
             var callTs = DateTime.UtcNow;
-            Debug.WriteLine($"[ED-EP7] Orchestrator.GetNextQuestionAsync called for model {modelId} at {callTs:o}");
+            Debug.WriteLine($"[ED-EP7] Orchestrator.RespondAsync called for model {modelId} at {callTs:o}");
             var model = await _repository.GetAsync(modelId).ConfigureAwait(false);
             if (model == null) return null;
             // Determine discovery state
@@ -120,25 +120,25 @@ namespace EngineeringDiscovery.Core.Services
                 var augmented = CreateAugmentedModelWithFocusAndObjective(model, activeObjective);
 
                 // Ask AI for a single candidate question focused strictly on the active objective
-                Debug.WriteLine($"[ED-EP7] Orchestrator calling conversationService.GetNextQuestionAsync for model {modelId}");
-                var questionText = await _conversationService.GetNextQuestionAsync(augmented).ConfigureAwait(false);
-                Debug.WriteLine($"[ED-EP7] Orchestrator received question for model {modelId}: '{questionText ?? "(null)"}'");
-                if (!string.IsNullOrWhiteSpace(questionText))
+                Debug.WriteLine($"[ED-EP7] Orchestrator calling conversationService.RespondAsync for model {modelId}");
+                var responseText = await _conversationService.RespondAsync(augmented).ConfigureAwait(false);
+                Debug.WriteLine($"[ED-EP7] Orchestrator received response for model {modelId}: '{responseText ?? "(null)"}'");
+                if (!string.IsNullOrWhiteSpace(responseText))
                 {
                     // Reject if it repeats recently
-                    if (IsRecentQuestion(model, questionText))
+                    if (IsRecentResponse(model, responseText))
                     {
-                        model.Conversation.Add(new ConversationEntry { Speaker = "Orchestrator", Message = $"Rejected AI question as repetitive: {questionText}", TimestampUtc = DateTime.UtcNow });
+                        model.Conversation.Add(new ConversationEntry { Speaker = "Orchestrator", Message = $"Rejected AI response as repetitive: {responseText}", TimestampUtc = DateTime.UtcNow });
                     }
                     else
                     {
                         // Accept and construct an EngineeringQuestion associated with the active objective
-                        var eq = new EngineeringQuestion { Question = questionText, Reason = "AI generated", Priority = int.MaxValue, Objective = activeObjective.Name, TargetCategory = string.Empty };
+                        var eq = new EngineeringQuestion { Question = responseText, Reason = "AI generated", Priority = int.MaxValue, Objective = activeObjective.Name, TargetCategory = string.Empty };
 
                         // Mark objective active and set current focus
                         activeObjective.Status = ObjectiveStatus.Active;
                         model.CurrentFocus = activeObjective.Name;
-                        model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = questionText, TimestampUtc = DateTime.UtcNow });
+                        model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = responseText, TimestampUtc = DateTime.UtcNow });
                         await _repository.UpdateAsync(model).ConfigureAwait(false);
                         return eq;
                     }
@@ -167,16 +167,16 @@ namespace EngineeringDiscovery.Core.Services
             return fallback;
         }
 
-        private static (string objective, string targetCategory) InferObjectiveAndCategory(string questionText, EngineeringModel model, string? preferredCategory)
+        private static (string objective, string targetCategory) InferObjectiveAndCategory(string text, EngineeringModel model, string? preferredCategory)
         {
-            if (string.IsNullOrWhiteSpace(questionText)) return (string.Empty, string.Empty);
-            var s = questionText.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(text)) return (string.Empty, string.Empty);
+            var s = text.ToLowerInvariant();
 
             // Look for explicit "objective:" or "objective -" markers
             var idx = s.IndexOf("objective:");
             if (idx >= 0)
             {
-                var part = questionText.Substring(idx + "objective:".Length).Trim();
+                var part = text.Substring(idx + "objective:".Length).Trim();
                 var upto = part.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
                 return (upto, preferredCategory ?? string.Empty);
             }
@@ -221,11 +221,11 @@ namespace EngineeringDiscovery.Core.Services
             return cat.Status == DiscoveryStatus.Complete || cat.Confidence >= 85.0;
         }
 
-        private static bool IsRecentQuestion(EngineeringModel model, string questionText)
+        private static bool IsRecentResponse(EngineeringModel model, string text)
         {
             if (model == null) return false;
             var recent = model.Conversation?.Where(c => c.Speaker == "EngineOS" || c.Speaker == "Orchestrator").OrderByDescending(c => c.TimestampUtc).Take(8) ?? Enumerable.Empty<ConversationEntry>();
-            var lower = questionText?.ToLowerInvariant() ?? string.Empty;
+            var lower = text?.ToLowerInvariant() ?? string.Empty;
             foreach (var r in recent)
             {
                 if (string.IsNullOrWhiteSpace(r.Message)) continue;

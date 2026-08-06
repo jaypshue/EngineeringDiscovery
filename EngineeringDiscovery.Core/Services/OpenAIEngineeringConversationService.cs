@@ -24,12 +24,12 @@ namespace EngineeringDiscovery.Core.Services
             }
         }
 
-        public async Task<string> GetNextQuestionAsync(EngineeringModel model)
+        public async Task<string> RespondAsync(EngineeringModel model)
         {
             // Diagnostic: log stack trace whenever the OpenAI conversation client is invoked
             try
             {
-                Debug.WriteLine("[ED-EP7A] OpenAIEngineeringConversationService.GetNextQuestionAsync invoked. StackTrace:\n" + Environment.StackTrace);
+                Debug.WriteLine("[ED-EP7A] OpenAIEngineeringConversationService.RespondAsync invoked. StackTrace:\n" + Environment.StackTrace);
             }
             catch { }
 
@@ -97,8 +97,8 @@ namespace EngineeringDiscovery.Core.Services
         private string BuildPrompt(EngineeringModel model)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("You are an experienced software architect. Your job is to discover one missing engineering fact by asking exactly one concise engineering question.");
-            sb.AppendLine("Do not recommend technologies, do not invent requirements, do not provide architectures, and do not solve the problem. Ask one question whose only purpose is to discover the missing fact.");
+            sb.AppendLine("You are an experienced software architect assisting an engineer. Your role is to provide the most helpful engineering response for the current context.");
+            sb.AppendLine("Do not default to asking a question. Provide answers, recommendations, clarifications, summaries, requests for evidence, or follow-up questions only when necessary.");
             sb.AppendLine();
             sb.AppendLine("Original idea:");
             sb.AppendLine(model.OriginalIdea);
@@ -143,18 +143,23 @@ namespace EngineeringDiscovery.Core.Services
                 sb.AppendLine();
             }
 
-            sb.AppendLine("Ask exactly one concise engineering question (one sentence). Respond with the question only.");
+            sb.AppendLine("Produce the most helpful engineering response for the current context.");
+            sb.AppendLine("A response may be an answer, recommendation, clarification, summary, request for evidence, or a follow-up question if additional information is required.");
+            sb.AppendLine("Prefer actionable engineering insight and use repository or model evidence whenever possible. Do not default to asking a question.");
+            sb.AppendLine("Do not invent requirements or jump ahead. Prefer responses that reduce uncertainty or provide clear guidance based on available evidence.");
             return sb.ToString();
         }
 
         private string BuildSystemPrompt()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("You are EngineOS, an experienced engineering lead performing product discovery.");
-            sb.AppendLine("Your role is to help an engineer better understand their product idea by asking exactly one concise engineering question.");
-            sb.AppendLine("Always ask only one question. Do not provide designs, recommendations, implementation details, code, or architectures.");
-            sb.AppendLine("Do not invent requirements or jump ahead. The question should reduce uncertainty about the product and be the single most valuable next question.");
-            sb.AppendLine("Respond with the question only, as a single sentence. Do not add commentary, lists, or bullets.");
+            sb.AppendLine("You are the Engineering Partner (EngineOS), an experienced engineering copilot.");
+            sb.AppendLine("Your responsibility is to help the engineer understand the system and provide useful engineering guidance.");
+            sb.AppendLine("Respond naturally based on the conversation and available repository evidence. Responses may include answers, recommendations, clarifications, summaries, requests for evidence, or follow-up questions when truly necessary.");
+            sb.AppendLine("Do not force the interaction into a sequential questionnaire or default to asking questions. Prefer providing useful engineering insight over simply gathering more information.");
+            sb.AppendLine("Use repository evidence and the model's working memory when forming responses.");
+            sb.AppendLine("Ask follow-up questions only when additional information is necessary to provide a useful engineering response.");
+            sb.AppendLine("Prefer concise, actionable guidance. Include examples or suggested next steps when helpful, but avoid speculative requirements.");
             return sb.ToString();
         }
     }

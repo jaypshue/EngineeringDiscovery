@@ -33,23 +33,11 @@ namespace EngineeringDiscovery.Core.Services
             await _repository.CreateAsync(model).ConfigureAwait(false);
             Debug.WriteLine($"[ED-EP7] StartSessionAsync: model created with Id={model.Id}");
 
-            // If a conversation service is available, request an initial partner reply and record it
-            if (_conversationService != null)
-            {
-                try
-                {
-                    var reply = await _conversationService.GetNextQuestionAsync(model).ConfigureAwait(false);
-                    if (!string.IsNullOrWhiteSpace(reply))
-                    {
-                        model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = reply, TimestampUtc = DateTime.UtcNow });
-                        await _repository.UpdateAsync(model).ConfigureAwait(false);
-                    }
-                }
-                catch
-                {
-                    // Swallow errors from the external service to keep startup deterministic without AI
-                }
-            }
+            // At startup, do NOT invoke the external conversation service. Seed a deterministic greeting so startup is deterministic
+            // and does not trigger Product Discovery questions automatically.
+            var greeting = "Hello — I'm EngineOS. Tell me about your idea and I'll help you explore it.";
+            model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = greeting, TimestampUtc = DateTime.UtcNow });
+            await _repository.UpdateAsync(model).ConfigureAwait(false);
 
             return model;
         }
@@ -73,7 +61,7 @@ namespace EngineeringDiscovery.Core.Services
                 try
                 {
                     Debug.WriteLine($"[ED-EP6] Prompt sent to conversation service for session {sessionId}");
-                    var reply = await _conversationService.GetNextQuestionAsync(model).ConfigureAwait(false);
+                    var reply = await _conversationService.RespondAsync(model).ConfigureAwait(false);
                     Debug.WriteLine($"[ED-EP6] LLM response received for session {sessionId}: {(reply ?? "(null)")}");
 
                     // Ensure the partner always returns a meaningful response
