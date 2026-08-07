@@ -110,6 +110,8 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         private void OnMessagesChanged()
         {
             MessagesChanged?.Invoke();
+            // Publish a ConversationUpdated engineering event for the engine to observe
+            EngineeringDiscovery.Wpf.Events.EngineeringEventBus.Publish(new EngineeringDiscovery.Wpf.Events.EngineeringEvent(EngineeringDiscovery.Wpf.Events.EngineeringEventType.ConversationUpdated, null));
         }
 
         public async Task InitializeAsync(string openingStatement = "")

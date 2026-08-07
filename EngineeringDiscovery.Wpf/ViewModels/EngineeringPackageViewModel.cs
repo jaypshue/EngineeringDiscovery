@@ -144,6 +144,8 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             IsDirty = false;
             Status = StatusReadyForImplementation;
             LastUpdated = DateTime.UtcNow;
+            // Publish an event so the engine can observe approvals
+            EngineeringDiscovery.Wpf.Events.EngineeringEventBus.Publish(new EngineeringDiscovery.Wpf.Events.EngineeringEvent(EngineeringDiscovery.Wpf.Events.EngineeringEventType.PackageApproved, null));
         }
 
         public void MarkImplementationPending()

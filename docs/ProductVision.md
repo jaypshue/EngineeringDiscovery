@@ -72,6 +72,20 @@ Its objective is to help engineers make consistently better engineering decision
 
 ---
 
+# Engineering Events
+
+Engineering progresses through observable events.
+
+Every meaningful engineering activity produces an Engineering Event.
+
+The Engine evaluates those events and continuously maintains Engineering State.
+
+The workspace is a projection of Engineering State.
+
+Engineering Packages, Recommendations, and Investigations emerge from Engineering State rather than being managed independently.
+
+---
+
 # Engineering Package
 
 The Engineering Package is the canonical implementation artifact produced from an engineering investigation.

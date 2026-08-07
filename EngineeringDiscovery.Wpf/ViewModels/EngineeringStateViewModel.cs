@@ -20,6 +20,9 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         public string CurrentReadiness { get; private set; } = "Not Ready";
         public string CurrentRecommendation { get; private set; } = string.Empty;
 
+        // Evidence collection owned by Engineering State
+        public System.Collections.ObjectModel.ObservableCollection<EngineeringDiscovery.Wpf.Models.EngineeringEvidence> Evidence { get; } = new System.Collections.ObjectModel.ObservableCollection<EngineeringDiscovery.Wpf.Models.EngineeringEvidence>();
+
         public string PrimaryActionText { get; private set; } = string.Empty;
         public ICommand? PrimaryActionCommand { get; private set; }
 
@@ -35,13 +38,66 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             Conversation.MessagesChanged += OnArtifactsChanged;
             Package.PropertyChanged += (s, e) => OnArtifactsChanged();
 
+            // Initialize evidence with placeholder categories (missing vs present)
+            SeedInitialEvidence();
+
             // Initial evaluation of engineering state
             EvaluateEngineeringState();
         }
 
+        private void SeedInitialEvidence()
+        {
+            // Seed placeholder evidence entries; the Engine will update these when events occur
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Repository, Title = "Repository", Status = "Present" });
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Conversation, Title = "Conversation", Status = "Present" });
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Architecture, Title = "Architecture", Status = "Partial" });
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Build, Title = "Build", Status = "Missing" });
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Tests, Title = "Tests", Status = "Missing" });
+            Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = EngineeringDiscovery.Wpf.Models.EvidenceCategory.Screenshots, Title = "Screenshots", Status = "Missing" });
+        }
+
         private void OnArtifactsChanged()
         {
-            ComputeState();
+            EvaluateEngineeringState();
+        }
+
+        private void OnEngineeringEvent(EngineeringDiscovery.Wpf.Events.EngineeringEvent evt)
+        {
+            // When an engineering event is observed, re-evaluate engineering state
+            // Convert certain events into evidence updates
+            if (evt.Type == EngineeringDiscovery.Wpf.Events.EngineeringEventType.ConversationUpdated)
+            {
+                UpsertEvidence(EngineeringDiscovery.Wpf.Models.EvidenceCategory.Conversation, "Conversation", "Conversation updated", "Present", evt.TimestampUtc);
+            }
+            else if (evt.Type == EngineeringDiscovery.Wpf.Events.EngineeringEventType.PackageApproved)
+            {
+                UpsertEvidence(EngineeringDiscovery.Wpf.Models.EvidenceCategory.PackageReview, "Package Review", "Package approved", "Present", evt.TimestampUtc);
+            }
+
+            EvaluateEngineeringState();
+        }
+
+        private void UpsertEvidence(EngineeringDiscovery.Wpf.Models.EvidenceCategory category, string title, string description, string status, DateTime timestamp)
+        {
+            // Try to find existing evidence by category and title
+            var existing = System.Linq.Enumerable.FirstOrDefault(Evidence, e => e.Category == category && e.Title == title);
+            if (existing != null)
+            {
+                existing.Description = description;
+                existing.Status = status;
+                existing.TimestampUtc = timestamp;
+                // Notify collection changed by replacing item (simple approach)
+                var idx = Evidence.IndexOf(existing);
+                if (idx >= 0)
+                {
+                    Evidence[idx] = existing;
+                }
+            }
+            else
+            {
+                Evidence.Add(new EngineeringDiscovery.Wpf.Models.EngineeringEvidence { Category = category, Title = title, Description = description, Status = status, TimestampUtc = timestamp });
+            }
+            OnPropertyChanged(nameof(Evidence));
         }
 
         private void EvaluateEngineeringState()

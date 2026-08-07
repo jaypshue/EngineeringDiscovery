@@ -114,6 +114,19 @@
 
                     <!-- Left: artifact summary -->
                     <StackPanel Grid.Column="0">
+                        <!-- Engineering Evidence summary -->
+                        <TextBlock Text="Engineering Evidence" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding EngineeringState.Evidence}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource SecondaryTextBrush}" Width="80" />
+                                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource PrimaryTextBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <TextBlock Text="{Binding Package.Purpose}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" />
 
                         <StackPanel Margin="0,12,0,0">
