@@ -127,6 +127,9 @@
     private IJSRuntime JS { get; set; } = null!;
 
     [Inject]
+    private NavigationManager Nav { get; set; } = null!;
+
+    [Inject]
     private EngineeringDiscovery.Web.Services.IRepositorySelectionService RepoSelection { get; set; } = null!;
 
     private Action? _repoSelectionChangedHandler;
@@ -390,6 +393,16 @@
             // Persist investigation into WorkspaceState directly
             WorkspaceState.SetInvestigation(investigation);
             // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
+
+            // After importing a repository, begin an engineering session by navigating to /app
+            // with the imported path so the ConversationHost can initialize a session and ingest
+            // a RepoAttached observation to establish the active engineering context.
+            try
+            {
+                var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);
+                Nav.NavigateTo($"/app?importedPath={encoded}", true);
+            }
+            catch { }
         }
         catch (Exception ex)
         {

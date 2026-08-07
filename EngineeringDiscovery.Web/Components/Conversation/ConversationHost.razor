@@ -3,6 +3,8 @@
 @using EngineeringDiscovery.Core.Observations
 @inject IEngineeringPartner Partner
 @inject IObservationService ObservationService
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.WebUtilities
 
 <div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto">
     <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;background:var(--surface)">
@@ -62,6 +64,31 @@
             {
                 Messages.Add(("EngineOS", "Good morning. What are we working on today?"));
             }
+
+            // If the page was loaded with an importedPath query parameter, ingest a RepoAttached observation
+            try
+            {
+                var uri = new Uri(Nav.Uri);
+                var qs = QueryHelpers.ParseQuery(uri.Query);
+                if (qs.TryGetValue("importedPath", out var p) && !string.IsNullOrWhiteSpace(p))
+                {
+                    var path = System.Uri.UnescapeDataString(p.ToString());
+                    // Ensure session exists
+                    if (SessionId == null || SessionId == Guid.Empty)
+                    {
+                        var m2 = await Partner.StartSessionAsync(string.Empty);
+                        SessionId = m2?.Id;
+                    }
+
+                    var obs = new Observation { Type = "RepoAttached", Source = "RepositoryImporter", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = path }) };
+                    await ObservationService.IngestAsync(obs);
+
+                    // Prompt the partner to summarize the imported repository
+                    var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, $"Repository imported: {path}");
+                    if (!string.IsNullOrWhiteSpace(reply)) Messages.Add(("EngineOS", reply));
+                }
+            }
+            catch { }
 
             // Load any existing recommendation from EngineeringModel
             await LoadRecommendationAsync();

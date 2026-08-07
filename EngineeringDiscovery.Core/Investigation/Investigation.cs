@@ -6,6 +6,12 @@ namespace EngineeringDiscovery.Core.Domain.Investigation
 {
     public class Investigation
     {
+        // Parameterless constructor required for JSON deserialization and some tooling.
+        // It delegates to the internal constructor to ensure collections and defaults are initialized.
+        public Investigation() : this(Guid.NewGuid(), string.Empty)
+        {
+        }
+
         private Investigation(Guid id, string repositoryPath)
         {
             Id = id;
