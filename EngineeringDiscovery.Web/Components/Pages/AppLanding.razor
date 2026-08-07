@@ -1,16 +1,56 @@
 @page "/app"
 @layout Layout.AppLayout
+@using EngineeringDiscovery.Web.Components.Conversation
 
 <PageTitle>Engineering Workspace</PageTitle>
 
-<div class="app-landing">
-    <h1>Engineering Workspace</h1>
-    <p class="muted">Conversation-first. Start by telling the Engineering Partner what you're working on.</p>
+<div class="app-landing" style="max-width:1100px;margin:0 auto;padding:20px">
+    <div style="text-align:center;margin-bottom:18px">
+        <h1 style="margin:0;font-size:2rem">Build software that rivals the best engineering teams.</h1>
+        <p class="muted" style="margin:10px 0 18px 0;max-width:800px;margin-left:auto;margin-right:auto">EngineOS is your Engineering Partner. Whether you're starting with an idea or an existing repository, EngineOS helps you understand, design, and build software through an ongoing engineering conversation.</p>
 
-    <ConversationHost />
+        <div style="display:flex;justify-content:center;gap:12px;margin-bottom:18px">
+            <button class="btn btn-primary btn-lg" @onclick="StartBuilding">Start Building</button>
+            <a class="btn btn-outline btn-lg" href="/repository">Import Repository</a>
+        </div>
+
+        <div style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:480px;display:flex;flex-direction:column;max-width:900px;margin:0 auto">
+            <ConversationHost @ref="_conversationHost" />
+        </div>
+    </div>
 </div>
 
 @code {
     // Keep the application surface intentionally minimal. ConversationHost is the primary
     // interactive surface and will evolve as the session develops.
+}
+
+@code {
+    [Inject]
+    private NavigationManager Nav { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Core.Services.IEngineeringPartner EngineeringPartner { get; set; } = null!;
+
+    private EngineeringDiscovery.Web.Components.Conversation.ConversationHost? _conversationHost;
+
+    private async Task StartBuilding()
+    {
+        // Ensure a conversation session exists and focus the composer with an inviting prompt
+        try
+        {
+            var model = await EngineeringPartner.StartSessionAsync(string.Empty);
+            if (model != null)
+            {
+                // Give the composer a friendly placeholder
+                if (_conversationHost != null)
+                {
+                    await _conversationHost.SetComposerPlaceholderAsync("What would you like to build today?");
+                    await Task.Delay(50);
+                    await _conversationHost.FocusComposerAsync();
+                }
+            }
+        }
+        catch { }
+    }
 }

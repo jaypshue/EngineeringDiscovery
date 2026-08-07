@@ -14,9 +14,23 @@
             </div>
         }
     </div>
+    @if (!string.IsNullOrWhiteSpace(CurrentRecommendation))
+    {
+        <div class="recommendation" style="margin:12px 0;padding:10px;border-left:4px solid #2b8aef;background:rgba(43,138,239,0.06);border-radius:4px">
+            <div style="font-weight:700">Recommendation</div>
+            <div style="margin-top:6px">@CurrentRecommendation</div>
+            @if (!string.IsNullOrWhiteSpace(CurrentCoordination))
+            {
+                <div style="margin-top:8px;font-size:0.9rem;color:var(--muted)">Coordination: @CurrentCoordination</div>
+            }
+            <div style="margin-top:8px;display:flex;gap:8px">
+                <button class="btn btn-sm btn-outline" @onclick="AcknowledgeRecommendationAsync">Acknowledge</button>
+            </div>
+        </div>
+    }
 
-    <div class="composer" style="display:flex;gap:8px;align-items:center">
-        <input style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)" @bind="Draft" @bind:event="oninput" placeholder="Describe what you're working on..." @onkeydown="HandleKeyDown" />
+    <div class="composer" style="display:flex;gap:8px;align-items:flex-end">
+        <textarea @ref="_composerRef" rows="3" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);resize:vertical" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
         <button class="btn btn-primary" @onclick="SendAsync" disabled="@IsSending || string.IsNullOrWhiteSpace(Draft)">Send</button>
     </div>
 </div>
@@ -26,6 +40,10 @@
     private string Draft { get; set; } = string.Empty;
     private bool IsSending { get; set; }
     private Guid? SessionId { get; set; }
+    private string CurrentRecommendation { get; set; } = string.Empty;
+    private string CurrentCoordination { get; set; } = string.Empty;
+    private ElementReference _composerRef;
+    private string _composerPlaceholder = "Describe what you're working on... (Enter to send, Shift+Enter for newline)";
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,11 +62,31 @@
             {
                 Messages.Add(("EngineOS", "Good morning. What are we working on today?"));
             }
+
+            // Load any existing recommendation from EngineeringModel
+            await LoadRecommendationAsync();
         }
         catch
         {
             Messages.Add(("EngineOS", "The Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns."));
         }
+    }
+
+    // Public methods for parent to control composer focus and placeholder
+    public async Task FocusComposerAsync()
+    {
+        try
+        {
+            await _composerRef.FocusAsync();
+        }
+        catch { }
+    }
+
+    public Task SetComposerPlaceholderAsync(string placeholder)
+    {
+        _composerPlaceholder = placeholder ?? string.Empty;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task SendAsync()
@@ -72,13 +110,15 @@
             var obs = new Observation { Type = "UserMessage", Source = "User", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { text = text }) };
             await ObservationService.IngestAsync(obs);
 
-            // Wait for the ObservationEngine to update state and then ask the partner to respond
             // Partner will read updated EngineeringModel and render a reply
             var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
             if (!string.IsNullOrWhiteSpace(reply))
             {
                 Messages.Add(("EngineOS", reply));
             }
+
+            // Refresh recommendation display from updated model
+            await LoadRecommendationAsync();
         }
         catch (Exception ex)
         {
@@ -93,10 +133,52 @@
 
     private Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        // Enter sends, Shift+Enter creates a newline
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
             _ = SendAsync();
         }
         return Task.CompletedTask;
+    }
+
+    private async Task LoadRecommendationAsync()
+    {
+        CurrentRecommendation = string.Empty;
+        CurrentCoordination = string.Empty;
+        if (SessionId == null || SessionId == Guid.Empty) return;
+        try
+        {
+            var model = await Partner.GetWorkingMemoryAsync(SessionId ?? Guid.Empty);
+            if (model != null && model.KnownFacts != null)
+            {
+                var rec = model.KnownFacts.LastOrDefault(f => string.Equals(f.Key, "LastRecommendation", StringComparison.OrdinalIgnoreCase));
+                if (rec != null) CurrentRecommendation = rec.Value ?? string.Empty;
+                var coord = model.KnownFacts.LastOrDefault(f => string.Equals(f.Key, "Coordination", StringComparison.OrdinalIgnoreCase));
+                if (coord != null) CurrentCoordination = coord.Value ?? string.Empty;
+            }
+        }
+        catch { }
+    }
+
+    private async Task AcknowledgeRecommendationAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentRecommendation) || SessionId == null) return;
+        try
+        {
+            var decision = new { summary = CurrentRecommendation, timestamp = DateTime.UtcNow };
+            var obs = new Observation
+            {
+                Type = "DecisionAccepted",
+                Source = "User",
+                SessionId = SessionId,
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(decision)
+            };
+            await ObservationService.IngestAsync(obs);
+
+            // Reflect acknowledgement in the conversation
+            Messages.Add(("You", "Acknowledged recommendation: " + CurrentRecommendation));
+            await LoadRecommendationAsync();
+        }
+        catch { }
     }
 }
