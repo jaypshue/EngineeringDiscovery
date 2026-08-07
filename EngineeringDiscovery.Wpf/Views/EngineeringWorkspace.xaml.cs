@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace EngineeringDiscovery.Wpf.Views
 {
@@ -17,6 +18,16 @@ namespace EngineeringDiscovery.Wpf.Views
         {
             InitializeComponent();
             Debug.WriteLine("[ED-EP7] EngineeringWorkspace constructed (pure view - DataContext must be provided by host)");
+        }
+
+        // Helper to route repository discovery intent through the workspace VM's EngineeringEngine.
+        // This is intentionally not invoked automatically.
+        public async Task BeginRepositoryDiscoveryAsync(string repositoryPath)
+        {
+            if (DataContext is EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel vm && vm.Engine != null)
+            {
+                await vm.Engine.BeginRepositoryDiscovery(repositoryPath).ConfigureAwait(false);
+            }
         }
     }
 }

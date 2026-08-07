@@ -103,6 +103,20 @@
                             <TextBlock Text="{Binding EngineeringState.CurrentRecommendation}" Foreground="{StaticResource SecondaryTextBrush}" />
                             <Button Content="{Binding EngineeringState.PrimaryActionText}" Command="{Binding EngineeringState.PrimaryActionCommand}" Style="{StaticResource PrimaryButton}" />
                         </StackPanel>
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Repository Discovery" Foreground="{StaticResource SecondaryTextBrush}" />
+                            <ItemsControl ItemsSource="{Binding EngineeringState.Evidence}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource PrimaryTextBrush}" />
+                                            <TextBlock Text=": " Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource SecondaryTextBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </DockPanel>
 

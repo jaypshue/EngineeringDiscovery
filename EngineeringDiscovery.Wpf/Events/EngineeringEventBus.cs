@@ -8,7 +8,11 @@ namespace EngineeringDiscovery.Wpf.Events
         PackageGenerated,
         PackageApproved,
         ImplementationReceived,
-        EvidenceCollected
+        EvidenceCollected,
+        RepositoryDiscovered,
+        SolutionDiscovered,
+        ProjectDiscovered,
+        RepositoryAnalysisCompleted
     }
 
     public class EngineeringEvent

@@ -39,7 +39,12 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
             // Create and expose EngineeringState projection
             EngineeringState = new EngineeringStateViewModel(Conversation, Package);
+
+            // Expose an EngineeringEngine for hosts to route intent through the Engine orchestration boundary
+            Engine = new Services.EngineeringEngine(new Services.RepositoryDiscoveryService());
         }
+
+        public Services.EngineeringEngine Engine { get; }
 
         private async Task InitializeAsync()
         {
