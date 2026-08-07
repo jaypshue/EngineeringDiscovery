@@ -14,6 +14,8 @@ builder.Services.AddRazorComponents()
 // hosts must explicitly load persisted workspace and call ReplaceWorkspace.
 builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+// Presentation helper to coordinate one-time startup interactions between Landing and Conversation
+builder.Services.AddScoped<EngineeringDiscovery.Web.Services.SessionStartupService>();
 // Register EngineeringPartner abstraction
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
 // Register in-memory engineering model repository (same as WPF host)

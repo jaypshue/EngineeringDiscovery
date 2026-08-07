@@ -1,0 +1,30 @@
+@namespace EngineeringDiscovery.Web.Components.Pages
+@using EngineeringDiscovery.Web.Services
+@using EngineeringDiscovery.Web.Components.Conversation
+@inject SessionStartupService Startup
+
+<div style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:480px;display:flex;flex-direction:column;max-width:900px;margin:0 auto">
+    <ConversationHost @ref="_conversationHost" />
+</div>
+
+@code {
+    private ConversationHost? _conversationHost;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // If LandingExperience requested a focus/placeholder, consume and apply it once
+            if (Startup.ConsumeShouldFocus())
+            {
+                var placeholder = Startup.ConsumePlaceholder();
+                if (_conversationHost != null)
+                {
+                    if (!string.IsNullOrEmpty(placeholder)) await _conversationHost.SetComposerPlaceholderAsync(placeholder);
+                    await Task.Delay(50);
+                    await _conversationHost.FocusComposerAsync();
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,36 @@
+@namespace EngineeringDiscovery.Web.Components.Pages
+@using EngineeringDiscovery.Web.Services
+@inject NavigationManager Nav
+
+<div class="app-landing" style="max-width:1100px;margin:0 auto;padding:20px">
+    <div style="text-align:center;margin-bottom:18px">
+        <h1 style="margin:0;font-size:2rem">Build software that rivals the best engineering teams.</h1>
+        <p class="muted" style="margin:10px 0 18px 0;max-width:800px;margin-left:auto;margin-right:auto">EngineOS is your Engineering Partner. Whether you're starting with an idea or an existing repository, EngineOS helps you understand, design, and build software through an ongoing engineering conversation.</p>
+
+        <div style="display:flex;justify-content:center;gap:12px;margin-bottom:18px">
+            <button class="btn btn-primary btn-lg" @onclick="StartBuilding">Start Building</button>
+            <a class="btn btn-outline btn-lg" href="/repository">Import Repository</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
+
+    [Inject]
+    private SessionStartupService Startup { get; set; } = null!;
+
+    private async Task StartBuilding()
+    {
+        try
+        {
+            var ws = new EngineeringDiscovery.Core.Domain.Workspace.Workspace();
+            WorkspaceState.ReplaceWorkspace(ws);
+            // Mark that the UI should focus the composer when the ConversationExperience renders.
+            Startup.MarkForFocus("What would you like to build today?");
+            await Task.CompletedTask;
+        }
+        catch { }
+    }
+}

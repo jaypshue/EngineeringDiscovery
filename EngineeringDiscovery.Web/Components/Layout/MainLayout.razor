@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@using EngineeringDiscovery.Core.Services
+@inject WorkspaceState WorkspaceState
+@implements IDisposable
 
 <div class="ed-shell">
     <header class="ed-header">
@@ -12,9 +15,12 @@
     </header>
 
     <div class="ed-body">
-        <nav class="ed-nav">
-            <NavigationMenu />
-        </nav>
+        @if (!WorkspaceState.HasWorkspace)
+        {
+            <nav class="ed-nav">
+                <NavigationMenu />
+            </nav>
+        }
 
         <main class="ed-workspace">
             @Body
@@ -32,3 +38,18 @@
         <span class="dismiss">🗙</span>
     </div>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        WorkspaceState.OnChange += OnWorkspaceChanged;
+    }
+
+    private void OnWorkspaceChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        try { WorkspaceState.OnChange -= OnWorkspaceChanged; } catch { }
+    }
+}

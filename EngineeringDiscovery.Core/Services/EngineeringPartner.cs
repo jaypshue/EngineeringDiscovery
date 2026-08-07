@@ -52,6 +52,27 @@ namespace EngineeringDiscovery.Core.Services
                 Debug.WriteLine($"[ED-EP6] Session {sessionId} not found in repository");
                 return "I couldn't locate the session. Please try starting a new conversation.";
             }
+            // Special-case: if the message indicates a repository was just imported, synthesize an
+            // evidence-based repository understanding immediately so the conversation begins from
+            // what EngineOS already knows about the codebase.
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(message) && message.StartsWith("Repository imported", StringComparison.OrdinalIgnoreCase))
+                {
+                    var summary = ComposeRepositoryUnderstanding(model);
+                    // Record EngineOS reply and persist the augmented working memory
+                    model.Conversation.Add(new ConversationEntry { Speaker = "EngineOS", Message = summary, TimestampUtc = DateTime.UtcNow });
+                    // Record the summary as a KnownFact for traceability
+                    model.KnownFacts.Add(new EngineeringFact { Key = "InitialRepositoryUnderstanding", Value = summary });
+                    await _repository.UpdateAsync(model).ConfigureAwait(false);
+                    Debug.WriteLine($"[ED-EP6] Repository understanding produced for session {sessionId}");
+                    return summary;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ED-EP6] Exception while composing repository understanding: {ex}");
+            }
             // 1) Understand: record the user message and extract simple intents/facts
             model.Conversation.Add(new ConversationEntry { Speaker = "User", Message = message, TimestampUtc = DateTime.UtcNow });
 
@@ -216,6 +237,61 @@ namespace EngineeringDiscovery.Core.Services
                 sb.Append("\nCoordination: ");
                 sb.Append(coordination);
             }
+            return sb.ToString();
+        }
+
+        // Compose an initial repository understanding from available model evidence.
+        // This produces a concise, measured summary and is suitable for immediate conversation.
+        private string ComposeRepositoryUnderstanding(EngineeringModel model)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"I've finished understanding the repository.");
+            sb.AppendLine();
+
+            // Repository path evidence
+            var repo = model.KnownFacts.LastOrDefault(f => string.Equals(f.Key, "RepositoryPath", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(repo))
+            {
+                sb.AppendLine($"My current understanding is based on the repository at: {repo}.");
+            }
+
+            // High-level technology signals: infer from KnownFacts that mention project types or packages
+            var techHints = model.KnownFacts.Where(f => f.Key.StartsWith("Tech:", StringComparison.OrdinalIgnoreCase)).Select(f => f.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
+            if (techHints.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Technologies detected:");
+                foreach (var t in techHints.Take(8)) sb.AppendLine($"- {t}");
+            }
+
+            // Discovery categories provide architectural groupings
+            if (model.DiscoveryCategories != null && model.DiscoveryCategories.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Major areas I identified:");
+                foreach (var c in model.DiscoveryCategories.Take(8))
+                {
+                    var confidence = Math.Round(c.Confidence * 100.0, 0);
+                    sb.AppendLine($"- {c.Name} (confidence: {confidence}%)");
+                }
+            }
+
+            // Fallback: list a few prominent known facts to ground the summary
+            var prominentFacts = model.KnownFacts.Where(f => !string.Equals(f.Key, "RepositoryPath", StringComparison.OrdinalIgnoreCase) && !f.Key.StartsWith("Tech:", StringComparison.OrdinalIgnoreCase)).Take(6).ToList();
+            if (prominentFacts.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Supporting evidence:");
+                foreach (var f in prominentFacts)
+                {
+                    var val = f.Value?.Replace('\n', ' ').Trim();
+                    if (val?.Length > 120) val = val.Substring(0, 117) + "...";
+                    sb.AppendLine($"- {f.Key}: {val}");
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("This is my current understanding based on the evidence I have; I can refine it after running targeted analyses (build, tests, or repository scanning). What would you like to explore first?");
             return sb.ToString();
         }
 

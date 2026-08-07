@@ -130,6 +130,12 @@
     private NavigationManager Nav { get; set; } = null!;
 
     [Inject]
+    private EngineeringDiscovery.Core.Services.IObservationService ObservationService { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Core.Services.IEngineeringPartner EngineeringPartner { get; set; } = null!;
+
+    [Inject]
     private EngineeringDiscovery.Web.Services.IRepositorySelectionService RepoSelection { get; set; } = null!;
 
     private Action? _repoSelectionChangedHandler;
@@ -394,11 +400,28 @@
             WorkspaceState.SetInvestigation(investigation);
             // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
 
-            // After importing a repository, begin an engineering session by navigating to /app
-            // with the imported path so the ConversationHost can initialize a session and ingest
-            // a RepoAttached observation to establish the active engineering context.
+            // Create an engineering session and ingest a RepoAttached observation immediately
             try
             {
+                // Ensure an EngineeringPartner session exists for this workspace
+                var model = await EngineeringPartner.StartSessionAsync(string.Empty).ConfigureAwait(false);
+                var sessionId = model?.Id;
+
+                if (sessionId.HasValue)
+                {
+                    var obs = new EngineeringDiscovery.Core.Observations.Observation
+                    {
+                        Type = "RepoAttached",
+                        Source = "RepositoryImporter",
+                        SessionId = sessionId,
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = SelectedRepositoryPath })
+                    };
+                    // Ingest observation so ObservationEngine updates the EngineeringModel immediately
+                    await ObservationService.IngestAsync(obs).ConfigureAwait(false);
+                }
+
+                // Navigate to /app to show the conversation. WorkspaceState already contains the workspace,
+                // so AppLanding will render the conversation on arrival.
                 var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);
                 Nav.NavigateTo($"/app?importedPath={encoded}", true);
             }
