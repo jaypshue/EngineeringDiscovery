@@ -21,6 +21,9 @@ builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringMod
 // Production repo fingerprint service
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.FileRepoFingerprintService>();
 
+// Observation Engine (core) - ingest observations and update Engineering State
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IObservationService, EngineeringDiscovery.Core.Services.ObservationEngine>();
+
 // Core services for current-task workflow
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ITimeProvider, EngineeringDiscovery.Core.Services.SystemTimeProvider>();
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ICurrentTaskService, EngineeringDiscovery.Core.Services.CurrentTaskService>();

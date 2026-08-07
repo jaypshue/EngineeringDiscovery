@@ -1,0 +1,16 @@
+@page "/app"
+@layout Layout.AppLayout
+
+<PageTitle>Engineering Workspace</PageTitle>
+
+<div class="app-landing">
+    <h1>Engineering Workspace</h1>
+    <p class="muted">Conversation-first. Start by telling the Engineering Partner what you're working on.</p>
+
+    <ConversationHost />
+</div>
+
+@code {
+    // Keep the application surface intentionally minimal. ConversationHost is the primary
+    // interactive surface and will evolve as the session develops.
+}

@@ -1,0 +1,94 @@
+@using EngineeringDiscovery.Core.Services
+@using EngineeringDiscovery.Core.Domain.EngineeringModel
+@inject IEngineeringPartner Partner
+
+<div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto">
+    <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;background:var(--surface)">
+        @foreach (var m in Messages)
+        {
+            <div class="message" style="margin-bottom:8px">
+                <div class="speaker" style="font-weight:600;font-size:0.9rem">@m.Speaker</div>
+                <div class="text" style="margin-top:4px">@m.Text</div>
+            </div>
+        }
+    </div>
+
+    <div class="composer" style="display:flex;gap:8px;align-items:center">
+        <input style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06)" @bind="Draft" @bind:event="oninput" placeholder="Describe what you're working on..." @onkeydown="HandleKeyDown" />
+        <button class="btn btn-primary" @onclick="SendAsync" disabled="@IsSending || string.IsNullOrWhiteSpace(Draft)">Send</button>
+    </div>
+</div>
+
+@code {
+    private List<(string Speaker, string Text)> Messages { get; } = new();
+    private string Draft { get; set; } = string.Empty;
+    private bool IsSending { get; set; }
+    private Guid? SessionId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var model = await Partner.StartSessionAsync(string.Empty);
+            SessionId = model?.Id;
+            if (model?.Conversation != null && model.Conversation.Any())
+            {
+                foreach (var e in model.Conversation)
+                {
+                    Messages.Add((e.Speaker ?? "EngineOS", e.Message ?? string.Empty));
+                }
+            }
+            else
+            {
+                Messages.Add(("EngineOS", "Good morning. What are we working on today?"));
+            }
+        }
+        catch
+        {
+            Messages.Add(("EngineOS", "The Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns."));
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        var text = (Draft ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        Messages.Add(("You", text));
+        Draft = string.Empty;
+        IsSending = true;
+
+        try
+        {
+            if (SessionId == null || SessionId == Guid.Empty)
+            {
+                var model = await Partner.StartSessionAsync(string.Empty);
+                SessionId = model?.Id;
+            }
+
+            var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
+            if (!string.IsNullOrWhiteSpace(reply))
+            {
+                Messages.Add(("EngineOS", reply));
+            }
+        }
+        catch (Exception ex)
+        {
+            Messages.Add(("EngineOS", "Failed to send message: " + ex.Message));
+        }
+        finally
+        {
+            IsSending = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = SendAsync();
+        }
+        return Task.CompletedTask;
+    }
+}
