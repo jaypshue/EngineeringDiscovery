@@ -11,15 +11,39 @@
             <button class="btn btn-primary btn-lg" @onclick="StartBuilding">Start Building</button>
             <a class="btn btn-outline btn-lg" href="/repository">Import Repository</a>
         </div>
+
+@if (showRestorePrompt)
+{
+    <div class="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000">
+        <div class="card" style="padding:20px;max-width:420px">
+            <h3>Resume previous workspace?</h3>
+            <p class="muted">A previously persisted workspace was found. Would you like to resume it or start fresh for this session?</p>
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:12px">
+                <button class="btn btn-outline" @onclick="StartFreshAsync">Start Fresh</button>
+                <button class="btn btn-primary" @onclick="ResumeAsync">Resume</button>
+            </div>
+        </div>
+    </div>
+}
     </div>
 </div>
 
 @code {
+    // Keep injected services declared in the @code block.
     [Inject]
     private EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState { get; set; } = null!;
 
     [Inject]
     private SessionStartupService Startup { get; set; } = null!;
+
+    [Inject]
+    private EngineeringDiscovery.Web.Services.DeveloperStartupMode DeveloperStartupMode { get; set; }
+
+    [Inject]
+    private EngineeringDiscovery.Core.Services.IWorkspacePersistence Persistence { get; set; } = null!;
+
+    private bool showRestorePrompt = false;
+    private EngineeringDiscovery.Core.Domain.Workspace.Workspace? persistedWorkspace;
 
     private async Task StartBuilding()
     {
@@ -32,5 +56,39 @@
             await Task.CompletedTask;
         }
         catch { }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // If developer mode is AskEveryTime, check whether a persisted workspace exists and prompt the developer.
+        if (DeveloperStartupMode == EngineeringDiscovery.Web.Services.DeveloperStartupMode.AskEveryTime)
+        {
+            try
+            {
+                persistedWorkspace = await Persistence.LoadAsync();
+                if (persistedWorkspace is not null)
+                {
+                    showRestorePrompt = true;
+                }
+            }
+            catch { }
+        }
+    }
+
+    private Task ResumeAsync()
+    {
+        if (persistedWorkspace is not null)
+        {
+            WorkspaceState.ReplaceWorkspace(persistedWorkspace);
+        }
+        showRestorePrompt = false;
+        return Task.CompletedTask;
+    }
+
+    private Task StartFreshAsync()
+    {
+        // Do not modify persisted data; simply ignore for this launch.
+        showRestorePrompt = false;
+        return Task.CompletedTask;
     }
 }

@@ -1,8 +1,19 @@
 using EngineeringDiscovery.Web.Components;
 using EngineeringDiscovery.Core.Services;
 using System.IO;
+using EngineeringDiscovery.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Developer-only startup mode (default: ResumePrevious). Set via environment variable ENGINEOS_STARTUP_MODE
+// Valid values: ResumePrevious | AlwaysStartFresh | AskEveryTime
+var startupModeEnv = Environment.GetEnvironmentVariable("ENGINEOS_STARTUP_MODE") ?? "ResumePrevious";
+if (!System.Enum.TryParse<EngineeringDiscovery.Web.Services.DeveloperStartupMode>(startupModeEnv, out var developerStartupMode))
+{
+    developerStartupMode = EngineeringDiscovery.Web.Services.DeveloperStartupMode.ResumePrevious;
+}
+// Register as an instance by type because enums are value types
+builder.Services.AddSingleton(typeof(EngineeringDiscovery.Web.Services.DeveloperStartupMode), developerStartupMode);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

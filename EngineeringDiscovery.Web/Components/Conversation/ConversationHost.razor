@@ -30,10 +30,26 @@
     }
 
     <div class="composer" style="display:flex;gap:8px;align-items:flex-end">
-        <textarea @ref="_composerRef" rows="3" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);resize:vertical" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
+        <textarea @ref="_composerRef" id="composer-textarea" rows="3" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);resize:vertical" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
         <button class="btn btn-primary" @onclick="SendAsync" disabled="@IsSending || string.IsNullOrWhiteSpace(Draft)">Send</button>
     </div>
 </div>
+
+@* Lightweight client-side script to toggle the Send button immediately on input events. *@
+<script>
+    (function () {
+        try {
+            var ta = document.getElementById('composer-textarea');
+            if (!ta) return;
+            ta.addEventListener('input', function () {
+                try {
+                    var b = ta.parentElement.querySelector('button');
+                    if (b) b.disabled = ta.value.trim() === '';
+                } catch { }
+            });
+        } catch { }
+    })();
+</script>
 
 @code {
     private List<(string Speaker, string Text)> Messages { get; } = new();
@@ -57,6 +73,8 @@
                 {
                     Messages.Add((e.Speaker ?? "EngineOS", e.Message ?? string.Empty));
                 }
+
+    // No explicit input handler; rely on Blazor @bind to update Draft on input events.
             }
             else
             {
@@ -75,6 +93,8 @@
             Messages.Add(("EngineOS", "The Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns."));
         }
     }
+
+
 
     // Public methods for parent to control composer focus and placeholder
     public async Task FocusComposerAsync()

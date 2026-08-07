@@ -1,5 +1,13 @@
 @page "/app"
 @layout Layout.AppLayout
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Subscribe to workspace changes so this selector updates when workspace state changes.
+        WorkspaceState.OnChange += WorkspaceState_OnChange;
+    }
+}
 @using EngineeringDiscovery.Web.Components.Pages
 
 <PageTitle>Engineering Workspace</PageTitle>
@@ -21,12 +29,6 @@ else
 }
 
 @code {
-    protected override void OnInitialized()
-    {
-        // Subscribe to workspace changes so this selector updates when workspace state changes.
-        WorkspaceState.OnChange += WorkspaceState_OnChange;
-    }
-
     private void WorkspaceState_OnChange() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
