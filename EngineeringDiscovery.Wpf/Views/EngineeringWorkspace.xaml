@@ -204,6 +204,16 @@
                     <TextBlock Text="Current Investigation: (none)" Foreground="{StaticResource PrimaryTextBrush}" />
                     <TextBlock Text="Current Understanding: (not available)" Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}" />
                     <TextBlock Text="Working Memory: summary placeholder" Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <!-- Repository summary -->
+                    <Border Margin="0,8,0,0" Padding="8" Background="{StaticResource SurfaceBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Repository" FontWeight="Bold" />
+                            <TextBlock Text="Name: {Binding RepositoryName}" Margin="0,4,0,0" />
+                            <TextBlock Text="Path: {Binding RepositoryPath}" Margin="0,2,0,0" FontStyle="Italic" />
+                            <TextBlock Text="Status: {Binding RepositoryStatus}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Button Content="Discover Repository" Margin="0,8,0,0" Width="160" HorizontalAlignment="Left" Click="DiscoverRepository_Click" />
                 </StackPanel>
             </GroupBox>
 

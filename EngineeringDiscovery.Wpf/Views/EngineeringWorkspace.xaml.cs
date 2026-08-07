@@ -29,5 +29,38 @@ namespace EngineeringDiscovery.Wpf.Views
                 await vm.Engine.BeginRepositoryDiscovery(repositoryPath).ConfigureAwait(false);
             }
         }
+
+        private async void DiscoverRepository_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            try
+            {
+                var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                var ws = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.WorkspaceState)) as EngineeringDiscovery.Core.Services.WorkspaceState;
+                var repoPath = ws?.ActiveWorkspace?.RepositoryPath;
+
+                if (string.IsNullOrWhiteSpace(repoPath))
+                {
+                    var sel = sp?.GetService(typeof(EngineeringDiscovery.Wpf.Services.RepositorySelectionService)) as EngineeringDiscovery.Wpf.Services.RepositorySelectionService;
+                    repoPath = sel?.SelectedPath;
+                }
+
+                if (!string.IsNullOrWhiteSpace(repoPath))
+                {
+                    if (DataContext is EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel vm &&
+                        vm.Engine != null)
+                    {
+                        await vm.Engine.BeginRepositoryDiscovery(repoPath).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        var engine = new EngineeringDiscovery.Wpf.Services.EngineeringEngine(new EngineeringDiscovery.Wpf.Services.RepositoryDiscoveryService());
+                        await engine.BeginRepositoryDiscovery(repoPath).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
     }
 }

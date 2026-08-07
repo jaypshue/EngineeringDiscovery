@@ -16,6 +16,8 @@ builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePers
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
 // Register EngineeringPartner abstraction
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
+// Register in-memory engineering model repository (same as WPF host)
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringModelRepository, EngineeringDiscovery.Core.Services.InMemoryEngineeringModelRepository>();
 // Production repo fingerprint service
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.FileRepoFingerprintService>();
 

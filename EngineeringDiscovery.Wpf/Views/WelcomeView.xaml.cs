@@ -20,20 +20,45 @@ namespace EngineeringDiscovery.Wpf.Views
                 var host = win.FindName("HostContent") as System.Windows.Controls.ContentControl ?? win.HostContent as System.Windows.Controls.ContentControl;
                 if (host != null)
                 {
-                    // Create workspace view with its owning view model so the view does not construct VMs in code-behind
+                    // Route through MainWindowViewModel's OpenRepositoryCommand so the normal repository selection/import
+                    // workflow runs. After import completes and WorkspaceState has a workspace, navigate to the EngineeringWorkspace.
                     var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
-                    if (sp != null)
+                    var mainVm = sp?.GetService(typeof(EngineeringDiscovery.Wpf.ViewModels.MainWindowViewModel)) as EngineeringDiscovery.Wpf.ViewModels.MainWindowViewModel;
+                    var partner = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
+                    var ws = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.WorkspaceState)) as EngineeringDiscovery.Core.Services.WorkspaceState;
+
+                    if (ws != null && mainVm != null)
                     {
-                        var partner = sp.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
-                        if (partner != null)
+                        void OnChange()
                         {
-                            host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) };
-                            System.Diagnostics.Debug.WriteLine("[ED-315] Navigated to EngineeringWorkspace with VM");
-                            return;
+                            try
+                            {
+                                if (ws.HasWorkspace)
+                                {
+                                    // Navigate to EngineeringWorkspace with VM on UI thread
+                                    if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == true)
+                                    {
+                                        host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) };
+                                    }
+                                    else
+                                    {
+                                        System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) }));
+                                    }
+                                    ws.OnChange -= OnChange;
+                                }
+                            }
+                            catch { ws.OnChange -= OnChange; }
                         }
+
+                        ws.OnChange += OnChange;
+
+                        // Trigger the OpenRepository flow (this shows folder picker and performs import)
+                        try { mainVm.OpenRepositoryCommand.Execute(null); }
+                        catch { /* ignore failures here; workspace state handler above will unsubscribe */ }
+                        return;
                     }
-                    host.Content = new EngineeringWorkspace();
-                    System.Diagnostics.Debug.WriteLine("[ED-315] Navigated to EngineeringWorkspace");
+
+                    System.Diagnostics.Debug.WriteLine("[ED-315] Host or services not available to perform OpenRepository");
                 }
                 else
                 {
@@ -55,9 +80,41 @@ namespace EngineeringDiscovery.Wpf.Views
                 var host = win.FindName("HostContent") as System.Windows.Controls.ContentControl ?? win.HostContent as System.Windows.Controls.ContentControl;
                 if (host != null)
                 {
-                    // ED-3: Replace startup Product Discovery navigation with the Engineering Workspace
-                    host.Content = new EngineeringWorkspace();
-                    System.Diagnostics.Debug.WriteLine("[ED-EP7] Navigated to EngineeringWorkspace (replacing ProductDiscoveryPlaceholder)");
+                    // Same flow as Corporate: trigger OpenRepository and navigate on successful import
+                    var sp = EngineeringDiscovery.Wpf.App.ServiceProvider;
+                    var mainVm = sp?.GetService(typeof(EngineeringDiscovery.Wpf.ViewModels.MainWindowViewModel)) as EngineeringDiscovery.Wpf.ViewModels.MainWindowViewModel;
+                    var partner = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.IEngineeringPartner)) as EngineeringDiscovery.Core.Services.IEngineeringPartner;
+                    var ws = sp?.GetService(typeof(EngineeringDiscovery.Core.Services.WorkspaceState)) as EngineeringDiscovery.Core.Services.WorkspaceState;
+
+                    if (ws != null && mainVm != null)
+                    {
+                        void OnChange()
+                        {
+                            try
+                            {
+                                if (ws.HasWorkspace)
+                                {
+                                    if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == true)
+                                    {
+                                        host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) };
+                                    }
+                                    else
+                                    {
+                                        System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => host.Content = new EngineeringWorkspace { DataContext = new EngineeringDiscovery.Wpf.ViewModels.EngineeringWorkspaceViewModel(partner) }));
+                                    }
+                                    ws.OnChange -= OnChange;
+                                }
+                            }
+                            catch { ws.OnChange -= OnChange; }
+                        }
+
+                        ws.OnChange += OnChange;
+                        try { mainVm.OpenRepositoryCommand.Execute(null); }
+                        catch { /* ignore */ }
+                        return;
+                    }
+
+                    System.Diagnostics.Debug.WriteLine("[ED-EP7] Host or services not available to perform OpenRepository");
                 }
                 else
                 {
