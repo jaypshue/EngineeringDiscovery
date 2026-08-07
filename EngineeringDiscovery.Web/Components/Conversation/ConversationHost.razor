@@ -1,6 +1,8 @@
 @using EngineeringDiscovery.Core.Services
 @using EngineeringDiscovery.Core.Domain.EngineeringModel
+@using EngineeringDiscovery.Core.Observations
 @inject IEngineeringPartner Partner
+@inject IObservationService ObservationService
 
 <div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto">
     <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;background:var(--surface)">
@@ -66,6 +68,12 @@
                 SessionId = model?.Id;
             }
 
+            // Create a UserMessage observation and ingest it through the ObservationEngine
+            var obs = new Observation { Type = "UserMessage", Source = "User", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { text = text }) };
+            await ObservationService.IngestAsync(obs);
+
+            // Wait for the ObservationEngine to update state and then ask the partner to respond
+            // Partner will read updated EngineeringModel and render a reply
             var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
             if (!string.IsNullOrWhiteSpace(reply))
             {

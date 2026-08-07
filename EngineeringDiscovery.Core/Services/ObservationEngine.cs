@@ -20,6 +20,7 @@ namespace EngineeringDiscovery.Core.Services
         private readonly ConcurrentDictionary<Guid, Observation> _store = new();
 
         public event Func<Observation, Task>? ObservationReceived;
+        public event Func<Guid?, Task>? StateUpdated;
 
         public ObservationEngine(IEngineeringModelRepository modelRepository)
         {
@@ -44,6 +45,17 @@ namespace EngineeringDiscovery.Core.Services
 
             // Minimal enrichment/inference pipeline
             await EnrichAndInferAsync(observation).ConfigureAwait(false);
+
+            // Notify subscribers that state may have changed for this session
+            var sHandler = StateUpdated;
+            if (sHandler != null)
+            {
+                try
+                {
+                    await sHandler.Invoke(observation.SessionId).ConfigureAwait(false);
+                }
+                catch { }
+            }
         }
 
         private async Task EnrichAndInferAsync(Observation obs)

@@ -12,5 +12,10 @@ namespace EngineeringDiscovery.Core.Services
 
         // Optional: a simple synchronous publish for subscribers; keep minimal for now.
         event Func<Observation, Task>? ObservationReceived;
+
+        // Event raised when the ObservationEngine has applied updates to EngineeringModel
+        // for a specific session id. Subscribers may use this to refresh UI or trigger
+        // partner consumption. The sessionId parameter may be null when the update is global.
+        event Func<Guid?, Task>? StateUpdated;
     }
 }
