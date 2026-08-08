@@ -50,9 +50,12 @@ namespace EngineeringDiscovery.Web.Services
         public bool ActiveWorkContractEngineOSReady { get; private set; }
         public DateTime? ActiveWorkContractUpdatedUtc { get; private set; }
         public string ActiveWorkContractLastUpdatedBy { get; private set; } = string.Empty;
+        // Primary action label (single primary Next Action) and a human-friendly detail string
         public string ActiveNextRecommendedAction { get; private set; } = string.Empty;
+        public string ActiveNextRecommendedActionLabel { get; private set; } = string.Empty;
+        public string ActiveNextRecommendedActionDetail { get; private set; } = string.Empty;
 
-        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc, string lastUpdatedBy = "", string nextRecommendedAction = "")
+        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc, string lastUpdatedBy = "", string nextRecommendedActionLabel = "", string nextRecommendedActionDetail = "")
         {
             ActiveWorkContractTitle = title ?? string.Empty;
             ActiveWorkContractStatus = status ?? string.Empty;
@@ -60,7 +63,10 @@ namespace EngineeringDiscovery.Web.Services
             ActiveWorkContractEngineOSReady = engineReady;
             ActiveWorkContractUpdatedUtc = updatedUtc;
             ActiveWorkContractLastUpdatedBy = lastUpdatedBy ?? string.Empty;
-            ActiveNextRecommendedAction = nextRecommendedAction ?? string.Empty;
+            ActiveNextRecommendedActionLabel = nextRecommendedActionLabel ?? string.Empty;
+            ActiveNextRecommendedActionDetail = nextRecommendedActionDetail ?? string.Empty;
+            // Back-compat property: ActiveNextRecommendedAction contains the label
+            ActiveNextRecommendedAction = ActiveNextRecommendedActionLabel;
             try
             {
                 StateChanged?.Invoke();

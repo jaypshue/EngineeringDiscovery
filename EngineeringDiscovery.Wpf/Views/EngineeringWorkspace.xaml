@@ -18,12 +18,34 @@
     <Grid Background="{StaticResource BackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="0" />
         </Grid.ColumnDefinitions>
 
         <!-- Conversation (primary) -->
-        <Border Grid.Column="0" Padding="16" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Padding="16" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="0">
             <StackPanel>
+                <DockPanel Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <TextBlock Text="Current Task" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
+                        <TextBlock Text="●" Margin="10,0,6,0" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Active" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="Generate Plan"
+                            Style="{StaticResource AccentButton}"
+                            Command="{Binding EngineeringState.PrimaryActionCommand}" />
+                </DockPanel>
+
+                <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Title" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox Text="{Binding Package.Purpose}" Margin="0,6,0,0" />
+
+                        <TextBlock Text="Goal" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,12,0,0" />
+                        <TextBox Text="{Binding EngineeringState.CurrentRecommendation}" Margin="0,6,0,0" Height="96" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                    </StackPanel>
+                </Border>
+
                 <TextBlock Text="Conversation" FontSize="20" FontWeight="Bold" Margin="0,0,0,12" Foreground="{StaticResource PrimaryTextBrush}" />
                 <Border x:Name="PART_Conversation" Background="{StaticResource CardBrush}" CornerRadius="4" Padding="12" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
                     <Grid>
@@ -85,7 +107,7 @@
         </Border>
 
         <!-- Engineering Package region (presentation only) -->
-        <Border Grid.Column="0" Grid.Row="1" Margin="0,12,0,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12">
+        <Border Grid.Column="0" Grid.Row="1" Margin="0,12,0,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12" Visibility="Collapsed">
             <!-- Package header: prominent status banner and compact status editor -->
             <StackPanel>
                 <DockPanel LastChildFill="True">
@@ -197,7 +219,7 @@
         </Border>
 
         <!-- Right rail: Context and Evidence -->
-        <StackPanel Grid.Column="1" Margin="0" Background="{StaticResource PanelBackgroundBrush}" Orientation="Vertical">
+        <StackPanel Grid.Column="1" Margin="0" Background="{StaticResource PanelBackgroundBrush}" Orientation="Vertical" Visibility="Collapsed">
             <!-- Context panel -->
             <GroupBox Header="Context" Margin="0,0,0,12">
                 <StackPanel x:Name="PART_Context" Margin="4">
