@@ -21,16 +21,16 @@ namespace EngineeringDiscovery.Web.Services
 
         public List<(string Name, string Path)> DiscoveredProjects { get; }
 
-        // Structured collection of member observations populated during MemberDiscoveryStep
+        // Structured collection of member observations populated by provider-produced MemberDescriptors and mapped by CompilationContextDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.MemberObservation> MemberObservations { get; } = new();
 
-        // Structured collection of type observations populated during TypeDiscoveryStep
+        // Structured collection of type observations populated by provider-produced TypeDescriptors and mapped by CompilationContextDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.TypeObservation> TypeObservations { get; } = new();
 
         // Compilation contexts produced by repository providers (language-agnostic)
         public List<EngineeringDiscovery.Web.Services.RepositoryLoading.CompilationContext> CompilationContexts { get; } = new();
 
-        // Structured collection of namespace observations populated during NamespaceDiscoveryStep
+        // Structured collection of namespace observations populated by provider-produced NamespaceObservations and mapped by CompilationContextDiscoveryStep
         public List<EngineeringDiscovery.Core.Models.NamespaceObservation> NamespaceObservations { get; } = new();
 
         public List<string> Diagnostics { get; }

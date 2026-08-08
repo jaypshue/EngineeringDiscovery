@@ -136,7 +136,7 @@ namespace EngineeringDiscovery.Web.Services
                             _inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, $"Project '{name}' has root namespace '{rootNamespace}'."));
                         }
 
-                        // Namespace discovery will be handled by NamespaceDiscoveryStep
+                        // Namespace discovery is handled by provider-produced NamespaceObservations and CompilationContextDiscoveryStep
                     }
                     catch { }
                 }
