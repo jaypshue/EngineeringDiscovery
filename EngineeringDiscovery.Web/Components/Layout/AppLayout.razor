@@ -2,11 +2,19 @@
 @inherits LayoutComponentBase
 
 <div class="app-shell">
-    <header class="app-header">
-        <div class="app-logo">EngineOS</div>
-        <div class="app-actions">
-            <a href="/app">Workspace</a>
-            <a href="/">Public Site</a>
+    @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
+    <header class="app-header" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px">
+        <div style="display:flex;gap:12px;align-items:center">
+            <div class="app-logo">EngineOS</div>
+            <div class="app-actions">
+                <a href="/app">Workspace</a>
+                <a href="/">Public Site</a>
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+            <div style="font-size:0.9rem;color:var(--muted)">Repo:</div>
+            <div style="font-weight:700">@(!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryName) ? WorkspaceState.ActiveRepositoryName : "(no repo)")</div>
+            <div style="padding:4px 8px;border-radius:6px;background:var(--surface);font-size:0.85rem">@WorkspaceState.Status</div>
         </div>
     </header>
 

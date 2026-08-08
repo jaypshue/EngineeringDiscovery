@@ -1,0 +1,13 @@
+@inject EngineeringDiscovery.Web.Services.SessionStartupService Startup
+
+<div style="display:none">
+    @* Temporary test helper to invoke the startup notification during manual verification. Remove before final merge if desired. *@
+    <button @onclick="InvokeTest" id="workspace-state-invoker" style="display:none">Invoke</button>
+</div>
+
+@code {
+    private void InvokeTest()
+    {
+        Startup.NotifyWorkspaceState("engineeringdiscovery", "C:\\projects\\EngineeringDiscovery", "None", "None", "Ready");
+    }
+}

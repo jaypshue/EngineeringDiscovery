@@ -28,5 +28,15 @@ namespace EngineeringDiscovery.Web.Services
             _placeholder = null;
             return p;
         }
+
+        // Minimal hook for the WorkspaceStateService: callers can set an initial workspace state
+        // after startup detection completes. This keeps changes small and avoids touching
+        // persistence in this story.
+        public event Action<string, string, string, string, string>? WorkspaceStateReady;
+
+        public void NotifyWorkspaceState(string repoName, string repoPath, string goal, string story, string status)
+        {
+            WorkspaceStateReady?.Invoke(repoName, repoPath, goal, story, status);
+        }
     }
 }

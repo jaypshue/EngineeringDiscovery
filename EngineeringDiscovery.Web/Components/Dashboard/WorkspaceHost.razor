@@ -127,6 +127,9 @@
     private IJSRuntime JS { get; set; } = null!;
 
     [Inject]
+    private SessionStartupService Startup { get; set; } = null!;
+
+    [Inject]
     private NavigationManager Nav { get; set; } = null!;
 
     [Inject]
@@ -420,6 +423,14 @@
                     await ObservationService.IngestAsync(obs).ConfigureAwait(false);
                 }
 
+                // Notify SessionStartupService so UI components can react to the imported repository.
+                try
+                {
+                    var repoName = string.Empty;
+                    try { repoName = System.IO.Path.GetFileName(SelectedRepositoryPath ?? string.Empty) ?? string.Empty; } catch { }
+                    Startup.NotifyWorkspaceState(repoName, SelectedRepositoryPath ?? string.Empty, "None", "None", "Ready");
+                }
+                catch { }
                 // Navigate to /app to show the conversation. WorkspaceState already contains the workspace,
                 // so AppLanding will render the conversation on arrival.
                 var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);

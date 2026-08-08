@@ -1,0 +1,62 @@
+@namespace EngineeringDiscovery.Web.Components.Workspace
+@using Microsoft.AspNetCore.Components
+
+<div class="engineering-context-card" style="padding:16px;border-radius:8px;background:var(--surface-1);box-shadow:0 1px 4px rgba(0,0,0,0.04);max-width:980px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+            <div style="font-size:0.95rem;color:var(--muted)">Active Repository</div>
+            <div style="font-weight:700;font-size:1.15rem">@(!string.IsNullOrEmpty(ActiveRepositoryName) ? ActiveRepositoryName : "(none)")</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">@(!string.IsNullOrEmpty(ActiveRepositoryPath) ? ActiveRepositoryPath : string.Empty)</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:0.85rem;color:var(--muted)">Status</div>
+            <div style="font-weight:700">@Status</div>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:20px;margin-top:16px">
+        <div style="flex:1">
+            <div style="font-size:0.85rem;color:var(--muted)">Current Goal</div>
+            <div style="margin-top:6px">@(!string.IsNullOrEmpty(CurrentGoalTitle) ? CurrentGoalTitle : "None")</div>
+        </div>
+        <div style="flex:1">
+            <div style="font-size:0.85rem;color:var(--muted)">Current Story</div>
+            <div style="margin-top:6px">@(!string.IsNullOrEmpty(CurrentStoryTitle) ? CurrentStoryTitle : "None")</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <button class="btn btn-primary" @onclick="OnDefineGoal">Define Goal</button>
+            <button class="btn btn-outline" @onclick="OnCreateStory">Create Story</button>
+            <button class="btn" @onclick="OnContinueSession">Continue Session</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ActiveRepositoryName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ActiveRepositoryPath { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CurrentGoalTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CurrentStoryTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Status { get; set; } = "Ready";
+
+    [Parameter]
+    public EventCallback DefineGoal { get; set; }
+
+    [Parameter]
+    public EventCallback CreateStory { get; set; }
+
+    [Parameter]
+    public EventCallback ContinueSession { get; set; }
+
+    private async Task OnDefineGoal() => await DefineGoal.InvokeAsync(null);
+    private async Task OnCreateStory() => await CreateStory.InvokeAsync(null);
+    private async Task OnContinueSession() => await ContinueSession.InvokeAsync(null);
+}

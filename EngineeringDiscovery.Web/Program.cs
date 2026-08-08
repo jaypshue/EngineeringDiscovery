@@ -26,7 +26,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
 // Presentation helper to coordinate one-time startup interactions between Landing and Conversation
-builder.Services.AddScoped<EngineeringDiscovery.Web.Services.SessionStartupService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.SessionStartupService>();
 // Register EngineeringPartner abstraction
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
 // Register in-memory engineering model repository (same as WPF host)
@@ -45,6 +45,7 @@ builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ICurrentTaskSer
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringAdvisorService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringInsightService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringRecommendationService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
 // Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
 builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
 // Repository selection interaction service (presentation-owned)
@@ -52,9 +53,29 @@ builder.Services.AddScoped<EngineeringDiscovery.Web.Services.IRepositorySelectio
 
 var app = builder.Build();
 
+// Hook startup workspace notification to the WorkspaceStateService now that the app provider is built
+try
+{
+    var startup = app.Services.GetService<SessionStartupService>();
+    var workspace = app.Services.GetService<WorkspaceStateService>();
+    if (startup != null && workspace != null)
+    {
+        startup.WorkspaceStateReady += (repoName, repoPath, goal, story, status) => workspace.SetState(repoName, repoPath, goal, story, status);
+    }
+}
+catch { }
+
 // After building services, explicitly load persisted workspace (if any) and initialize WorkspaceState.
 using (var scope = app.Services.CreateScope())
 {
+    // Wire SessionStartupService.WorkspaceStateReady to update WorkspaceStateService when available.
+    var startup = scope.ServiceProvider.GetService<EngineeringDiscovery.Web.Services.SessionStartupService>();
+    var workspace = scope.ServiceProvider.GetService<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
+    if (startup is not null && workspace is not null)
+    {
+        startup.WorkspaceStateReady += (repoName, repoPath, goal, story, status) => workspace.SetState(repoName, repoPath, goal, story, status);
+    }
+
     var persistence = scope.ServiceProvider.GetRequiredService<IWorkspacePersistence>();
     var workspaceState = scope.ServiceProvider.GetRequiredService<EngineeringDiscovery.Core.Services.WorkspaceState>();
     var loaded = persistence.LoadAsync().GetAwaiter().GetResult();
