@@ -1,0 +1,17 @@
+@using EngineeringDiscovery.Web.Components.Shared
+@namespace EngineeringDiscovery.Web.Components.Workspaces
+
+<div class="recommendation-workspace ed-workspace">
+    <CurrentTaskHeader />
+
+    <div class="workspace-main" style="display:flex;gap:16px;align-items:flex-start">
+        <main class="conversation-main" style="flex:1">
+            <ConversationArea />
+        </main>
+
+        <aside class="side-rail" style="width:320px;display:flex;flex-direction:column;gap:12px">
+            <RecommendationCard Title="Start by approving this recommendation" Rationale="Suggested next step based on current analysis." />
+            <CurrentUnderstandingCard />
+        </aside>
+    </div>
+</div>

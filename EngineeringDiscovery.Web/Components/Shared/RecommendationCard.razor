@@ -1,0 +1,93 @@
+@namespace EngineeringDiscovery.Web.Components.Shared
+@using Microsoft.AspNetCore.Components
+
+<div class="recommendation-card">
+    <div class="rec-summary">
+        <h3>@(Title ?? "Recommendation: Review this next action")</h3>
+        <p class="muted">@(Rationale ?? "EngineOS suggests the following next step based on current investigation.")</p>
+    </div>
+
+    <div class="rec-actions">
+        <button class="btn btn-primary" @onclick="OnApprove">Approve</button>
+        <button class="btn" @onclick="OnModify">Modify</button>
+        <button class="btn btn-danger" @onclick="OnReject">Reject</button>
+        <div class="rec-overflow">
+            <button class="btn">More ▾</button>
+        </div>
+    </div>
+
+    <div class="rec-details">
+        <a href="#" @onclick="ToggleWhy">Why?</a>
+        @if (ShowWhy)
+        {
+            <div class="why">@WhyPlaceholder</div>
+        }
+
+        <a href="#" @onclick="ToggleFiles">Affected Files</a>
+        @if (ShowFiles)
+        {
+            <div class="files">@FilesPlaceholder</div>
+        }
+
+        <a href="#" @onclick="ToggleImpl">Implementation</a>
+        @if (ShowImpl)
+        {
+            <div class="impl">@ImplPlaceholder</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Rationale { get; set; }
+
+    [Parameter]
+    public EventCallback OnApproved { get; set; }
+
+    [Parameter]
+    public EventCallback OnModified { get; set; }
+
+    [Parameter]
+    public EventCallback OnRejected { get; set; }
+
+    private bool ShowWhy { get; set; }
+    private bool ShowFiles { get; set; }
+    private bool ShowImpl { get; set; }
+
+    private string WhyPlaceholder => "High-level reasoning and brief evidence summary.";
+    private string FilesPlaceholder => "List of affected files (placeholder).";
+    private string ImplPlaceholder => "Implementation notes / patch placeholder.";
+
+    private async Task OnApprove()
+    {
+        if (OnApproved.HasDelegate) await OnApproved.InvokeAsync(null);
+    }
+
+    private async Task OnModify()
+    {
+        if (OnModified.HasDelegate) await OnModified.InvokeAsync(null);
+    }
+
+    private async Task OnReject()
+    {
+        if (OnRejected.HasDelegate) await OnRejected.InvokeAsync(null);
+    }
+
+    private void ToggleWhy()
+    {
+        ShowWhy = !ShowWhy; ShowFiles = false; ShowImpl = false;
+    }
+
+    private void ToggleFiles()
+    {
+        ShowFiles = !ShowFiles; ShowWhy = false; ShowImpl = false;
+    }
+
+    private void ToggleImpl()
+    {
+        ShowImpl = !ShowImpl; ShowWhy = false; ShowFiles = false;
+    }
+}

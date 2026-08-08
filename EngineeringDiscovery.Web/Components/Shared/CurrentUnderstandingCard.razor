@@ -1,0 +1,24 @@
+@namespace EngineeringDiscovery.Web.Components.Shared
+@using Microsoft.AspNetCore.Components
+
+<aside class="current-understanding">
+    <h4>Current Understanding</h4>
+    <p class="summary">@SummaryText</p>
+
+    <a href="#" @onclick="ToggleDetails">Show Details</a>
+    @if (ShowDetails)
+    {
+        <div class="details">@DetailsPlaceholder</div>
+    }
+</aside>
+
+@code {
+    private bool ShowDetails { get; set; }
+    private string SummaryText => "Short conclusions and key assumptions (placeholder).";
+    private string DetailsPlaceholder => "Detailed observations, evidence, and references.";
+
+    private void ToggleDetails()
+    {
+        ShowDetails = !ShowDetails;
+    }
+}

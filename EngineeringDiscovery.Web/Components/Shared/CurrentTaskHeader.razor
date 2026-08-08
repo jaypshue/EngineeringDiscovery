@@ -1,0 +1,47 @@
+@using EngineeringDiscovery.Core.Services
+@inject ICurrentTaskService CurrentTaskService
+@inject WorkspaceState WorkspaceState
+
+<header class="ed-header">
+    <div class="ed-header-left">
+        @if (WorkspaceState.ActiveWorkspace?.CurrentTask is null)
+        {
+            <input class="ed-task-title" @bind="NewTitle" placeholder="Current Task" />
+            <button class="btn" @onclick="BeginTask">Begin</button>
+        }
+        else
+        {
+            <div class="ed-task-title-display">@WorkspaceState.ActiveWorkspace.CurrentTask.Title</div>
+        }
+    </div>
+    <div class="ed-header-right">
+        @if (WorkspaceState.ActiveWorkspace?.CurrentTask is null)
+        {
+            <input class="ed-goal" @bind="NewGoal" placeholder="Goal (short)" />
+        }
+        else
+        {
+            <div class="ed-goal-display">@WorkspaceState.ActiveWorkspace.CurrentTask.Goal</div>
+        }
+    </div>
+</header>
+
+@code {
+    private string NewTitle { get; set; } = string.Empty;
+    private string NewGoal { get; set; } = string.Empty;
+
+    private async Task BeginTask()
+    {
+        if (string.IsNullOrWhiteSpace(NewTitle)) return;
+        try
+        {
+            await CurrentTaskService.BeginTaskAsync(NewTitle, string.Empty, NewGoal);
+            NewTitle = string.Empty;
+            NewGoal = string.Empty;
+        }
+        catch
+        {
+            // swallow - presentation only change
+        }
+    }
+}
