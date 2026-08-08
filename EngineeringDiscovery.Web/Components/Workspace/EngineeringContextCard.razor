@@ -26,6 +26,16 @@
         <div style="flex:1">
             <div style="font-size:0.85rem;color:var(--muted)">Work Contract</div>
             <div style="margin-top:6px">@(!string.IsNullOrEmpty(ActiveWorkContractTitle) ? ActiveWorkContractTitle : "(none)")</div>
+            @if (string.IsNullOrEmpty(ActiveWorkContractTitle))
+            {
+                <div style="margin-top:8px">
+                    <button class="btn btn-primary" @onclick="CreateWorkContract">Create Work Contract</button>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(ActiveWorkContractLastUpdatedBy))
+            {
+                <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Last Updated By: @ActiveWorkContractLastUpdatedBy</div>
+            }
             <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Contract Status: <strong>@(string.IsNullOrEmpty(ActiveWorkContractStatus) ? "-" : ActiveWorkContractStatus)</strong></div>
             <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Human Ready: @(ActiveWorkContractHumanReady ? "Yes" : "No") &nbsp; EngineOS Ready: @(ActiveWorkContractEngineOSReady ? "Yes" : "No")</div>
         </div>
@@ -67,6 +77,9 @@
     public bool ActiveWorkContractEngineOSReady { get; set; }
 
     [Parameter]
+    public string ActiveWorkContractLastUpdatedBy { get; set; } = string.Empty;
+
+    [Parameter]
     public EventCallback DefineGoal { get; set; }
 
     [Parameter]
@@ -78,4 +91,10 @@
     private async Task OnDefineGoal() => await DefineGoal.InvokeAsync(null);
     private async Task OnCreateStory() => await CreateStory.InvokeAsync(null);
     private async Task OnContinueSession() => await ContinueSession.InvokeAsync(null);
+
+    private void CreateWorkContract()
+    {
+        // Fire an event through ContinueSession to let the page handle creation (ConversationExperience will call ContractService.CreateEmptyDraft)
+        _ = ContinueSession.InvokeAsync(null);
+    }
 }

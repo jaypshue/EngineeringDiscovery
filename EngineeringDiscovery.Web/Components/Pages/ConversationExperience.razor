@@ -4,6 +4,7 @@
 @using EngineeringDiscovery.Web.Components.Workspace
 @inject SessionStartupService Startup
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
+@using EngineeringDiscovery.Web.Models
 
 <div style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:480px;display:flex;flex-direction:column;max-width:900px;margin:0 auto;gap:12px">
     <EngineeringContextCard ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" ActiveWorkContractTitle="@WorkspaceState.ActiveWorkContractTitle" ActiveWorkContractStatus="@WorkspaceState.ActiveWorkContractStatus" ActiveWorkContractHumanReady="@WorkspaceState.ActiveWorkContractHumanReady" ActiveWorkContractEngineOSReady="@WorkspaceState.ActiveWorkContractEngineOSReady" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
@@ -11,6 +12,7 @@
     @if (HasContract)
     {
         <WorkContractEditor />
+        <ConversationHost @ref="_conversationHost" />
     }
     else
     {
@@ -30,6 +32,14 @@
     {
         if (firstRender)
         {
+            // Ensure a Work Contract exists so the editor is the primary surface
+            if (ContractService.CurrentContract == null)
+            {
+                ContractService.CreateEmptyDraft();
+                // Let the editor render
+                await InvokeAsync(StateHasChanged);
+            }
+
             // If LandingExperience requested a focus/placeholder, consume and apply it once
             if (Startup.ConsumeShouldFocus())
             {
@@ -48,5 +58,15 @@
 
     private void OnDefineGoal() { /* UI hook - left unimplemented for ED-302 (future story) */ }
     private void OnCreateStory() { /* UI hook - left unimplemented for ED-302 (future story) */ }
-    private void OnContinueSession() { /* UI hook - left unimplemented for ED-302 (future story) */ }
+    private void OnContinueSession()
+    {
+        // Create an empty Work Contract draft in response to the dashboard CTA
+        var draft = new WorkContract
+        {
+            RepositoryName = WorkspaceState.ActiveRepositoryName,
+            RepositoryPath = WorkspaceState.ActiveRepositoryPath
+        };
+        ContractService.CreateDraft(draft);
+        StateHasChanged();
+    }
 }

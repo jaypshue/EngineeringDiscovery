@@ -49,14 +49,16 @@ namespace EngineeringDiscovery.Web.Services
         public bool ActiveWorkContractHumanReady { get; private set; }
         public bool ActiveWorkContractEngineOSReady { get; private set; }
         public DateTime? ActiveWorkContractUpdatedUtc { get; private set; }
+        public string ActiveWorkContractLastUpdatedBy { get; private set; } = string.Empty;
 
-        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc)
+        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc, string lastUpdatedBy = "")
         {
             ActiveWorkContractTitle = title ?? string.Empty;
             ActiveWorkContractStatus = status ?? string.Empty;
             ActiveWorkContractHumanReady = humanReady;
             ActiveWorkContractEngineOSReady = engineReady;
             ActiveWorkContractUpdatedUtc = updatedUtc;
+            ActiveWorkContractLastUpdatedBy = lastUpdatedBy ?? string.Empty;
             try
             {
                 StateChanged?.Invoke();

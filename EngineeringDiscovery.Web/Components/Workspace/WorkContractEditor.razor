@@ -11,6 +11,10 @@
     else
     {
         <div style="display:flex;flex-direction:column;gap:8px;">
+            @if (string.IsNullOrEmpty(ContractService.CurrentContract.LastUpdatedBy))
+            {
+                <div style="font-size:0.85rem;color:var(--muted);">New Work Contract — begin typing to define the work.</div>
+            }
             <div>
                 <label>Title</label>
                 <input value="@ContractService.CurrentContract.Title" @oninput="OnTitleInput" />
@@ -45,6 +49,10 @@
                 <div>Status: <strong>@ContractService.CurrentContract.Status</strong></div>
                 <div>Human Ready: <strong>@(ContractService.CurrentContract.HumanReady ? "Yes" : "No")</strong></div>
                 <div>EngineOS Ready: <strong>@(ContractService.CurrentContract.EngineOSReady ? "Yes" : "No")</strong></div>
+                @if (!string.IsNullOrEmpty(ContractService.CurrentContract.LastUpdatedBy))
+                {
+                    <div>Last Updated By: <strong>@ContractService.CurrentContract.LastUpdatedBy</strong></div>
+                }
             </div>
 
             <div style="display:flex;gap:8px">

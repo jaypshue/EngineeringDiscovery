@@ -26,6 +26,7 @@ namespace EngineeringDiscovery.Web.Services
             _current.Status = "Editing";
             _current.HumanReady = false;
             _current.EngineOSReady = false;
+            _current.LastUpdatedBy = "You";
             // Update presentation summary
             PushSummaryToWorkspace();
             ContractChanged?.Invoke();
@@ -41,6 +42,7 @@ namespace EngineeringDiscovery.Web.Services
             _current.EngineOSReady = false;
             _current.Status = "Editing";
             _current.UpdatedUtc = DateTime.UtcNow;
+            _current.LastUpdatedBy = "You";
             PushSummaryToWorkspace();
             ContractChanged?.Invoke();
         }
@@ -50,6 +52,7 @@ namespace EngineeringDiscovery.Web.Services
             if (_current == null) return;
             _current.HumanReady = ready;
             EvaluateStatus();
+            _current.LastUpdatedBy = "You";
             PushSummaryToWorkspace();
             ContractChanged?.Invoke();
         }
@@ -59,6 +62,7 @@ namespace EngineeringDiscovery.Web.Services
             if (_current == null) return;
             _current.EngineOSReady = ready;
             EvaluateStatus();
+            _current.LastUpdatedBy = "EngineOS";
             PushSummaryToWorkspace();
             ContractChanged?.Invoke();
         }
@@ -78,7 +82,22 @@ namespace EngineeringDiscovery.Web.Services
                 _current.Status,
                 _current.HumanReady,
                 _current.EngineOSReady,
-                _current.UpdatedUtc);
+                _current.UpdatedUtc,
+                _current.LastUpdatedBy);
+        }
+
+        public WorkContract CreateEmptyDraft()
+        {
+            var c = new WorkContract();
+            c.UpdatedUtc = DateTime.UtcNow;
+            c.Status = "Editing";
+            c.HumanReady = false;
+            c.EngineOSReady = false;
+            c.LastUpdatedBy = string.Empty;
+            _current = c;
+            PushSummaryToWorkspace();
+            ContractChanged?.Invoke();
+            return _current;
         }
     }
 }
