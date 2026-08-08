@@ -72,6 +72,135 @@ Its objective is to help engineers make consistently better engineering decision
 
 ---
 
+# Engineering Workflow Principles
+
+The Shared Engineering Workspace exists to minimize mechanical work and maximize engineering judgment.
+
+As EngineOS evolves, the engineer should spend progressively less time operating software and progressively more time making engineering decisions.
+
+## Mechanical Work vs Engineering Judgment
+
+EngineOS performs the mechanical work.
+
+Human engineers perform the engineering judgment.
+
+Examples of mechanical work include:
+
+- generating initial engineering documents
+- organizing engineering artifacts
+- collecting engineering evidence
+- maintaining engineering context
+- preparing implementation packages
+- coordinating implementation agents
+
+Examples of engineering judgment include:
+
+- selecting priorities
+- reviewing engineering intent
+- making architectural decisions
+- accepting or rejecting proposals
+- approving implementation
+- validating engineering outcomes
+
+The success of EngineOS is measured by how effectively it transfers mechanical work away from the engineer while preserving human ownership of engineering decisions.
+
+---
+
+## Workflow Before Interface
+
+The workspace should guide engineering rather than expose implementation.
+
+Every screen should answer three questions:
+
+- Where am I?
+- What requires my attention?
+- What should I do next?
+
+EngineOS should continuously move engineering toward the next valid state.
+
+---
+
+## Engineering Decisions
+
+Every visible control must satisfy at least one of the following:
+
+- advance engineering work
+- communicate engineering state
+- request engineering judgment
+
+Controls that satisfy none of these purposes should not exist.
+
+---
+
+## Documents Are Primary
+
+Engineering is centered around living engineering documents.
+
+Conversation exists to improve engineering documents.
+
+Engineering documents become implementation packages.
+
+Implementation produces engineering evidence.
+
+Engineering evidence improves the Engineering Model.
+
+The engineer primarily reviews and refines documents rather than authoring every artifact from scratch.
+
+---
+
+## Progressive Automation
+
+EngineOS should proactively generate engineering artifacts whenever sufficient engineering understanding exists.
+
+Examples include:
+
+- Work Contracts
+- Product Vision updates
+- Architecture documents
+- Roadmaps
+- Engineering Packages
+- Verification plans
+
+The engineer reviews, revises, and approves these artifacts before they advance.
+
+Automation should reduce typing.
+
+It should never reduce engineering ownership.
+
+---
+
+## State-Aware Guidance
+
+Recommendations should be based on the current engineering state before conversational intent.
+
+The current engineering state determines the next valid engineering action.
+
+EngineOS should guide engineers toward engineering progress rather than simply responding to questions.
+
+---
+
+## Open Authoring
+
+EngineOS owns the engineering workflow.
+
+It does not require that every engineering artifact be authored inside EngineOS.
+
+Engineering artifacts may be drafted using:
+
+- EngineOS
+- ChatGPT
+- GitHub Copilot
+- Visual Studio
+- future compatible authoring environments
+
+Regardless of where an artifact is authored, EngineOS remains the steward of the engineering workspace and the canonical engineering state.
+
+The engineering workflow is portable.
+
+The engineering understanding remains centralized.
+
+---
+
 # Engineering Events
 
 Engineering progresses through observable events.

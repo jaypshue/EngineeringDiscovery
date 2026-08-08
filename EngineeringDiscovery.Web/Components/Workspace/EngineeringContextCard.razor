@@ -40,9 +40,18 @@
             <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Human Ready: @(ActiveWorkContractHumanReady ? "Yes" : "No") &nbsp; EngineOS Ready: @(ActiveWorkContractEngineOSReady ? "Yes" : "No")</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <button class="btn btn-primary" @onclick="OnDefineGoal">Define Goal</button>
-            <button class="btn btn-outline" @onclick="OnCreateStory">Create Story</button>
-            <button class="btn" @onclick="OnContinueSession">Continue Session</button>
+            <div style="font-size:0.9rem;color:var(--muted)">Next Action</div>
+            <div style="font-weight:700">@(!string.IsNullOrEmpty(ActiveNextRecommendedAction) ? ActiveNextRecommendedAction : "Start New Work Contract")</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+                @if (string.IsNullOrEmpty(ActiveWorkContractTitle))
+                {
+                    <button class="btn btn-primary" @onclick="CreateWorkContract">Start New Work Contract</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="OnContinueSession">Continue Work</button>
+                }
+            </div>
         </div>
     </div>
 </div>
@@ -78,6 +87,9 @@
 
     [Parameter]
     public string ActiveWorkContractLastUpdatedBy { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ActiveNextRecommendedAction { get; set; } = string.Empty;
 
     [Parameter]
     public EventCallback DefineGoal { get; set; }

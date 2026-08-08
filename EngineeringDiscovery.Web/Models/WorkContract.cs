@@ -30,5 +30,14 @@ namespace EngineeringDiscovery.Web.Models
                 && string.IsNullOrWhiteSpace(ImplementationPlan)
                 && string.IsNullOrWhiteSpace(VerificationRequirements);
         }
+
+        // The living document representation of the Work Contract. Prefer this for editing.
+        public string DocumentText { get; set; } = string.Empty;
+
+        public string ToDocumentText()
+        {
+            // Basic markdown-like composition
+            return $"# {Title}\n\n## Objective\n{Objective}\n\n## Acceptance Criteria\n{AcceptanceCriteria}\n\n## Out Of Scope\n{OutOfScope}\n\n## Implementation Plan\n{ImplementationPlan}\n\n## Verification Requirements\n{VerificationRequirements}";
+        }
     }
 }

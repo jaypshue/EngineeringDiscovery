@@ -13,51 +13,29 @@
         <div style="display:flex;flex-direction:column;gap:8px;">
             @if (string.IsNullOrEmpty(ContractService.CurrentContract.LastUpdatedBy))
             {
-                <div style="font-size:0.85rem;color:var(--muted);">New Work Contract — begin typing to define the work.</div>
+                <div style="font-size:0.95rem;color:var(--muted);">EngineOS can generate the initial draft. Click 'Request Draft' to get a proposed contract.</div>
             }
-            <div>
-                <label>Title</label>
-                <input value="@ContractService.CurrentContract.Title" @oninput="OnTitleInput" />
-            </div>
 
             <div>
-                <label>Objective</label>
-                <textarea @oninput="OnObjectiveInput">@ContractService.CurrentContract.Objective</textarea>
-            </div>
-
-            <div>
-                <label>Acceptance Criteria</label>
-                <textarea @oninput="OnAcceptanceInput">@ContractService.CurrentContract.AcceptanceCriteria</textarea>
-            </div>
-
-            <div>
-                <label>Out Of Scope</label>
-                <textarea @oninput="OnOutOfScopeInput">@ContractService.CurrentContract.OutOfScope</textarea>
-            </div>
-
-            <div>
-                <label>Implementation Plan</label>
-                <textarea @oninput="OnImplementationInput">@ContractService.CurrentContract.ImplementationPlan</textarea>
-            </div>
-
-            <div>
-                <label>Verification Requirements</label>
-                <textarea @oninput="OnVerificationInput">@ContractService.CurrentContract.VerificationRequirements</textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div style="font-weight:700;font-size:1.05rem">Work Contract</div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-sm" @onclick="RequestDraft">Request Draft</button>
+                        <button class="btn btn-sm" @onclick="ToggleHumanReady">Human Ready: @(ContractService.CurrentContract.HumanReady ? "Yes" : "No")</button>
+                    </div>
+                </div>
+                <div style="margin-top:8px">
+                    <textarea style="width:100%;min-height:240px;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);font-family:monospace" @bind="DocumentText" @oninput="OnDocumentEdited"></textarea>
+                </div>
             </div>
 
             <div style="display:flex;gap:8px;align-items:center">
                 <div>Status: <strong>@ContractService.CurrentContract.Status</strong></div>
-                <div>Human Ready: <strong>@(ContractService.CurrentContract.HumanReady ? "Yes" : "No")</strong></div>
                 <div>EngineOS Ready: <strong>@(ContractService.CurrentContract.EngineOSReady ? "Yes" : "No")</strong></div>
                 @if (!string.IsNullOrEmpty(ContractService.CurrentContract.LastUpdatedBy))
                 {
                     <div>Last Updated By: <strong>@ContractService.CurrentContract.LastUpdatedBy</strong></div>
                 }
-            </div>
-
-            <div style="display:flex;gap:8px">
-                <button @onclick="ToggleHumanReady">Toggle Human Ready</button>
-                <button @onclick="SimulateEngineReady">Simulate EngineOS Ready</button>
             </div>
         </div>
     }
@@ -67,6 +45,11 @@
     protected override void OnInitialized()
     {
         ContractService.ContractChanged += OnContractChanged;
+        // Initialize document text from the current contract
+        if (ContractService.CurrentContract != null)
+        {
+            DocumentText = string.IsNullOrWhiteSpace(ContractService.CurrentContract.DocumentText) ? ContractService.CurrentContract.ToDocumentText() : ContractService.CurrentContract.DocumentText;
+        }
     }
 
     private void OnContractChanged() => InvokeAsync(StateHasChanged);
@@ -124,5 +107,27 @@
         var cur = ContractService.CurrentContract;
         if (cur == null) return;
         ContractService.SetEngineOSReady(!cur.EngineOSReady);
+    }
+
+    private string DocumentText { get; set; } = string.Empty;
+
+    private void OnDocumentEdited(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        // Update the living document text on the contract and clear readiness
+        ContractService.UpdateField(c => c.DocumentText = text);
+    }
+
+    private async Task RequestDraft()
+    {
+        // Request EngineOS to generate an initial draft proposal for the current repository/context
+        if (ContractService.CurrentContract == null) return;
+
+        // Simulate partner request by creating a proposal observation; Partner will populate working memory
+        // For this implementation we will call Partner via ConversationHost flow instead of direct partner call
+        // Raise a simple recommendation into WorkspaceState (for UI) and set a placeholder DocumentText
+        ContractService.UpdateField(c => c.DocumentText = "# Proposed Work Contract\n\n_EngineOS is generating a draft..._");
+        await Task.Delay(250); // allow UI to update
+        // In a future iteration this would call Partner and wait for a structured draft to be returned
     }
 }

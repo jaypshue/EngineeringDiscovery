@@ -50,8 +50,9 @@ namespace EngineeringDiscovery.Web.Services
         public bool ActiveWorkContractEngineOSReady { get; private set; }
         public DateTime? ActiveWorkContractUpdatedUtc { get; private set; }
         public string ActiveWorkContractLastUpdatedBy { get; private set; } = string.Empty;
+        public string ActiveNextRecommendedAction { get; private set; } = string.Empty;
 
-        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc, string lastUpdatedBy = "")
+        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc, string lastUpdatedBy = "", string nextRecommendedAction = "")
         {
             ActiveWorkContractTitle = title ?? string.Empty;
             ActiveWorkContractStatus = status ?? string.Empty;
@@ -59,6 +60,7 @@ namespace EngineeringDiscovery.Web.Services
             ActiveWorkContractEngineOSReady = engineReady;
             ActiveWorkContractUpdatedUtc = updatedUtc;
             ActiveWorkContractLastUpdatedBy = lastUpdatedBy ?? string.Empty;
+            ActiveNextRecommendedAction = nextRecommendedAction ?? string.Empty;
             try
             {
                 StateChanged?.Invoke();
