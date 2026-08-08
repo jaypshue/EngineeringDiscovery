@@ -46,6 +46,8 @@ builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringAdvis
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringInsightService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringRecommendationService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
+// Session-scoped WorkContract manager for ED-303
+builder.Services.AddScoped<EngineeringDiscovery.Web.Services.WorkContractService>();
 // Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
 builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
 // Repository selection interaction service (presentation-owned)

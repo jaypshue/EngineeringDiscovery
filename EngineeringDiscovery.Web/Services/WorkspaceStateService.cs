@@ -42,5 +42,29 @@ namespace EngineeringDiscovery.Web.Services
                 _log.LogWarning(ex, "WorkspaceStateService.StateChanged handler threw");
             }
         }
+
+        // Work Contract summary (session-scoped view)
+        public string ActiveWorkContractTitle { get; private set; } = string.Empty;
+        public string ActiveWorkContractStatus { get; private set; } = string.Empty;
+        public bool ActiveWorkContractHumanReady { get; private set; }
+        public bool ActiveWorkContractEngineOSReady { get; private set; }
+        public DateTime? ActiveWorkContractUpdatedUtc { get; private set; }
+
+        public void SetWorkContractSummary(string title, string status, bool humanReady, bool engineReady, DateTime? updatedUtc)
+        {
+            ActiveWorkContractTitle = title ?? string.Empty;
+            ActiveWorkContractStatus = status ?? string.Empty;
+            ActiveWorkContractHumanReady = humanReady;
+            ActiveWorkContractEngineOSReady = engineReady;
+            ActiveWorkContractUpdatedUtc = updatedUtc;
+            try
+            {
+                StateChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "WorkspaceStateService.StateChanged handler threw");
+            }
+        }
     }
 }
