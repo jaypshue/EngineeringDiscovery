@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 {
-    internal class CSharpRepositoryProvider : IRepositoryProvider
+    internal class CSharpRepositoryProvider : IRepositoryProvider, ILanguageProvider
     {
         public bool CanLoad(string repositoryRoot)
         {

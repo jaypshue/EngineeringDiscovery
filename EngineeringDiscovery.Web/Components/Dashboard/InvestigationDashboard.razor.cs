@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Components.Dashboard
 {
@@ -73,84 +74,133 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                 };
             }
 
+            // Require structured observations for structural dashboard projection
+            var hasTypes = Investigation.TypeObservations != null && Investigation.TypeObservations.Any();
+            var hasNamespaces = Investigation.NamespaceObservations != null && Investigation.NamespaceObservations.Any();
+            var hasMembers = Investigation.MemberObservations != null && Investigation.MemberObservations.Any();
+
+            if (!hasTypes && !hasNamespaces && !hasMembers)
+            {
+                throw new InvalidOperationException("Investigation missing structured observations: TypeObservations, NamespaceObservations, or MemberObservations are required for structural dashboard projection.");
+            }
+
             var projects = new Dictionary<string, ProjectNodeViewModel>(StringComparer.OrdinalIgnoreCase);
             var dependencies = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
             var technologies = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
             var findings = new List<EngineeringDiscovery.Core.Domain.Investigation.Finding>();
 
+            // Helper: lookup descriptive DiscoveryObservation entries
+            var discoveryObs = Investigation.Observations ?? Array.Empty<DiscoveryObservation>();
+
+            IEnumerable<string> GetTypeDescriptions(EngineeringDiscovery.Core.Models.TypeObservation t)
+            {
+                return discoveryObs.Where(o => o.Kind == ObservationKind.Type
+                        && string.Equals(o.Project ?? string.Empty, t.Project ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(o.Namespace ?? string.Empty, t.Namespace ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(o.Type ?? string.Empty, t.TypeName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    .Select(o => o.Description)
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+            }
+
+            IEnumerable<string> GetNamespaceDescriptions(EngineeringDiscovery.Core.Models.NamespaceObservation n)
+            {
+                return discoveryObs.Where(o => o.Kind == ObservationKind.Namespace
+                        && string.Equals(o.Project ?? string.Empty, n.Project ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(o.Namespace ?? string.Empty, n.NamespaceName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    .Select(o => o.Description)
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+            }
+
+            IEnumerable<string> GetMemberDescriptions(EngineeringDiscovery.Core.Models.MemberObservation m)
+            {
+                return discoveryObs.Where(o => o.Kind == ObservationKind.Member
+                        && string.Equals(o.Project ?? string.Empty, m.Project ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(o.Type ?? string.Empty, m.Type ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(o.Member ?? string.Empty, m.MemberName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    .Select(o => o.Description)
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+            }
+
+            // Build structural tree from canonical observations
+            if (hasTypes)
+            {
+                foreach (var t in Investigation.TypeObservations)
+                {
+                    var pname = string.IsNullOrWhiteSpace(t.Project) ? "<unknown>" : t.Project;
+                    if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
+                    var proj = projects[pname];
+
+                    var nsName = string.IsNullOrWhiteSpace(t.Namespace) ? "<global>" : t.Namespace;
+                    if (!proj.Namespaces.ContainsKey(nsName)) proj.Namespaces[nsName] = new NamespaceNodeViewModel { Name = nsName };
+                    var nsModel = proj.Namespaces[nsName];
+
+                    var typeName = t.TypeName ?? "<unknown>";
+                    if (!nsModel.Types.ContainsKey(typeName)) nsModel.Types[typeName] = new TypeNodeViewModel { Name = typeName, Kind = t.Kind.ToString().ToLowerInvariant() };
+                    var typeModel = nsModel.Types[typeName];
+
+                    var descs = GetTypeDescriptions(t).ToList();
+                    if (descs.Any()) typeModel.Observations.AddRange(descs);
+                    else typeModel.Observations.Add($"Defines {t.Kind.ToString().ToLowerInvariant()} '{typeName}' in namespace '{nsName}'.");
+                }
+            }
+
+            if (hasNamespaces)
+            {
+                foreach (var n in Investigation.NamespaceObservations)
+                {
+                    var pname = string.IsNullOrWhiteSpace(n.Project) ? "<unknown>" : n.Project;
+                    if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
+                    var proj = projects[pname];
+
+                    var nsName = string.IsNullOrWhiteSpace(n.NamespaceName) ? "<global>" : n.NamespaceName;
+                    if (!proj.Namespaces.ContainsKey(nsName)) proj.Namespaces[nsName] = new NamespaceNodeViewModel { Name = nsName };
+                    var nsModel = proj.Namespaces[nsName];
+
+                    var descs = GetNamespaceDescriptions(n).ToList();
+                    if (descs.Any()) nsModel.Observations.AddRange(descs);
+                    else nsModel.Observations.Add($"Namespace '{nsName}'.");
+                }
+            }
+
+            if (hasMembers)
+            {
+                foreach (var m in Investigation.MemberObservations)
+                {
+                    var pname = string.IsNullOrWhiteSpace(m.Project) ? "<unknown>" : m.Project;
+                    if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
+                    var proj = projects[pname];
+
+                    var nsName = string.IsNullOrWhiteSpace(m.Namespace) ? "<global>" : m.Namespace;
+                    if (!proj.Namespaces.ContainsKey(nsName)) proj.Namespaces[nsName] = new NamespaceNodeViewModel { Name = nsName };
+                    var nsModel = proj.Namespaces[nsName];
+
+                    var typeName = string.IsNullOrWhiteSpace(m.Type) ? "<unknown>" : m.Type;
+                    if (!nsModel.Types.ContainsKey(typeName)) nsModel.Types[typeName] = new TypeNodeViewModel { Name = typeName, Kind = "class" };
+                    var typeModel = nsModel.Types[typeName];
+
+                    if (!string.IsNullOrWhiteSpace(m.MemberName) && !typeModel.Members.Contains(m.MemberName)) typeModel.Members.Add(m.MemberName);
+
+                    var descs = GetMemberDescriptions(m).ToList();
+                    if (descs.Any()) typeModel.Observations.AddRange(descs);
+                    else if (!string.IsNullOrWhiteSpace(m.MemberName)) typeModel.Observations.Add($"Defines member '{m.MemberName}' in type '{typeName}'.");
+                }
+            }
+
+            // Preserve non-structural findings and collect technology/dependency signals via regex
             foreach (var f in Investigation.Findings ?? Enumerable.Empty<Finding>())
             {
                 if (f.Type != FindingType.Observation) findings.Add(f);
                 var desc = f.Description ?? string.Empty;
 
-                foreach (Match m in Regex.Matches(desc, "Project '(?<p>[^']+)'", RegexOptions.IgnoreCase))
-                {
-                    var pname = m.Groups["p"].Value.Trim();
-                    if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
-                    projects[pname].Observations.Add(desc);
-                }
-
-                foreach (Match m in Regex.Matches(desc, "Project (?<p>[A-Za-z0-9_.-]+)", RegexOptions.IgnoreCase))
-                {
-                    var pname = m.Groups["p"].Value.Trim();
-                    if (!projects.ContainsKey(pname)) projects[pname] = new ProjectNodeViewModel { Name = pname };
-                    projects[pname].Observations.Add(desc);
-                }
-
-                var nsMatches = Regex.Matches(desc, "defines namespace '(?<ns>[^']+)'", RegexOptions.IgnoreCase);
-                foreach (Match nm in nsMatches)
-                {
-                    var ns = nm.Groups["ns"].Value.Trim();
-                    var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
-                    if (!projects.ContainsKey(p)) projects[p] = new ProjectNodeViewModel { Name = p };
-                    var proj = projects[p];
-                    if (!proj.Namespaces.ContainsKey(ns)) proj.Namespaces[ns] = new NamespaceNodeViewModel { Name = ns };
-                    proj.Namespaces[ns].Observations.Add(desc);
-                }
-
-                var typeRegex = new Regex("defines (?:class|interface|record|struct|enum|delegate) '(?<type>[^']+)' in namespace '(?<ns>[^']+)'", RegexOptions.IgnoreCase);
-                foreach (Match tm in typeRegex.Matches(desc))
-                {
-                    var typeName = tm.Groups["type"].Value.Trim();
-                    var ns = tm.Groups["ns"].Value.Trim();
-                    var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
-                    if (!projects.ContainsKey(p)) projects[p] = new ProjectNodeViewModel { Name = p };
-                    var proj = projects[p];
-                    if (!proj.Namespaces.ContainsKey(ns)) proj.Namespaces[ns] = new NamespaceNodeViewModel { Name = ns };
-                    var nsModel = proj.Namespaces[ns];
-                    if (!nsModel.Types.ContainsKey(typeName)) nsModel.Types[typeName] = new TypeNodeViewModel { Name = typeName, Kind = KindFromDesc(desc) };
-                    nsModel.Types[typeName].Observations.Add(desc);
-                }
-
-                var memberRegex = new Regex("defines (?<kind>constructor|method|property|field|event) '(?<member>[^']+)' in type '(?<type>[^']+)'", RegexOptions.IgnoreCase);
-                foreach (Match mm in memberRegex.Matches(desc))
-                {
-                    var kind = mm.Groups["kind"].Value.Trim();
-                    var member = mm.Groups["member"].Value.Trim();
-                    var typeName = mm.Groups["type"].Value.Trim();
-                    var p = ExtractProjectFromDesc(desc) ?? "<unknown>";
-                    if (!projects.ContainsKey(p)) projects[p] = new ProjectNodeViewModel { Name = p };
-                    var proj = projects[p];
-                    var tmodel = proj.Namespaces.Values.SelectMany(n => n.Types.Values).FirstOrDefault(t => string.Equals(t.Name, typeName, StringComparison.OrdinalIgnoreCase));
-                    if (tmodel == null)
-                    {
-                        if (!proj.Namespaces.ContainsKey("<global>")) proj.Namespaces["<global>"] = new NamespaceNodeViewModel { Name = "<global>" };
-                        var nsModel = proj.Namespaces["<global>"];
-                        if (!nsModel.Types.ContainsKey(typeName)) nsModel.Types[typeName] = new TypeNodeViewModel { Name = typeName, Kind = "type" };
-                        nsModel.Types[typeName].Members.Add($"{kind}: {member}");
-                        nsModel.Types[typeName].Observations.Add(desc);
-                    }
-                    else
-                    {
-                        tmodel.Members.Add($"{kind}: {member}");
-                        tmodel.Observations.Add(desc);
-                    }
-                }
-
                 var depRegex = new Regex("references package '(?<pkg>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match dm in depRegex.Matches(desc)) dependencies.Add(dm.Groups["pkg"].Value.Trim());
+
                 var frameRegex = new Regex("references framework '(?<fw>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match dm in frameRegex.Matches(desc)) dependencies.Add(dm.Groups["fw"].Value.Trim());
+
                 var analyzerRegex = new Regex("references analyzer '(?<an>[^']+)'", RegexOptions.IgnoreCase);
                 foreach (Match dm in analyzerRegex.Matches(desc)) dependencies.Add(dm.Groups["an"].Value.Trim());
 
@@ -158,7 +208,7 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
                 foreach (Match um in usesRegex.Matches(desc))
                 {
                     var tech = um.Groups["tech"].Value.Trim();
-                    if (!string.IsNullOrWhiteSpace(tech) && tech.Length < 100) technologies.Add(tech);
+                    if (!string.IsNullOrWhiteSpace(tech)) technologies.Add(tech);
                 }
             }
 
@@ -166,13 +216,6 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
             ViewModel.Dependencies = dependencies.ToList();
             ViewModel.Technologies = technologies.ToList();
             ViewModel.Findings = findings;
-
-            ViewModel.Summary.TechnologyCount = technologies.Count;
-
-            // Reset selection on rebuild
-            SelectedNodeType = NodeType.None;
-            SelectedDetails.Clear();
-            SelectedObservations = new List<string>();
         }
 
         // Selection model for details panel

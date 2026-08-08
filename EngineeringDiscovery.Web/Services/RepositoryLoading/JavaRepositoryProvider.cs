@@ -7,7 +7,7 @@ using EngineeringDiscovery.Core.Models;
 
 namespace EngineeringDiscovery.Web.Services.RepositoryLoading
 {
-    internal class JavaRepositoryProvider : IRepositoryProvider
+    internal class JavaRepositoryProvider : IRepositoryProvider, ILanguageProvider
     {
         private static readonly Regex PackageDeclarationRegex = new Regex(@"^\s*package\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly Regex TypeDeclarationRegex = new Regex(@"^\s*(?:(public|protected|private)\s+)?(?:(abstract|final|static)\s+)*(class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)(?<clauses>[^\{;]*)", RegexOptions.Compiled | RegexOptions.Multiline);
