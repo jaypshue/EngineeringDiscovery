@@ -185,6 +185,16 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         {
             var ctx = new CompilationContext { ProjectName = projectName ?? string.Empty, ProjectFilePath = projectFilePath };
 
+            // If project file did not provide a RootNamespace via MSBuild, provide a fallback extractor
+            try
+            {
+                if (string.IsNullOrWhiteSpace(ctx.ProjectFilePath) && !string.IsNullOrWhiteSpace(projectFilePath))
+                {
+                    ctx.ProjectFilePath = projectFilePath;
+                }
+            }
+            catch { }
+
             foreach (var tree in compilation.SyntaxTrees)
             {
                 try
@@ -232,6 +242,21 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                                 EventCount = symbol.GetMembers().OfType<IEventSymbol>().Count(),
                                 SourceFilePath = tree.FilePath
                             };
+
+                            // If project file contains RootNamespace, it's already captured on the csproj; otherwise keep empty.
+                            try
+                            {
+                                if (!string.IsNullOrWhiteSpace(projectFilePath))
+                                {
+                                    var rn = EngineeringDiscovery.Web.Services.RepositoryLoading.FallbackParsing.RootNamespaceResolver.GetRootNamespaceFromCsproj(projectFilePath);
+                                    if (!string.IsNullOrWhiteSpace(rn) && string.IsNullOrWhiteSpace(td.Namespace))
+                                    {
+                                        // If type lacks declared namespace (unlikely under Roslyn), prefer project RootNamespace
+                                        td.Namespace = rn;
+                                    }
+                                }
+                            }
+                            catch { }
 
                             // Capture implemented interface names
                             try
@@ -485,6 +510,89 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
                 }
                 catch { }
             }
+            // Fallback member scanning for loose-file scenarios: when MemberDescriptors empty, attempt textual heuristics
+            try
+            {
+                if (ctx.MemberDescriptors.Count == 0)
+                {
+                    var csFiles = compilation.SyntaxTrees.Select(st => st.FilePath).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    foreach (var f in csFiles)
+                    {
+                        try
+                        {
+                            var text = System.IO.File.ReadAllText(f);
+                            foreach (var t in ctx.Types.Where(x => string.Equals(x.SourceFilePath ?? string.Empty, f, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                try
+                                {
+                                    foreach (var mem in EngineeringDiscovery.Web.Services.RepositoryLoading.FallbackParsing.LooseFileMemberScanner.ScanMembersInType(text, t.TypeName))
+                                    {
+                                        try
+                                        {
+                                            var md = new MemberDescriptor
+                                            {
+                                                Project = ctx.ProjectName,
+                                                Namespace = t.Namespace ?? string.Empty,
+                                                TypeName = t.TypeName ?? string.Empty,
+                                                MemberName = mem.MemberName ?? string.Empty,
+                                                Kind = mem.Kind == "method" ? MemberKind.Method : mem.Kind == "constructor" ? MemberKind.Constructor : MemberKind.Field,
+                                                Visibility = "",
+                                                IsStatic = false,
+                                                IsAsync = false,
+                                                LineCount = 0
+                                            };
+                                            ctx.MemberDescriptors.Add(md);
+                                        }
+                                        catch { }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                var namespaces = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var t in ctx.Types)
+                {
+                    try { if (!string.IsNullOrWhiteSpace(t.Namespace)) namespaces.Add(t.Namespace); } catch { }
+                }
+
+                if (namespaces.Count > 0)
+                {
+                    foreach (var ns in namespaces)
+                    {
+                        try
+                        {
+                            var nsObs = new EngineeringDiscovery.Core.Models.NamespaceObservation
+                            {
+                                Project = ctx.ProjectName,
+                                NamespaceName = ns,
+                                TypeCount = ctx.Types.Count(x => string.Equals(x.Namespace ?? string.Empty, ns, StringComparison.OrdinalIgnoreCase)),
+                                ClassCount = 0,
+                                InterfaceCount = 0,
+                                RecordCount = 0,
+                                StructCount = 0,
+                                EnumCount = 0,
+                                DelegateCount = 0,
+                                PublicTypeCount = 0,
+                                InternalTypeCount = 0,
+                                AbstractTypeCount = 0,
+                                StaticTypeCount = 0
+                            };
+
+                            try { ctx.NamespaceObservations.Add(nsObs); } catch { }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
 
             return ctx;
         }

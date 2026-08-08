@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using EngineeringDiscovery.Core.Domain.Investigation;
 using EngineeringDiscovery.Core.Models;
 using EngineeringDiscovery.Web.Services.RepositoryLoading;
@@ -34,6 +35,15 @@ namespace EngineeringDiscovery.Web.Services.Discovery
                             {
                                 try { context.NamespaceObservations.Add(nsObs); } catch { }
                                 try { _inv.AddNamespaceObservation(nsObs); } catch { }
+
+                                // Preserve legacy human-readable findings for namespace discovery
+                                try
+                                {
+                                    var desc = $"Project '{c.ProjectName}' defines namespace '{nsObs.NamespaceName}'.";
+                                    try { _inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, desc)); } catch { }
+                                    try { _inv.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Namespace, Project = nsObs.Project, Namespace = nsObs.NamespaceName, Description = desc }); } catch { }
+                                }
+                                catch { }
                             }
                         }
                         catch { }
@@ -317,6 +327,21 @@ namespace EngineeringDiscovery.Web.Services.Discovery
 
                             try { context.TypeObservations.Add(typeObs); } catch { }
                             try { _inv.AddTypeObservation(typeObs); } catch { }
+
+                            // Preserve legacy human-readable findings for type discovery
+                            try
+                            {
+                                var fileNameOnly = string.Empty;
+                                try { fileNameOnly = !string.IsNullOrWhiteSpace(t.SourceFilePath) ? Path.GetFileName(t.SourceFilePath) : string.Empty; } catch { }
+                                var kind = t.Kind.ToString().ToLowerInvariant();
+                                var nsDisplay = string.IsNullOrWhiteSpace(t.Namespace) ? "<global>" : t.Namespace;
+                                var desc = string.IsNullOrWhiteSpace(fileNameOnly)
+                                    ? $"Project '{c.ProjectName}' defines {kind} '{t.TypeName}' in namespace '{nsDisplay}'."
+                                    : $"Project '{c.ProjectName}' defines {kind} '{t.TypeName}' in namespace '{nsDisplay}' (file: {fileNameOnly}).";
+                                try { _inv.AddFinding(new Finding(Guid.NewGuid(), FindingType.Observation, desc)); } catch { }
+                                try { _inv.AddObservation(new DiscoveryObservation { Kind = ObservationKind.Type, Project = c.ProjectName, Namespace = t.Namespace, Type = t.TypeName, Description = desc }); } catch { }
+                            }
+                            catch { }
                         }
                             catch { }
                         }
