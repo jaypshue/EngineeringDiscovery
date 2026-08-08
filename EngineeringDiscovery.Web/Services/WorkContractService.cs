@@ -67,6 +67,24 @@ namespace EngineeringDiscovery.Web.Services
             ContractChanged?.Invoke();
         }
 
+        // Apply a proposed change to the contract originating from EngineOS (or other author).
+        // The updater should modify the WorkContract fields as needed. The author indicates who
+        // is credited with the change (e.g., "EngineOS"). Applying a proposal clears readiness
+        // and sets Status back to Editing.
+        public void ApplyProposal(Action<WorkContract> updater, string author = "EngineOS")
+        {
+            if (_current == null) return;
+            updater(_current);
+            // Any accepted proposal resets readiness and returns to Editing
+            _current.HumanReady = false;
+            _current.EngineOSReady = false;
+            _current.Status = "Editing";
+            _current.UpdatedUtc = DateTime.UtcNow;
+            _current.LastUpdatedBy = author ?? string.Empty;
+            PushSummaryToWorkspace();
+            ContractChanged?.Invoke();
+        }
+
         private void EvaluateStatus()
         {
             if (_current == null) return;

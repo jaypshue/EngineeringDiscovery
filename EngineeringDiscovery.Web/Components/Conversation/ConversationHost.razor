@@ -16,6 +16,9 @@
             </div>
         }
     </div>
+    <div style="margin-top:8px;font-size:0.9rem;color:var(--muted)">
+        Active Artifact: <strong>Work Contract</strong> — @(!string.IsNullOrEmpty(WorkspaceState.ActiveWorkContractTitle) ? WorkspaceState.ActiveWorkContractTitle : "(none)")
+    </div>
     @if (!string.IsNullOrWhiteSpace(CurrentRecommendation))
     {
         <div class="recommendation" style="margin:12px 0;padding:10px;border-left:4px solid #2b8aef;background:rgba(43,138,239,0.06);border-radius:4px">
@@ -28,6 +31,19 @@
             <div style="margin-top:8px;display:flex;gap:8px">
                 <button class="btn btn-sm btn-outline" @onclick="AcknowledgeRecommendationAsync">Acknowledge</button>
                 <button class="btn btn-sm btn-primary" @onclick="GenerateWorkContractAsync">Generate Work Contract</button>
+                <button class="btn btn-sm" @onclick="ProposeContractEditAsync">Propose Edit</button>
+            </div>
+        </div>
+    }
+
+    @if (IsProposalPending && !string.IsNullOrWhiteSpace(ProposedChangePreview))
+    {
+        <div class="proposal-preview" style="margin:12px 0;padding:10px;border-left:4px solid #8a2be2;background:rgba(138,43,226,0.06);border-radius:4px">
+            <div style="font-weight:700">Proposed Change Preview</div>
+            <div style="margin-top:6px">@ProposedChangePreview</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+                <button class="btn btn-sm btn-primary" @onclick="AcceptProposal">Accept Proposal</button>
+                <button class="btn btn-sm btn-outline" @onclick="RejectProposal">Reject</button>
             </div>
         </div>
     }
@@ -63,6 +79,8 @@
     private string CurrentCoordination { get; set; } = string.Empty;
     private ElementReference _composerRef;
     private string _composerPlaceholder = "Describe what you're working on... (Enter to send, Shift+Enter for newline)";
+    private bool IsProposalPending { get; set; }
+    private string ProposedChangePreview { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -207,6 +225,58 @@
             await LoadRecommendationAsync();
         }
         catch { }
+    }
+
+    // Request EngineOS to propose a revision to the active Work Contract based on the current recommendation or
+    // a user prompt. The proposed change is returned as a preview and must be explicitly accepted by the user
+    // to update the WorkContractService.CurrentContract.
+    private async Task ProposeContractEditAsync()
+    {
+        if (SessionId == null || string.IsNullOrWhiteSpace(CurrentRecommendation)) return;
+        try
+        {
+            // Ask partner for a proposed update to the contract. We include the active contract summary via WorkspaceState.
+            var prompt = new { action = "ProposeWorkContractEdit", recommendation = CurrentRecommendation, contractTitle = WorkspaceState.ActiveWorkContractTitle, contractStatus = WorkspaceState.ActiveWorkContractStatus };
+            var obs = new Observation { Type = "ProposeContractEditRequest", Source = "User", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(prompt) };
+            await ObservationService.IngestAsync(obs);
+
+            // Partner should produce a structured suggestion into working memory; reload recommendation area
+            await LoadRecommendationAsync();
+
+            // For simplicity reuse CurrentRecommendation as the suggested contract change preview text.
+            // Display the preview in the conversation messages and add Accept/Reject actions as follow-ups.
+            ProposedChangePreview = CurrentRecommendation;
+            IsProposalPending = true;
+            Messages.Add(("EngineOS", "Proposed Contract Edit (preview available)."));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+    }
+
+    private void AcceptProposal()
+    {
+        // Apply proposal: for this implementation we translate CurrentRecommendation into a simple Title/Objectives update.
+        if (string.IsNullOrWhiteSpace(CurrentRecommendation) || ContractService.CurrentContract == null) return;
+
+        ContractService.ApplyProposal(c =>
+        {
+            // Keep it minimal: if Title is empty, set it; otherwise append to Objective
+            if (string.IsNullOrWhiteSpace(c.Title)) c.Title = CurrentRecommendation;
+            else c.Objective = (c.Objective + "\n" + CurrentRecommendation).Trim();
+        }, "EngineOS");
+
+        Messages.Add(("You", "Accepted proposal and updated Work Contract."));
+        IsProposalPending = false;
+        ProposedChangePreview = string.Empty;
+        // Refresh workspace recommendation area and UI
+        _ = LoadRecommendationAsync();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void RejectProposal()
+    {
+        Messages.Add(("You", "Rejected the proposed contract edit."));
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task GenerateWorkContractAsync()
