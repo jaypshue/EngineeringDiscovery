@@ -1,0 +1,120 @@
+@namespace EngineeringDiscovery.Web.Components.Workspace
+@using EngineeringDiscovery.Web.Models
+@using EngineeringDiscovery.Web.Services
+@inject WorkContractService ContractService
+
+<div class="work-contract-editor" style="background:var(--surface-1);padding:12px;border-radius:6px;">
+    @if (ContractService.CurrentContract is null)
+    {
+        <div>No Work Contract in this session.</div>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <div>
+                <label>Title</label>
+                <input value="@ContractService.CurrentContract.Title" @oninput="OnTitleInput" />
+            </div>
+
+            <div>
+                <label>Objective</label>
+                <textarea @oninput="OnObjectiveInput">@ContractService.CurrentContract.Objective</textarea>
+            </div>
+
+            <div>
+                <label>Acceptance Criteria</label>
+                <textarea @oninput="OnAcceptanceInput">@ContractService.CurrentContract.AcceptanceCriteria</textarea>
+            </div>
+
+            <div>
+                <label>Out Of Scope</label>
+                <textarea @oninput="OnOutOfScopeInput">@ContractService.CurrentContract.OutOfScope</textarea>
+            </div>
+
+            <div>
+                <label>Implementation Plan</label>
+                <textarea @oninput="OnImplementationInput">@ContractService.CurrentContract.ImplementationPlan</textarea>
+            </div>
+
+            <div>
+                <label>Verification Requirements</label>
+                <textarea @oninput="OnVerificationInput">@ContractService.CurrentContract.VerificationRequirements</textarea>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center">
+                <div>Status: <strong>@ContractService.CurrentContract.Status</strong></div>
+                <div>Human Ready: <strong>@(ContractService.CurrentContract.HumanReady ? "Yes" : "No")</strong></div>
+                <div>EngineOS Ready: <strong>@(ContractService.CurrentContract.EngineOSReady ? "Yes" : "No")</strong></div>
+            </div>
+
+            <div style="display:flex;gap:8px">
+                <button @onclick="ToggleHumanReady">Toggle Human Ready</button>
+                <button @onclick="SimulateEngineReady">Simulate EngineOS Ready</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ContractService.ContractChanged += OnContractChanged;
+    }
+
+    private void OnContractChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ContractService.ContractChanged -= OnContractChanged;
+    }
+
+    private void OnTitleInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.Title = text);
+    }
+
+    private void OnObjectiveInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.Objective = text);
+    }
+
+    private void OnAcceptanceInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.AcceptanceCriteria = text);
+    }
+
+    private void OnOutOfScopeInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.OutOfScope = text);
+    }
+
+    private void OnImplementationInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.ImplementationPlan = text);
+    }
+
+    private void OnVerificationInput(ChangeEventArgs e)
+    {
+        var text = e?.Value?.ToString() ?? string.Empty;
+        ContractService.UpdateField(c => c.VerificationRequirements = text);
+    }
+
+    private void ToggleHumanReady()
+    {
+        var cur = ContractService.CurrentContract;
+        if (cur == null) return;
+        ContractService.SetHumanReady(!cur.HumanReady);
+    }
+
+    private void SimulateEngineReady()
+    {
+        var cur = ContractService.CurrentContract;
+        if (cur == null) return;
+        ContractService.SetEngineOSReady(!cur.EngineOSReady);
+    }
+}

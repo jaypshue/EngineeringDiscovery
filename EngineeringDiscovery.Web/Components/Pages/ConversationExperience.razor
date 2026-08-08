@@ -6,13 +6,25 @@
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
 
 <div style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:480px;display:flex;flex-direction:column;max-width:900px;margin:0 auto;gap:12px">
-    <EngineeringContextCard ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
+    <EngineeringContextCard ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" ActiveWorkContractTitle="@WorkspaceState.ActiveWorkContractTitle" ActiveWorkContractStatus="@WorkspaceState.ActiveWorkContractStatus" ActiveWorkContractHumanReady="@WorkspaceState.ActiveWorkContractHumanReady" ActiveWorkContractEngineOSReady="@WorkspaceState.ActiveWorkContractEngineOSReady" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
 
-    <ConversationHost @ref="_conversationHost" />
+    @if (HasContract)
+    {
+        <WorkContractEditor />
+    }
+    else
+    {
+        <ConversationHost @ref="_conversationHost" />
+    }
 </div>
 
 @code {
     private ConversationHost? _conversationHost;
+
+    private bool HasContract => ContractService.CurrentContract is not null;
+
+    [Inject]
+    private WorkContractService ContractService { get; set; } = null!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

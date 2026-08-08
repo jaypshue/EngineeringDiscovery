@@ -4,6 +4,7 @@
 @inject IEngineeringPartner Partner
 @inject IObservationService ObservationService
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
+@inject EngineeringDiscovery.Web.Services.WorkContractService ContractService
 
 <div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto">
     <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;background:var(--surface)">
@@ -26,6 +27,7 @@
             }
             <div style="margin-top:8px;display:flex;gap:8px">
                 <button class="btn btn-sm btn-outline" @onclick="AcknowledgeRecommendationAsync">Acknowledge</button>
+                <button class="btn btn-sm btn-primary" @onclick="GenerateWorkContractAsync">Generate Work Contract</button>
             </div>
         </div>
     }
@@ -205,5 +207,27 @@
             await LoadRecommendationAsync();
         }
         catch { }
+    }
+
+    private async Task GenerateWorkContractAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentRecommendation) || ContractService == null) return;
+
+        // Build a minimal WorkContract draft from the recommendation
+        var draft = new EngineeringDiscovery.Web.Models.WorkContract
+        {
+            Title = CurrentRecommendation.Length > 120 ? CurrentRecommendation.Substring(0, 120) : CurrentRecommendation,
+            Objective = CurrentRecommendation,
+            RepositoryName = WorkspaceState.ActiveRepositoryName,
+            RepositoryPath = WorkspaceState.ActiveRepositoryPath
+        };
+
+        ContractService.CreateDraft(draft);
+
+        // Add a message to the conversation to indicate the action
+        Messages.Add(("You", "Generated Work Contract from recommendation"));
+        // Refresh recommendation area (it may be cleared by ingestion)
+        await LoadRecommendationAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

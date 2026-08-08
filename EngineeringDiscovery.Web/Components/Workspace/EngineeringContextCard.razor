@@ -23,6 +23,12 @@
             <div style="font-size:0.85rem;color:var(--muted)">Current Story</div>
             <div style="margin-top:6px">@(!string.IsNullOrEmpty(CurrentStoryTitle) ? CurrentStoryTitle : "None")</div>
         </div>
+        <div style="flex:1">
+            <div style="font-size:0.85rem;color:var(--muted)">Work Contract</div>
+            <div style="margin-top:6px">@(!string.IsNullOrEmpty(ActiveWorkContractTitle) ? ActiveWorkContractTitle : "(none)")</div>
+            <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Contract Status: <strong>@(string.IsNullOrEmpty(ActiveWorkContractStatus) ? "-" : ActiveWorkContractStatus)</strong></div>
+            <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Human Ready: @(ActiveWorkContractHumanReady ? "Yes" : "No") &nbsp; EngineOS Ready: @(ActiveWorkContractEngineOSReady ? "Yes" : "No")</div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <button class="btn btn-primary" @onclick="OnDefineGoal">Define Goal</button>
             <button class="btn btn-outline" @onclick="OnCreateStory">Create Story</button>
@@ -46,6 +52,19 @@
 
     [Parameter]
     public string Status { get; set; } = "Ready";
+
+    // Work Contract summary (read-only presentation values provided by WorkspaceStateService)
+    [Parameter]
+    public string ActiveWorkContractTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ActiveWorkContractStatus { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ActiveWorkContractHumanReady { get; set; }
+
+    [Parameter]
+    public bool ActiveWorkContractEngineOSReady { get; set; }
 
     [Parameter]
     public EventCallback DefineGoal { get; set; }
