@@ -9,7 +9,10 @@
 /* Global anchor/link styling for EngineOS: high-contrast, underlined, and consistent across components.
    This rule intentionally targets plain anchors so component-specific links inherit the EngineOS treatment
    rather than falling back to browser defaults. Avoid inline styles; use tokens above. */
-a, a:link, a:visited, a:hover, a:active {
+/* Anchor/link styling: targets plain navigational anchors but avoids buttons with .btn class.
+   Ensure anchors styled as buttons (class .btn) retain their button colors and are not overridden.
+   Place this rule above other styles so it applies to plain links but not .btn elements. */
+a:not(.btn), a:not(.btn):link, a:not(.btn):visited, a:not(.btn):hover, a:not(.btn):active {
     color: var(--link);
     text-decoration: underline;
 }

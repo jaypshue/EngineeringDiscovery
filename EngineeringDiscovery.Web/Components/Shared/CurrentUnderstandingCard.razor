@@ -14,7 +14,7 @@
         <p class="summary">Projects: @(Investigation.ProjectObservation?.Project ?? "n/a") • Namespaces: @(Investigation.RepositoryMetrics?.TotalNamespaces ?? (Investigation.NamespaceObservations?.Count ?? 0)) • Types: @(Investigation.RepositoryMetrics?.TotalTypes ?? (Investigation.TypeObservations?.Count ?? 0))</p>
     }
 
-    <a href="#" @onclick="ToggleDetails">Show Details</a>
+    <a href="#" @onclick="ToggleDetails" @onclick:preventDefault="true">Show Details</a>
     @if (ShowDetails)
     {
         @if (Investigation == null)
