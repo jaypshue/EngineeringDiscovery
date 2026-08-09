@@ -141,15 +141,13 @@ namespace EngineeringDiscovery.Wpf.Services
                     return false;
                 }
 
-                var workspace = new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace
+                var ws = _workspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
+                ws.ImportedRepositories.Add(new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
                 {
                     RepositoryPath = SelectedPath,
-                    Investigation = investigation,
-                    CurrentTask = null,
-                    SelectedRole = EngineeringDiscovery.Core.Domain.Models.EngineeringRole.Developer
-                };
-
-                _workspaceState.ReplaceWorkspace(workspace);
+                    Investigation = investigation
+                });
+                _workspaceState.ReplaceWorkspace(ws);
                 _workspaceState.SetInvestigation(investigation);
                 return true;
             }

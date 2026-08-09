@@ -25,6 +25,18 @@ namespace EngineeringDiscovery.Web.Services.Persistence
         public CurrentTaskDto? CurrentTask { get; set; }
 
         public InvestigationDto? Investigation { get; set; }
+
+    // New: support multiple imported repositories in DTO
+    public ImportedRepositoryDto[] ImportedRepositories { get; set; } = Array.Empty<ImportedRepositoryDto>();
+    }
+
+    internal sealed class ImportedRepositoryDto
+    {
+        public string RepositoryPath { get; set; } = string.Empty;
+        public DateTime CreatedUtc { get; set; }
+        public DateTime? LastBuiltUtc { get; set; }
+        public string? RepositoryFingerprint { get; set; }
+        public InvestigationDto? Investigation { get; set; }
     }
 
     internal sealed class CurrentTaskDto

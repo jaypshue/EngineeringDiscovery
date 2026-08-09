@@ -3,38 +3,48 @@
 
 <div class="app-shell">
     @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
-    <header class="app-header" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px">
+    <header class="app-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px">
         <div style="display:flex;gap:12px;align-items:center">
             <div class="app-logo">EngineOS</div>
+            <div style="font-size:0.9rem;color:var(--muted);">Conversation-first engineering partner</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
             <div class="app-actions">
                 <a href="/app">Workspace</a>
                 <a href="/">Public Site</a>
             </div>
         </div>
-        <div style="display:flex;gap:12px;align-items:center">
-            <div class="repo-context">
-                <div style="font-size:0.9rem;color:var(--muted);">Repo:</div>
-                <div style="font-weight:700">@(!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryName) ? WorkspaceState.ActiveRepositoryName : "(no repo)")</div>
-            </div>
-            <div style="padding:4px 8px;border-radius:6px;background:var(--surface);font-size:0.85rem">@WorkspaceState.Status</div>
-            <div>
-                @if (string.IsNullOrWhiteSpace(WorkspaceState.ActiveRepositoryName))
-                {
-                    <a class="btn btn-outline" href="/repository">Import Repository</a>
-                }
-                else
-                {
-                    <a class="btn btn-outline" href="/repository">Refresh / Replace</a>
-                }
-            </div>
-        </div>
     </header>
 
-    <main class="app-body">
-        @Body
+    <div class="repository-context" style="padding:8px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface)">
+        <div style="display:flex;flex-direction:column;gap:8px;margin:0 24px">
+            <div style="font-size:0.9rem;color:var(--muted);">Imported Repositories</div>
+            @if (!string.IsNullOrWhiteSpace(WorkspaceState.ActiveRepositoryName) || !string.IsNullOrWhiteSpace(WorkspaceState.ActiveRepositoryPath))
+            {
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <div class="repo-context" style="min-width:0;flex:1">
+                        <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@(!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryName) ? WorkspaceState.ActiveRepositoryName : "(no repo)")</div>
+                        @if (!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryPath))
+                        {
+                            <div style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@WorkspaceState.ActiveRepositoryPath</div>
+                        }
+                        <a href="/repository#refresh" style="padding:0 6px;font-size:0.85rem;color:var(--link);text-decoration:underline">Refresh</a>
+                    </div>
+                </div>
+            }
+            <div style="display:flex;justify-content:flex-end">
+                <a href="/repository" style="padding:0 6px;font-size:0.9rem;color:var(--link);text-decoration:underline">Add repository</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="app-body" style="padding:16px 0">
+        <div style="margin:0 24px">
+            @Body
+        </div>
     </main>
 
     <footer class="app-footer">
-        <div>EngineOS — Conversation-first engineering partner</div>
+        <div style="margin:0 24px">EngineOS — Conversation-first engineering partner</div>
     </footer>
 </div>

@@ -114,6 +114,7 @@ namespace EngineeringDiscovery.Core.Services
                 try
                 {
                     Debug.WriteLine($"[ED-EP6] Prompt sent to conversation service for session {sessionId}");
+                    // For spike: if configured to use Luna conversation service, forward raw user text via Luna
                     llmReply = await _conversationService.RespondAsync(model).ConfigureAwait(false);
                 }
                 catch (Exception ex)

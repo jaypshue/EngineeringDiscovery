@@ -33,6 +33,9 @@ namespace EngineeringDiscovery.Core.Services
 
         public Workspace? ActiveWorkspace { get; private set; }
 
+        // Convenience accessor for imported repositories collection
+        public System.Collections.Generic.List<Domain.Workspace.ImportedRepository>? ImportedRepositories => ActiveWorkspace?.ImportedRepositories;
+
         // ED-300: expose a convenience accessor for the current activity
         public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity => ActiveWorkspace?.CurrentActivity;
 
@@ -78,10 +81,17 @@ namespace EngineeringDiscovery.Core.Services
             {
                 if (ActiveWorkspace is null) return EngineeringModelFreshness.Unknown;
                 if (ActiveWorkspace.Investigation is null) return EngineeringModelFreshness.Unknown;
-                if (string.IsNullOrWhiteSpace(ActiveWorkspace.RepositoryPath)) return EngineeringModelFreshness.Unknown;
+                // Use the repository path from the first imported repository when available. Legacy code
+                // used ActiveWorkspace.RepositoryPath as the canonical path; prefer ImportedRepositories now.
+                var repoPath = ActiveWorkspace.RepositoryPath;
+                if (ActiveWorkspace.ImportedRepositories != null && ActiveWorkspace.ImportedRepositories.Count > 0)
+                {
+                    repoPath = ActiveWorkspace.ImportedRepositories[0].RepositoryPath;
+                }
+                if (string.IsNullOrWhiteSpace(repoPath)) return EngineeringModelFreshness.Unknown;
 
                 // Host-provided service evaluates freshness according to configured policy
-                var task = _fingerprintService.EvaluateFreshnessAsync(ActiveWorkspace.RepositoryPath, ActiveWorkspace.LastBuiltUtc, ActiveWorkspace.RepositoryFingerprint);
+                var task = _fingerprintService.EvaluateFreshnessAsync(repoPath, ActiveWorkspace.LastBuiltUtc, ActiveWorkspace.RepositoryFingerprint);
                 var result = task.GetAwaiter().GetResult();
                 return result switch
                 {
@@ -128,6 +138,29 @@ namespace EngineeringDiscovery.Core.Services
         // Operations to mutate state - keep minimal; UI should call into domain services in future
         public void ReplaceWorkspace(Workspace workspace)
         {
+            // Migration: if persisted workspace still uses legacy RepositoryPath and
+            // ImportedRepositories is empty, convert legacy RepositoryPath into an ImportedRepository
+            try
+            {
+                if (workspace != null && (workspace.ImportedRepositories == null || workspace.ImportedRepositories.Count == 0) && !string.IsNullOrWhiteSpace(workspace.RepositoryPath))
+                {
+                    // Preserve existing Investigation if present on the workspace as the ImportedRepository's investigation
+                    var imported = new Domain.Workspace.ImportedRepository
+                    {
+                        RepositoryPath = workspace.RepositoryPath,
+                        Investigation = workspace.Investigation,
+                        CreatedUtc = workspace.CreatedUtc,
+                        LastBuiltUtc = workspace.LastBuiltUtc,
+                        RepositoryFingerprint = workspace.RepositoryFingerprint
+                    };
+                    workspace.ImportedRepositories = new System.Collections.Generic.List<Domain.Workspace.ImportedRepository> { imported };
+                }
+            }
+            catch
+            {
+                // Swallow migration failures to avoid preventing workspace activation
+            }
+
             ActiveWorkspace = workspace;
             // Do not perform persistence here; persistence is the responsibility of workflow services.
             NotifyStateChanged();
@@ -136,7 +169,9 @@ namespace EngineeringDiscovery.Core.Services
         public void SetInvestigation(Domain.Investigation.Investigation? investigation)
         {
             if (ActiveWorkspace is null) ActiveWorkspace = new Workspace();
+            // Store investigation at workspace-level for backward compatibility. Do not overwrite per-repo investigations.
             ActiveWorkspace.Investigation = investigation;
+            // Persist changes
             Save();
             NotifyStateChanged();
         }

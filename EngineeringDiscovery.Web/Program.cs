@@ -37,6 +37,9 @@ builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprin
 // Observation Engine (core) - ingest observations and update Engineering State
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IObservationService, EngineeringDiscovery.Core.Services.ObservationEngine>();
 
+// HTTP client for spike Luna conversational calls
+builder.Services.AddHttpClient<EngineeringDiscovery.Core.Services.LunaConversationService>();
+
 // Core services for current-task workflow
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ITimeProvider, EngineeringDiscovery.Core.Services.SystemTimeProvider>();
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.ICurrentTaskService, EngineeringDiscovery.Core.Services.CurrentTaskService>();
@@ -86,16 +89,36 @@ using (var scope = app.Services.CreateScope())
     var loaded = persistence.LoadAsync().GetAwaiter().GetResult();
     if (loaded is not null)
     {
+        // Replace canonical workspace in core state. WorkspaceState.ReplaceWorkspace will perform a
+        // non-destructive migration from legacy RepositoryPath into ImportedRepositories when needed.
         workspaceState.ReplaceWorkspace(loaded);
-        // Mirror persisted workspace into the presentation WorkspaceStateService so header and presentation
-        // components reflect the restored workspace immediately. This reuses the existing presentation
-        // facade instead of inventing a new persistence pathway.
+
+        // Mirror a presentation-friendly summary into the WorkspaceStateService. Presentation state
+        // must not be treated as authoritative for repository collection. Prefer ImportedRepositories
+        // when available and fall back to legacy RepositoryPath only for backward compatibility.
         var presentationWorkspace = scope.ServiceProvider.GetService<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
         if (presentationWorkspace is not null)
         {
-            var repoPath = loaded.RepositoryPath ?? string.Empty;
-            var repoName = string.IsNullOrWhiteSpace(repoPath) ? string.Empty : System.IO.Path.GetFileName(repoPath);
-            var status = loaded.Investigation?.Status.ToString() ?? "Ready";
+            string repoPath = string.Empty;
+            string repoName = string.Empty;
+            string status = loaded.Investigation?.Status.ToString() ?? "Ready";
+
+            try
+            {
+                if (loaded.ImportedRepositories != null && loaded.ImportedRepositories.Count > 0)
+                {
+                    // Use the first imported repository as a presentation-friendly selection seed.
+                    repoPath = loaded.ImportedRepositories[0].RepositoryPath ?? string.Empty;
+                }
+                else
+                {
+                    repoPath = loaded.RepositoryPath ?? string.Empty; // legacy fallback
+                }
+
+                repoName = string.IsNullOrWhiteSpace(repoPath) ? string.Empty : System.IO.Path.GetFileName(repoPath);
+            }
+            catch { }
+
             presentationWorkspace.SetState(repoName, repoPath, string.Empty, string.Empty, status);
         }
     }

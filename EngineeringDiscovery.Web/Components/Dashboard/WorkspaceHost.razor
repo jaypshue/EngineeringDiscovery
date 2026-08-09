@@ -86,11 +86,13 @@
                 }
             </div>
 
-            <p><strong>Repository:</strong> @WorkspaceState.ActiveWorkspace?.RepositoryPath</p>
-            <p><strong>Repository Status:</strong> @DiscoveryStatus</p>
-            <p><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</p>
-            <div class="target-selector">
-                <input class="repo-input" @bind="SelectedRepositoryPath" @bind:event="oninput" placeholder="Replace repository root path" tabindex="0" aria-disabled="false" />
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <div><strong>Repository:</strong> @WorkspaceState.ActiveWorkspace?.RepositoryPath</div>
+                <div><strong>Repository Status:</strong> @DiscoveryStatus</div>
+                <div><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</div>
+            </div>
+                <div class="target-selector">
+                <input class="repo-input" @bind="SelectedRepositoryPath" @bind:event="oninput" placeholder="Repository root path" tabindex="0" aria-disabled="false" />
                 <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(!IsImportEnabled)">
                     @if (IsBuilding)
                     {
@@ -99,7 +101,7 @@
                     }
                     else
                     {
-                        <span>Import Repository (replace)</span>
+                        <span>Import Repository</span>
                     }
                 </button>
             </div>
@@ -361,12 +363,7 @@
             return;
         }
 
-        // If a workspace already exists, confirm replacement
-        if (WorkspaceState.HasWorkspace)
-        {
-            var ok = await JS.InvokeAsync<bool>("confirm", "Importing another repository will replace the current Workspace. Continue?");
-            if (!ok) return;
-        }
+        // If a workspace already exists, importing will append an ImportedRepository. Proceed without replace confirmation.
 
         IsBuilding = true;
         DiscoveryStatus = "Building Engineering Model...";
@@ -388,18 +385,22 @@
 
             DiscoveryStatus = "Engineering Model Complete";
 
-            // Build a complete Workspace and persist it (includes freshness metadata)
-            var workspace = new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace
+            // Build a complete ImportedRepository and append it to the Workspace's ImportedRepositories
+            var imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
             {
                 RepositoryPath = SelectedRepositoryPath,
                 Investigation = investigation,
-                CurrentTask = null,
-                SelectedRole = Role
+                CreatedUtc = DateTime.UtcNow
             };
 
-            WorkspaceState.ReplaceWorkspace(workspace);
-
-            // Persist investigation into WorkspaceState directly
+            // Append the imported repository to the existing workspace. Do not replace the entire workspace.
+            var ws = WorkspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
+            if (ws.ImportedRepositories == null) ws.ImportedRepositories = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository>();
+            ws.ImportedRepositories.Add(imported);
+            WorkspaceState.ReplaceWorkspace(ws);
+            // Persist investigation for this workspace (keeps UI in sync). Note: SetInvestigation updates the
+            // workspace-level Investigation. Individual ImportedRepository.Investigation objects remain the
+            // canonical per-repo discovery results.
             WorkspaceState.SetInvestigation(investigation);
             // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
 

@@ -38,6 +38,9 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
 
         public DateTime LastModifiedUtc { get; private set; }
 
+        // Support multiple imported repositories attached to this workspace.
+        public System.Collections.Generic.List<ImportedRepository> ImportedRepositories { get; set; } = new();
+
         // ED-300: Activity support (single active activity for initial scope)
         public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity { get; set; }
 
@@ -61,6 +64,21 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
             Touch();
         }
 
-        public bool IsEmpty() => string.IsNullOrWhiteSpace(RepositoryPath) && Investigation is null;
+        public bool IsEmpty() => (string.IsNullOrWhiteSpace(RepositoryPath) && (ImportedRepositories == null || ImportedRepositories.Count == 0)) && Investigation is null;
+    }
+
+    public sealed class ImportedRepository
+    {
+        public ImportedRepository()
+        {
+            RepositoryPath = string.Empty;
+            CreatedUtc = DateTime.UtcNow;
+        }
+
+        public string RepositoryPath { get; set; }
+        public DateTime CreatedUtc { get; set; }
+        public DateTime? LastBuiltUtc { get; set; }
+        public string? RepositoryFingerprint { get; set; }
+        public global::EngineeringDiscovery.Core.Domain.Investigation.Investigation? Investigation { get; set; }
     }
 }

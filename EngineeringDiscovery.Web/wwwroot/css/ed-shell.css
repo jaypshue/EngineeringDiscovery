@@ -75,6 +75,26 @@ body{background:var(--bg);color:var(--text);font-family:Segoe UI,Segoe,Arial,san
 
 @media (max-width:800px){.ed-nav{display:none}.ed-workspace{padding:12px}}
 
+/* Override component-level centering/max-width rules so the main workspace
+   uses the full available width within the app margins. These rules intentionally
+   use !important to override inline styles applied in some components while
+   preserving responsive behavior. */
+.conversation-experience-shell,
+.conversation-host,
+.conversation-first,
+.engineering-context-card,
+.recommendation-card,
+.current-understanding,
+.artifacts-details {
+    max-width: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Ensure conversation column stretches to available width inside the main app margins */
+.conversation-column { width: 100%; min-width: 0; }
+
 /* Dashboard layout: ensure Roles panel and Dashboard render side-by-side */
 .dashboard-grid{display:flex;gap:12px;align-items:flex-start;min-height:0}
 .left-pane{width:250px;flex:0 0 250px;border-right:1px solid rgba(255,255,255,0.03);padding:15px;box-sizing:border-box}

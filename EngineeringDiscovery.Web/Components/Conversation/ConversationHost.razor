@@ -2,6 +2,7 @@
 @using EngineeringDiscovery.Core.Domain.EngineeringModel
 @using EngineeringDiscovery.Core.Observations
 @inject IEngineeringPartner Partner
+@inject EngineeringDiscovery.Core.Services.LunaConversationService Luna
 @inject IObservationService ObservationService
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
 @inject EngineeringDiscovery.Web.Services.WorkContractService ContractService
@@ -155,8 +156,22 @@
             var obs = new Observation { Type = "UserMessage", Source = "User", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { text = text }) };
             await ObservationService.IngestAsync(obs);
 
-            // Partner will read updated EngineeringModel and render a reply
-            var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
+            // Spike path: if environment variable ENGINEOS_SPIKE_LUNA=true then call Luna and display reply directly
+            string reply = string.Empty;
+            try
+            {
+                var spike = Environment.GetEnvironmentVariable("ENGINEOS_SPIKE_LUNA") ?? string.Empty;
+                if (string.Equals(spike, "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    var system = "You are EngineOS Man, an engineering partner. Talk naturally with the human. Understand what the human is asking before deciding what to do. Do not assume every message is an engineering task. Do not force the conversation into a predefined workflow.";
+                    reply = await Luna.SendMessageAsync(text, system);
+                }
+                else
+                {
+                    reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
+                }
+            }
+            catch { }
             if (!string.IsNullOrWhiteSpace(reply))
             {
                 Messages.Add(("EngineOS", reply));
