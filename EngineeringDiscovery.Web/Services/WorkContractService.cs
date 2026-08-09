@@ -117,5 +117,15 @@ namespace EngineeringDiscovery.Web.Services
             ContractChanged?.Invoke();
             return _current;
         }
+
+        // Determine whether the implementation package (projection of the current contract + workspace)
+        // is ready to be sent to the extension. Conservative authoritative rule: a repository must be
+        // attached and the current contract must be present and marked ready by both the human and EngineOS.
+        public bool IsReady()
+        {
+            if (_current == null) return false;
+            if (string.IsNullOrWhiteSpace(_workspaceState.ActiveRepositoryName)) return false;
+            return _current.HumanReady && _current.EngineOSReady;
+        }
     }
 }

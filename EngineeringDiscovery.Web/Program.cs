@@ -87,6 +87,17 @@ using (var scope = app.Services.CreateScope())
     if (loaded is not null)
     {
         workspaceState.ReplaceWorkspace(loaded);
+        // Mirror persisted workspace into the presentation WorkspaceStateService so header and presentation
+        // components reflect the restored workspace immediately. This reuses the existing presentation
+        // facade instead of inventing a new persistence pathway.
+        var presentationWorkspace = scope.ServiceProvider.GetService<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
+        if (presentationWorkspace is not null)
+        {
+            var repoPath = loaded.RepositoryPath ?? string.Empty;
+            var repoName = string.IsNullOrWhiteSpace(repoPath) ? string.Empty : System.IO.Path.GetFileName(repoPath);
+            var status = loaded.Investigation?.Status.ToString() ?? "Ready";
+            presentationWorkspace.SetState(repoName, repoPath, string.Empty, string.Empty, status);
+        }
     }
 }
 

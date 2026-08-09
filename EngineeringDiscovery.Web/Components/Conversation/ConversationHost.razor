@@ -293,6 +293,8 @@
         };
 
         ContractService.CreateDraft(draft);
+        // Mark the draft as proposed by EngineOS so WorkContractEditor reflects proposer intent.
+        ContractService.ApplyProposal(c => { }, "EngineOS");
 
         // Add a message to the conversation to indicate the action
         Messages.Add(("You", "Generated Work Contract from recommendation"));

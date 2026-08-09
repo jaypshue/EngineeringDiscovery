@@ -4,14 +4,30 @@
 <div class="recommendation-workspace ed-workspace">
     <CurrentTaskHeader />
 
-    <div class="workspace-main" style="display:flex;gap:16px;align-items:flex-start">
-        <main class="conversation-main" style="flex:1">
+    <div class="conversation-first" style="display:flex;flex-direction:column;gap:12px;max-width:1100px;margin:0 auto">
+        <!-- Conversation (primary) -->
+        <section class="conversation-section">
             <ConversationArea />
-        </main>
+        </section>
 
-        <aside class="side-rail" style="width:320px;display:flex;flex-direction:column;gap:12px">
-            <RecommendationCard Title="Start by approving this recommendation" Rationale="Suggested next step based on current analysis." />
+        <!-- Recommendation immediately follows conversation and remains adjacent visually -->
+        <section class="recommendation-section">
+            <RecommendationCard Title="Suggested next action" Rationale="EngineOS suggests this next step based on current analysis." />
+        </section>
+
+        <!-- Current Understanding follows recommendation -->
+        <section class="understanding-section">
             <CurrentUnderstandingCard />
-        </aside>
+        </section>
+
+        <!-- Artifacts: collapsed work contract to keep it visually secondary -->
+        <section class="artifacts-section">
+            <details class="artifacts-details">
+                <summary>Artifacts (Work Contract)</summary>
+                <div style="margin-top:8px">
+                    <WorkContractEditor />
+                </div>
+            </details>
+        </section>
     </div>
 </div>

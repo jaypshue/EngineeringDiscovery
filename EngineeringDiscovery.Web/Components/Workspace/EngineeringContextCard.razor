@@ -1,66 +1,55 @@
 @namespace EngineeringDiscovery.Web.Components.Workspace
 @using Microsoft.AspNetCore.Components
 
-<div class="engineering-context-card" style="padding:16px;border-radius:8px;background:var(--surface-1);box-shadow:0 1px 4px rgba(0,0,0,0.04);max-width:980px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-            <div style="font-size:0.95rem;color:var(--muted)">Active Repository</div>
-            <div style="font-weight:700;font-size:1.15rem">@(!string.IsNullOrEmpty(ActiveRepositoryName) ? ActiveRepositoryName : "(none)")</div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">@(!string.IsNullOrEmpty(ActiveRepositoryPath) ? ActiveRepositoryPath : string.Empty)</div>
-        </div>
-        <div style="text-align:right">
-            <div style="font-size:0.85rem;color:var(--muted)">Status</div>
-            <div style="font-weight:700">@Status</div>
-        </div>
-    </div>
+@{
+    var hasRepository = !string.IsNullOrWhiteSpace(ActiveRepositoryName);
+    var discoveredTechnologies = GetDiscoveredTechnologies();
+    var hasTechnologies = discoveredTechnologies != null && discoveredTechnologies.Count > 0;
+    var hasStatus = !string.IsNullOrWhiteSpace(Status) && (Status != "Ready" || Investigation != null);
+    var showCard = hasRepository || hasTechnologies || hasStatus;
+}
 
-    <div style="display:flex;gap:20px;margin-top:16px">
-        <div style="flex:1">
-            <div style="font-size:0.85rem;color:var(--muted)">Current Goal</div>
-            <div style="margin-top:6px">@(!string.IsNullOrEmpty(CurrentGoalTitle) ? CurrentGoalTitle : "None")</div>
-        </div>
-        <div style="flex:1">
-            <div style="font-size:0.85rem;color:var(--muted)">Current Story</div>
-            <div style="margin-top:6px">@(!string.IsNullOrEmpty(CurrentStoryTitle) ? CurrentStoryTitle : "None")</div>
-        </div>
-        <div style="flex:1">
-            <div style="font-size:0.85rem;color:var(--muted)">Work Contract</div>
-            <div style="margin-top:6px">@(!string.IsNullOrEmpty(ActiveWorkContractTitle) ? ActiveWorkContractTitle : "(none)")</div>
-            @if (string.IsNullOrEmpty(ActiveWorkContractTitle))
+@if (showCard)
+{
+    <div class="engineering-context-card" style="padding:12px;border-radius:8px;background:var(--surface-1);box-shadow:0 1px 4px rgba(0,0,0,0.04);max-width:980px;margin:0 auto;display:flex;gap:12px;align-items:center">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            @if (hasRepository)
             {
-                <div style="margin-top:8px">
-                    <button class="btn btn-primary" @onclick="CreateWorkContract">Create Work Contract</button>
+                <div>
+                    <div style="font-size:0.85rem;color:var(--muted)">Repository</div>
+                    <div style="font-weight:700;font-size:1rem">@ActiveRepositoryName</div>
+                    @if (!string.IsNullOrWhiteSpace(ActiveRepositoryPath))
+                    {
+                        <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">@ActiveRepositoryPath</div>
+                    }
                 </div>
             }
-            else if (!string.IsNullOrEmpty(ActiveWorkContractLastUpdatedBy))
+
+            @if (hasStatus)
             {
-                <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Last Updated By: @ActiveWorkContractLastUpdatedBy</div>
+                <div style="text-align:right">
+                    <div style="font-size:0.8rem;color:var(--muted)">Discovery</div>
+                    <div style="font-weight:700">@Status</div>
+                </div>
             }
-            <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Contract Status: <strong>@(string.IsNullOrEmpty(ActiveWorkContractStatus) ? "-" : ActiveWorkContractStatus)</strong></div>
-            <div style="margin-top:6px;font-size:0.85rem;color:var(--muted)">Human Ready: @(ActiveWorkContractHumanReady ? "Yes" : "No") &nbsp; EngineOS Ready: @(ActiveWorkContractEngineOSReady ? "Yes" : "No")</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <div style="font-size:0.9rem;color:var(--muted)">Next Action</div>
-            <div style="font-weight:700">@(!string.IsNullOrEmpty(ActiveNextRecommendedAction) ? ActiveNextRecommendedAction : "Start New Work Contract")</div>
-            @if (!string.IsNullOrEmpty(ActiveNextRecommendedActionDetail))
-            {
-                <div style="margin-top:6px;font-size:0.85rem;color:var(--muted);max-width:360px;text-align:right">@ActiveNextRecommendedActionDetail</div>
-            }
-            <div style="margin-top:8px;display:flex;gap:8px">
-                @if (string.IsNullOrEmpty(ActiveWorkContractTitle))
-                {
-                    <button class="btn btn-primary" @onclick="CreateWorkContract">Start New Work Contract</button>
-                }
-                else
-                {
-                    <button class="btn btn-primary" @onclick="OnContinueSession">Continue Work</button>
-                }
+
+        @if (hasTechnologies)
+        {
+            <div style="display:flex;gap:20px;margin-top:12px;align-items:center">
+                <div style="flex:1">
+                    <div style="font-size:0.8rem;color:var(--muted)">Technologies</div>
+                    <div style="margin-top:6px">@string.Join(", ", discoveredTechnologies)</div>
+                </div>
             </div>
-        </div>
+        }
     </div>
-</div>
+}
 
 @code {
+    [Parameter]
+    public EngineeringDiscovery.Core.Domain.Investigation.Investigation? Investigation { get; set; }
+
     [Parameter]
     public string ActiveRepositoryName { get; set; } = string.Empty;
 
@@ -115,5 +104,53 @@
     {
         // Fire an event through ContinueSession to let the page handle creation (ConversationExperience will call ContractService.CreateEmptyDraft)
         _ = ContinueSession.InvokeAsync(null);
+    }
+
+    private string GetTechnologySummary()
+    {
+        if (Investigation == null)
+        {
+            return string.Empty;
+        }
+
+        // ProjectObservation.Project is a project identifier; we don't invent a technology list here.
+        if (Investigation.ProjectObservation != null && !string.IsNullOrEmpty(Investigation.ProjectObservation.Project))
+        {
+            return Investigation.ProjectObservation.Project;
+        }
+
+        return string.Empty;
+    }
+
+    private System.Collections.Generic.List<string>? GetDiscoveredTechnologies()
+    {
+        if (Investigation == null) return null;
+
+        // Technology discovery in this repo is represented by Findings that mention known frameworks or package references.
+        // We conservatively parse Findings for simple technology hints (no invention). If none found, return null.
+        var list = new System.Collections.Generic.List<string>();
+        try
+        {
+            if (Investigation.Findings != null)
+            {
+                foreach (var f in Investigation.Findings)
+                {
+                    var desc = f.Description ?? string.Empty;
+                    if (desc.IndexOf("EntityFrameworkCore", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("EntityFrameworkCore")) list.Add("EntityFrameworkCore");
+                    if (desc.IndexOf("Serilog", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("Serilog")) list.Add("Serilog");
+                    if (desc.IndexOf("SignalR", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("SignalR")) list.Add("SignalR");
+                    if (desc.IndexOf("xunit", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("xUnit")) list.Add("xUnit");
+                    if (desc.IndexOf("nunit", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("NUnit")) list.Add("NUnit");
+                    if (desc.IndexOf("MediatR", System.StringComparison.OrdinalIgnoreCase) >= 0 && !list.Contains("MediatR")) list.Add("MediatR");
+                }
+            }
+        }
+        catch
+        {
+            // conservative: if parsing fails, treat as no technologies discovered
+            return null;
+        }
+
+        return list.Count > 0 ? list : null;
     }
 }

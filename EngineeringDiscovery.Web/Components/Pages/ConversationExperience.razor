@@ -2,22 +2,50 @@
 @using EngineeringDiscovery.Web.Services
 @using EngineeringDiscovery.Web.Components.Conversation
 @using EngineeringDiscovery.Web.Components.Workspace
+@using EngineeringDiscovery.Web.Components.Shared
 @inject SessionStartupService Startup
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
+@inject EngineeringDiscovery.Core.Services.WorkspaceState CoreWorkspaceState
 @using EngineeringDiscovery.Web.Models
 
-<div style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:480px;display:flex;flex-direction:column;max-width:900px;margin:0 auto;gap:12px">
-    <EngineeringContextCard ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" ActiveWorkContractTitle="@WorkspaceState.ActiveWorkContractTitle" ActiveWorkContractStatus="@WorkspaceState.ActiveWorkContractStatus" ActiveWorkContractHumanReady="@WorkspaceState.ActiveWorkContractHumanReady" ActiveWorkContractEngineOSReady="@WorkspaceState.ActiveWorkContractEngineOSReady" ActiveWorkContractLastUpdatedBy="@WorkspaceState.ActiveWorkContractLastUpdatedBy" ActiveNextRecommendedAction="@WorkspaceState.ActiveNextRecommendedAction" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
+<div class="conversation-experience-shell" style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:520px;display:flex;flex-direction:column;align-items:center;gap:12px">
+    <!-- Header: Current Task / Goal -->
+    <!-- CurrentTaskHeader removed per UX-104: header did not contribute meaningful information in the conversation-first flow -->
 
-    @if (HasContract)
-    {
-        <WorkContractEditor />
-        <ConversationHost @ref="_conversationHost" />
-    }
-    else
-    {
-        <ConversationHost @ref="_conversationHost" />
-    }
+    <!-- Engineering context (compact orientation) -->
+    <div class="engineering-context-compact" style="width:100%">
+        <EngineeringContextCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" ActiveWorkContractTitle="@WorkspaceState.ActiveWorkContractTitle" ActiveWorkContractStatus="@WorkspaceState.ActiveWorkContractStatus" ActiveWorkContractHumanReady="@WorkspaceState.ActiveWorkContractHumanReady" ActiveWorkContractEngineOSReady="@WorkspaceState.ActiveWorkContractEngineOSReady" ActiveWorkContractLastUpdatedBy="@WorkspaceState.ActiveWorkContractLastUpdatedBy" ActiveNextRecommendedAction="@WorkspaceState.ActiveNextRecommendedAction" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
+    </div>
+
+    <!-- Main conversation-first column -->
+    <div class="conversation-column" style="width:100%;display:flex;flex-direction:column;gap:12px">
+        <section class="conversation-section" style="flex:1;min-height:360px">
+            <ConversationHost @ref="_conversationHost" />
+        </section>
+
+        <!-- Recommendation immediately follows conversation -->
+        <section class="recommendation-section">
+            <RecommendationCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" />
+            <div style="margin-top:10px">
+                <button class="btn btn-secondary" @onclick="OnSendToExtension" disabled="@(!IsSendToExtensionReady)">Send to Extension</button>
+            </div>
+        </section>
+
+        <!-- Current Understanding follows recommendation -->
+        <section class="understanding-section">
+            <CurrentUnderstandingCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" />
+        </section>
+
+        <!-- Artifacts: Work Contract initially collapsed beneath the main workflow -->
+        <section class="artifacts-section">
+            <details class="artifacts-details">
+                <summary>Artifacts ▾</summary>
+                <div style="margin-top:8px">
+                    <WorkContractEditor />
+                </div>
+            </details>
+        </section>
+    </div>
 </div>
 
 @code {
@@ -68,5 +96,26 @@
         };
         ContractService.CreateDraft(draft);
         StateHasChanged();
+    }
+
+    private void OnSendToExtension()
+    {
+        // Placeholder callback for future extension handoff. No implementation per UX-104.
+    }
+
+    private bool IsSendToExtensionReady => ContractService.IsReady();
+
+    // Presentation-only helper: try to return the canonical Investigation from the core WorkspaceState
+    // Kept for backward compatibility; prefer injecting CoreWorkspaceState directly.
+    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? WorkspaceStateServiceToInvestigation()
+    {
+        try
+        {
+            return CoreWorkspaceState.ActiveWorkspace?.Investigation;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

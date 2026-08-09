@@ -1,21 +1,68 @@
 @namespace EngineeringDiscovery.Web.Components.Shared
 @using Microsoft.AspNetCore.Components
+@using EngineeringDiscovery.Core.Domain.Investigation
 
 <aside class="current-understanding">
     <h4>Current Understanding</h4>
-    <p class="summary">@SummaryText</p>
+    @if (Investigation == null)
+    {
+        <p class="summary">Investigation not available.</p>
+    }
+    else
+    {
+        <p class="summary">Repository: @System.IO.Path.GetFileName(Investigation.RepositoryPath) — Status: @Investigation.Status.ToString()</p>
+        <p class="summary">Projects: @(Investigation.ProjectObservation?.Project ?? "n/a") • Namespaces: @(Investigation.RepositoryMetrics?.TotalNamespaces ?? (Investigation.NamespaceObservations?.Count ?? 0)) • Types: @(Investigation.RepositoryMetrics?.TotalTypes ?? (Investigation.TypeObservations?.Count ?? 0))</p>
+    }
 
     <a href="#" @onclick="ToggleDetails">Show Details</a>
     @if (ShowDetails)
     {
-        <div class="details">@DetailsPlaceholder</div>
+        @if (Investigation == null)
+        {
+            <div class="details">Investigation not available.</div>
+        }
+        else
+        {
+            <div class="details">
+                <h5>Findings</h5>
+                @if (Investigation.Findings?.Count > 0)
+                {
+                    <ul>
+                        @foreach (var f in Investigation.Findings)
+                        {
+                            <li>@f.Type.ToString(): @f.Description</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div>No findings reported by the Investigation.</div>
+                }
+
+                <h5>Artifacts</h5>
+                @if (Investigation.Artifacts?.Count > 0)
+                {
+                    <ul>
+                        @foreach (var a in Investigation.Artifacts)
+                        {
+                            <li>@a.Type.ToString(): <strong>@a.Title</strong> — @a.Description</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div>No artifacts available.</div>
+                }
+            </div>
+        }
     }
 </aside>
 
 @code {
+    [Parameter]
+    public Investigation? Investigation { get; set; }
+
     private bool ShowDetails { get; set; }
-    private string SummaryText => "Short conclusions and key assumptions (placeholder).";
-    private string DetailsPlaceholder => "Detailed observations, evidence, and references.";
 
     private void ToggleDetails()
     {

@@ -1,57 +1,85 @@
 @namespace EngineeringDiscovery.Web.Components.Shared
 @using Microsoft.AspNetCore.Components
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Core.Models
 
 <div class="recommendation-card">
     <div class="rec-summary">
-        <h3>@(Title ?? "Recommendation: Review this next action")</h3>
-        <p class="muted">@(Rationale ?? "EngineOS suggests the following next step based on current investigation.")</p>
+        @if (Investigation == null)
+        {
+            <h3>No recommendations available yet.</h3>
+            <p class="muted">Investigation not available.</p>
+        }
+        else
+        {
+            <!-- Do not infer recommendations from artifacts. Show explicit recommendation only when provided via Investigation.Artifacts with a Recommendation-like type (none defined); otherwise show no recommendations. -->
+            <h3>No recommendations available yet.</h3>
+            <p class="muted">The Investigation contains @((Investigation.Artifacts?.Count) ?? 0) artifact(s). Open details for investigation-backed artifacts and evidence.</p>
+        }
     </div>
 
-    <div class="rec-actions">
-        <button class="btn btn-primary" @onclick="OnApprove">Approve</button>
-        <button class="btn" @onclick="OnModify">Modify</button>
-        <button class="btn btn-danger" @onclick="OnReject">Reject</button>
-        <div class="rec-overflow">
-            <button class="btn">More ▾</button>
-        </div>
-    </div>
+    @* Actions removed per UX-104: RecommendationCard is read-only and document-like *@
 
     <div class="rec-details">
         <a href="#" @onclick="ToggleWhy">Why?</a>
         @if (ShowWhy)
         {
-            <div class="why">@WhyPlaceholder</div>
+            if (Investigation != null && (Investigation.Findings?.Count ?? 0) > 0)
+            {
+                <div class="why">
+                    <ul>
+                        @foreach (var f in Investigation.Findings)
+                        {
+                            <li>@f.Type.ToString(): @f.Description</li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="why">No investigation evidence available for a recommendation.</div>
+            }
         }
 
-        <a href="#" @onclick="ToggleFiles">Affected Files</a>
+        <a href="#" @onclick="ToggleFiles">Investigation Artifacts</a>
         @if (ShowFiles)
         {
-            <div class="files">@FilesPlaceholder</div>
+            if (Investigation != null && (Investigation.Artifacts?.Count ?? 0) > 0)
+            {
+                <div class="files">
+                    <ul>
+                        @foreach (var a in Investigation.Artifacts)
+                        {
+                            <li>@a.Type.ToString(): <strong>@a.Title</strong> — @a.Description</li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="files">No artifacts available in the Investigation.</div>
+            }
         }
 
         <a href="#" @onclick="ToggleImpl">Implementation</a>
         @if (ShowImpl)
         {
-            <div class="impl">@ImplPlaceholder</div>
+            <div class="impl">
+                <p>If implementation notes are present as Investigation artifacts they will appear here; otherwise this information is not available from the Investigation.</p>
+            </div>
         }
     </div>
 </div>
 
 @code {
     [Parameter]
+    public Investigation? Investigation { get; set; }
+
+    [Parameter]
     public string? Title { get; set; }
 
     [Parameter]
     public string? Rationale { get; set; }
-
-    [Parameter]
-    public EventCallback OnApproved { get; set; }
-
-    [Parameter]
-    public EventCallback OnModified { get; set; }
-
-    [Parameter]
-    public EventCallback OnRejected { get; set; }
 
     private bool ShowWhy { get; set; }
     private bool ShowFiles { get; set; }
@@ -61,20 +89,7 @@
     private string FilesPlaceholder => "List of affected files (placeholder).";
     private string ImplPlaceholder => "Implementation notes / patch placeholder.";
 
-    private async Task OnApprove()
-    {
-        if (OnApproved.HasDelegate) await OnApproved.InvokeAsync(null);
-    }
-
-    private async Task OnModify()
-    {
-        if (OnModified.HasDelegate) await OnModified.InvokeAsync(null);
-    }
-
-    private async Task OnReject()
-    {
-        if (OnRejected.HasDelegate) await OnRejected.InvokeAsync(null);
-    }
+    // RecommendationCard is read-only per UX-104; action callbacks removed.
 
     private void ToggleWhy()
     {

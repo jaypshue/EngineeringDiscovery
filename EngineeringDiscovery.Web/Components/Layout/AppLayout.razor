@@ -12,9 +12,21 @@
             </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
-            <div style="font-size:0.9rem;color:var(--muted)">Repo:</div>
-            <div style="font-weight:700">@(!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryName) ? WorkspaceState.ActiveRepositoryName : "(no repo)")</div>
+            <div class="repo-context">
+                <div style="font-size:0.9rem;color:var(--muted);">Repo:</div>
+                <div style="font-weight:700">@(!string.IsNullOrEmpty(WorkspaceState.ActiveRepositoryName) ? WorkspaceState.ActiveRepositoryName : "(no repo)")</div>
+            </div>
             <div style="padding:4px 8px;border-radius:6px;background:var(--surface);font-size:0.85rem">@WorkspaceState.Status</div>
+            <div>
+                @if (string.IsNullOrWhiteSpace(WorkspaceState.ActiveRepositoryName))
+                {
+                    <a class="btn btn-outline" href="/repository">Import Repository</a>
+                }
+                else
+                {
+                    <a class="btn btn-outline" href="/repository">Refresh / Replace</a>
+                }
+            </div>
         </div>
     </header>
 

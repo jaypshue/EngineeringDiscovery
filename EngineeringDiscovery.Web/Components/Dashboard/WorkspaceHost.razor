@@ -473,13 +473,14 @@
         }
 
         // After discovery completes, render the appropriate workspace and always pass a non-null Investigation.
+        // UX-101: render RecommendationWorkspace for presentation-first, conversation-first experience for non-CurrentTask roles.
         return Role switch
         {
-            EngineeringRole.Architect => (__builder) => { __builder.OpenComponent(0, typeof(ArchitectWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
-            EngineeringRole.Planner => (__builder) => { __builder.OpenComponent(0, typeof(PlannerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
-            EngineeringRole.Developer => (__builder) => { __builder.OpenComponent(0, typeof(DeveloperWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
-            EngineeringRole.Verifier => (__builder) => { __builder.OpenComponent(0, typeof(VerifierWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
-            EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(ReviewerWorkspace)); __builder.AddAttribute(1, "Investigation", (object)investigation); __builder.CloseComponent(); },
+            EngineeringRole.Architect => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
+            EngineeringRole.Planner => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
+            EngineeringRole.Developer => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
+            EngineeringRole.Verifier => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
+            EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
             _ => (__builder) => { __builder.AddContent(0, "Workspace content."); }
         };
     }
