@@ -45,7 +45,18 @@ namespace EngineeringDiscovery.Web.Services.ObservationEnrichment
 
                 // Populate DerivedTypeCount/IsRootType/IsLeafType using unique identities
                 // Map types by identity to enable lookup without colliding on simple TypeName
-                var typeByIdentity = types.ToDictionary(t => GetIdentity(t), StringComparer.OrdinalIgnoreCase);
+                // If multiple observations somehow share the same identity (unlikely), preserve the first
+                // and avoid throwing by using a safe population loop instead of ToDictionary.
+                var typeByIdentity = new Dictionary<string, EngineeringDiscovery.Core.Models.TypeObservation>(StringComparer.OrdinalIgnoreCase);
+                foreach (var t in types)
+                {
+                    try
+                    {
+                        var id = GetIdentity(t);
+                        if (!typeByIdentity.ContainsKey(id)) typeByIdentity[id] = t;
+                    }
+                    catch { }
+                }
 
                 foreach (var t in types)
                 {

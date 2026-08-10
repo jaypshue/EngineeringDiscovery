@@ -2,6 +2,10 @@
 @using EngineeringDiscovery.Web.Components.Shared
 @namespace EngineeringDiscovery.Web.Components.Workspaces
 @inject WorkspaceState WorkspaceState
+@using EngineeringDiscovery.Web.Components.Dashboard
+@* IterationWorkspace is intentionally lightweight and additive. It attaches to the active workspace and
+   provides a small surface for recording goals, evidence, and next actions without modifying existing flows. *@
+@using EngineeringDiscovery.Web.Components.Workspaces
 
 <div class="recommendation-workspace ed-workspace">
     <CurrentTaskHeader />
@@ -31,5 +35,27 @@
                 </div>
             </details>
         </section>
+
+        <!-- Lightweight Engineering Iteration surface (MVP) -->
+        <section class="iteration-section">
+            <IterationWorkspace />
+        </section>
+
+        <!-- Explorer: InvestigationDashboard (lightweight entry to Explorer mode) -->
+        @{ var inv = WorkspaceState.ActiveWorkspace?.Investigation; }
+        @if (inv is not null && (
+                (inv.TypeObservations != null && inv.TypeObservations.Any()) ||
+                (inv.NamespaceObservations != null && inv.NamespaceObservations.Any()) ||
+                (inv.MemberObservations != null && inv.MemberObservations.Any())))
+        {
+            <section class="explorer-section">
+                <details>
+                    <summary class="link">Explorer</summary>
+                    <div style="margin-top:8px">
+                        <InvestigationDashboard Investigation="inv" />
+                    </div>
+                </details>
+            </section>
+        }
     </div>
 </div>

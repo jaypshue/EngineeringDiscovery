@@ -2,6 +2,7 @@
 // Provides showDirectoryPicker-based detection when available, falling back to file input (webkitdirectory) and drag/drop.
 
 window.repoPicker = {
+    _handlers: {},
     // Detect repository metadata using showDirectoryPicker when available.
     detectFromDirectoryPicker: async function () {
         if (!window.showDirectoryPicker) return null;
@@ -166,6 +167,17 @@ window.repoPicker = {
     attachFolderInputHandler: function (inputId, dotNetRef) {
         const el = document.getElementById(inputId);
         if (!el) return;
+        // Clean up any previous handlers for this input
+        this._handlers[inputId] = this._handlers[inputId] || {};
+        if (this._handlers[inputId].change) {
+            try {
+                el.removeEventListener('change', this._handlers[inputId].change);
+            } catch { }
+        }
+        if (this._handlers[inputId].intervalId) {
+            try { clearInterval(this._handlers[inputId].intervalId); } catch { }
+        }
+
         let lastDispatchedKey = '';
         const notifyIfFilesPresent = async () => {
             if (!el || !el.files || el.files.length === 0) return false;
@@ -175,16 +187,13 @@ window.repoPicker = {
             const summary = window.repoPicker.detectFromFileInput(el);
             if (summary) {
                 lastDispatchedKey = key;
-                await dotNetRef.invokeMethodAsync('OnClientSelectionDetected', summary);
+                try { await dotNetRef.invokeMethodAsync('OnClientSelectionDetected', summary); } catch { }
                 return true;
             }
             return false;
         };
-        el.addEventListener('change', async () => {
-            try {
-                await notifyIfFilesPresent();
-            } catch (e) { }
-        });
+        const changeHandler = async () => { try { await notifyIfFilesPresent(); } catch (e) { } };
+        el.addEventListener('change', changeHandler);
 
         // Some automation drivers (e.g., Playwright SetInputFiles) may set files without firing a change event.
         // Poll briefly after wiring up the handler to detect programmatic assignments.
@@ -202,6 +211,38 @@ window.repoPicker = {
                     clearInterval(iv);
                 }
             }, 200);
+            this._handlers[inputId].change = changeHandler;
+            this._handlers[inputId].intervalId = iv;
         } catch (e) { }
     }
+};
+
+// Detach handlers for cleanup to avoid JS calling disposed .NET refs
+window.repoPicker.detachHandlers = function (dropElementId, inputId) {
+    try {
+        if (dropElementId && window.repoPicker._handlers && window.repoPicker._handlers[dropElementId] && window.repoPicker._handlers[dropElementId].drop) {
+            const h = window.repoPicker._handlers[dropElementId].drop;
+            const el = document.getElementById(dropElementId);
+            if (el) {
+                try { el.removeEventListener('dragover', h.onDragOver); } catch { }
+                try { el.removeEventListener('dragleave', h.onDragLeave); } catch { }
+                try { el.removeEventListener('drop', h.onDrop); } catch { }
+            }
+            delete window.repoPicker._handlers[dropElementId].drop;
+        }
+    } catch { }
+
+    try {
+        if (inputId && window.repoPicker._handlers && window.repoPicker._handlers[inputId]) {
+            const h2 = window.repoPicker._handlers[inputId];
+            const el2 = document.getElementById(inputId);
+            if (el2 && h2.change) {
+                try { el2.removeEventListener('change', h2.change); } catch { }
+            }
+            if (h2.intervalId) {
+                try { clearInterval(h2.intervalId); } catch { }
+            }
+            delete window.repoPicker._handlers[inputId];
+        }
+    } catch { }
 };

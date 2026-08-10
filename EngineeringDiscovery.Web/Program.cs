@@ -49,17 +49,36 @@ builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringAdvis
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringInsightService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.EngineeringRecommendationService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.WorkspaceStateService>();
+// Diagnostic circuit handler (temporary, logging-only)
+builder.Services.AddSingleton<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, EngineeringDiscovery.Web.Services.DiagnosticCircuitHandler>();
 // Session-scoped WorkContract manager for ED-303
 builder.Services.AddScoped<EngineeringDiscovery.Web.Services.WorkContractService>();
 // EngineeringStateService must be scoped to the same lifetime as WorkContractService because it
 // observes session-scoped contract changes and therefore cannot be a singleton.
 builder.Services.AddScoped<EngineeringDiscovery.Web.Services.EngineeringStateService>();
+// Iteration service (presentation-scoped) for Engineering Iteration MVP
+builder.Services.AddScoped<EngineeringDiscovery.Web.Services.IterationService>();
 // Register presentation view state store (per-circuit for Blazor Server). Use scoped for server-side.
 builder.Services.AddScoped<EngineeringDiscovery.Core.Services.IViewStateStore, EngineeringDiscovery.Web.Services.WebViewStateStore>();
 // Repository selection interaction service (presentation-owned)
 builder.Services.AddScoped<EngineeringDiscovery.Web.Services.IRepositorySelectionService, EngineeringDiscovery.Web.Services.RepositorySelectionService>();
 
 var app = builder.Build();
+
+// Temporary global exception hooks for diagnostic capture (logging-only)
+try
+{
+    AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+    {
+        try { Console.WriteLine($"[UNHANDLED] {DateTime.UtcNow:o} {e.ExceptionObject?.ToString()}"); } catch { }
+    };
+
+    TaskScheduler.UnobservedTaskException += (s, e) =>
+    {
+        try { Console.WriteLine($"[UNOBSERVED] {DateTime.UtcNow:o} {e.Exception?.ToString()}"); } catch { }
+    };
+}
+catch { }
 
 // Hook startup workspace notification to the WorkspaceStateService now that the app provider is built
 try
@@ -139,5 +158,22 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Request logging middleware (temporary, diagnostic-only)
+app.Use(async (context, next) =>
+{
+    var start = DateTime.UtcNow;
+    try
+    {
+        try { Console.WriteLine($"[REQ] {start:o} {context.Request.Method} {context.Request.Path}{context.Request.QueryString}"); } catch { }
+        await next();
+        try { Console.WriteLine($"[REQ] {DateTime.UtcNow:o} {context.Request.Method} {context.Request.Path} responded {context.Response.StatusCode}"); } catch { }
+    }
+    catch (Exception ex)
+    {
+        try { Console.WriteLine($"[REQ-ERR] {DateTime.UtcNow:o} {context.Request.Method} {context.Request.Path} Exception={ex}"); } catch { }
+        throw;
+    }
+});
 
 app.Run();

@@ -23,6 +23,20 @@
 
     <section class="workbench-toolbar">
         <input class="search-input" placeholder="Search discovery..." @bind="SearchTerm" />
+        <div class="explorer-question" style="margin-left:12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;flex-direction:column">
+                <label class="question-label"><strong>Ask EngineOS about this codebase</strong></label>
+                <span class="question-help" style="font-size:0.9em;color:var(--muted-color);">Ask a question in plain English about the repository.</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <input class="question-input" placeholder="Where is the Person model and what does it contain?" @bind="ExplorationQuestion" />
+                <button class="btn" @onclick="OnExplore">Ask</button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(CurrentExplorationGoal))
+            {
+                <div class="current-goal" style="margin-top:6px;font-size:0.95em;color:var(--muted-color);">Current goal: @CurrentExplorationGoal</div>
+            }
+        </div>
     </section>
 
     <section class="workbench-panels">

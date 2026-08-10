@@ -14,8 +14,7 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
         [Parameter]
         public Investigation? Investigation { get; set; }
 
-        [Inject]
-        private EngineeringDiscovery.Web.Services.InvestigationState InvestigationState { get; set; } = null!;
+        // InvestigationState (legacy) removed: callers must supply Investigation via the component parameter.
 
         protected EngineeringDiscovery.Web.Components.Dashboard.ViewModels.InvestigationDashboardViewModel? ViewModel { get; set; }
 
@@ -24,16 +23,30 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
         protected HashSet<string> ExpandedProjects { get; } = new();
         protected HashSet<string> ExpandedNamespaces { get; } = new();
         protected HashSet<string> ExpandedTypes { get; } = new();
+        protected string ExplorationQuestion { get; set; } = string.Empty;
+        protected string CurrentExplorationGoal { get; set; } = string.Empty;
 
         protected override void OnParametersSet()
         {
             base.OnParametersSet();
-            // If parent did not supply an Investigation parameter, use the shared InvestigationState.
+            // Do not fall back to legacy InvestigationState; use the provided Investigation parameter as authoritative.
+            // If no Investigation is supplied, leave ViewModel null so the UI can show a clear empty state.
             if (Investigation is null)
             {
-                Investigation = InvestigationState.Investigation;
+                ViewModel = null;
+                return;
             }
+
             BuildViewModel();
+        }
+
+        protected void OnExplore()
+        {
+            // Presentation-only: record the submitted exploration question in local UI state so it
+            // can be displayed as the current exploration goal. Do NOT modify ViewModel or the
+            // underlying Investigation domain object.
+            CurrentExplorationGoal = string.IsNullOrWhiteSpace(ExplorationQuestion) ? CurrentExplorationGoal : ExplorationQuestion;
+            StateHasChanged();
         }
 
         protected void BuildViewModel()

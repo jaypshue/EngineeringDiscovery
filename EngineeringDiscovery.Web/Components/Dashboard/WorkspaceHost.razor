@@ -211,7 +211,16 @@
             RepoSelection.StateChanged -= _repoSelectionChangedHandler;
             _repoSelectionChangedHandler = null;
         }
-        _dotNetRef?.Dispose();
+        try
+        {
+            // Ensure any JS-side handlers are removed before disposing the .NET reference to avoid
+            // JS invoking methods on a disposed DotNetObjectReference which can cause unhandled errors.
+            try { await JS.InvokeVoidAsync("repoPicker.detachHandlers", "dropArea", "folderPicker"); } catch { }
+        }
+        finally
+        {
+            _dotNetRef?.Dispose();
+        }
     }
 
     private async Task BrowseForRepositoryAsync()
@@ -369,12 +378,18 @@
         DiscoveryStatus = "Building Engineering Model...";
         StateHasChanged();
 
+        Console.WriteLine($"[DIAG] BuildEngineeringModelAsync started at {DateTime.UtcNow:o}");
+        Console.WriteLine($"[DIAG] SelectedRepositoryPath (at build start)='{SelectedRepositoryPath}'");
+
         try
         {
+            Console.WriteLine($"[DIAG] Instantiating InvestigationEngine at {DateTime.UtcNow:o}");
             var engine = new EngineeringDiscovery.Web.Services.InvestigationEngine();
 
             // Run discovery and create the Investigation off the UI thread
+            Console.WriteLine($"[DIAG] Before CreateInvestigation Task.Run at {DateTime.UtcNow:o}");
             var investigation = await Task.Run(() => engine.CreateInvestigation(SelectedRepositoryPath, null));
+            Console.WriteLine($"[DIAG] After CreateInvestigation returned at {DateTime.UtcNow:o}; investigation is {(investigation==null?"NULL":"NOT_NULL")}");
 
             if (investigation is null)
             {
@@ -408,20 +423,24 @@
             try
             {
                 // Ensure an EngineeringPartner session exists for this workspace
-                var model = await EngineeringPartner.StartSessionAsync(string.Empty).ConfigureAwait(false);
-                var sessionId = model?.Id;
+                    Console.WriteLine($"[DIAG] About to call EngineeringPartner.StartSessionAsync at {DateTime.UtcNow:o}");
+                    var model = await EngineeringPartner.StartSessionAsync(string.Empty).ConfigureAwait(false);
+                    Console.WriteLine($"[DIAG] Returned from StartSessionAsync at {DateTime.UtcNow:o}; model is {(model==null?"NULL":"NOT_NULL")}");
+                    var sessionId = model?.Id;
 
                 if (sessionId.HasValue)
                 {
-                    var obs = new EngineeringDiscovery.Core.Observations.Observation
-                    {
-                        Type = "RepoAttached",
-                        Source = "RepositoryImporter",
-                        SessionId = sessionId,
-                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = SelectedRepositoryPath })
-                    };
-                    // Ingest observation so ObservationEngine updates the EngineeringModel immediately
-                    await ObservationService.IngestAsync(obs).ConfigureAwait(false);
+                        var obs = new EngineeringDiscovery.Core.Observations.Observation
+                        {
+                            Type = "RepoAttached",
+                            Source = "RepositoryImporter",
+                            SessionId = sessionId,
+                            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = SelectedRepositoryPath })
+                        };
+                        // Ingest observation so ObservationEngine updates the EngineeringModel immediately
+                        Console.WriteLine($"[DIAG] About to call ObservationService.IngestAsync at {DateTime.UtcNow:o}");
+                        await ObservationService.IngestAsync(obs).ConfigureAwait(false);
+                        Console.WriteLine($"[DIAG] Returned from ObservationService.IngestAsync at {DateTime.UtcNow:o}");
                 }
 
                 // Notify SessionStartupService so UI components can react to the imported repository.
@@ -429,7 +448,9 @@
                 {
                     var repoName = string.Empty;
                     try { repoName = System.IO.Path.GetFileName(SelectedRepositoryPath ?? string.Empty) ?? string.Empty; } catch { }
+                    Console.WriteLine($"[DIAG] About to call Startup.NotifyWorkspaceState at {DateTime.UtcNow:o}");
                     Startup.NotifyWorkspaceState(repoName, SelectedRepositoryPath ?? string.Empty, "None", "None", "Ready");
+                    Console.WriteLine($"[DIAG] Returned from Startup.NotifyWorkspaceState at {DateTime.UtcNow:o}");
                 }
                 catch { }
                 // Navigate to the Dashboard and select the Architect role so the existing
@@ -437,7 +458,9 @@
                 // already contains the workspace and investigation.
                 var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);
                 // preserve importedPath for any downstream handling and set role=Architect
-                Nav.NavigateTo($"/dashboard?role=Architect&importedPath={encoded}", true);
+                    Console.WriteLine($"[DIAG] About to call Nav.NavigateTo at {DateTime.UtcNow:o}");
+                    Nav.NavigateTo($"/dashboard?role=Architect&importedPath={encoded}", true);
+                    Console.WriteLine($"[DIAG] Returned from Nav.NavigateTo at {DateTime.UtcNow:o}");
             }
             catch { }
         }

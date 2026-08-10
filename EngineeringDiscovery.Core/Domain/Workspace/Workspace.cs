@@ -13,6 +13,7 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
             Investigation = null;
             CurrentTask = null;
             CurrentActivity = null;
+            Iterations = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Iteration.EngineeringIteration>();
             // SelectedRole will be set via the property initializer
             CreatedUtc = DateTime.UtcNow;
             LastModifiedUtc = CreatedUtc;
@@ -43,6 +44,9 @@ namespace EngineeringDiscovery.Core.Domain.Workspace
 
         // ED-300: Activity support (single active activity for initial scope)
         public global::EngineeringDiscovery.Core.Domain.Activity.EngineeringActivity? CurrentActivity { get; set; }
+
+        // Lightweight iteration history for small engineering loops (v1)
+        public System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Iteration.EngineeringIteration> Iterations { get; set; }
 
         // Freshness metadata
         // The time the Engineering Model (Investigation) was last built for this workspace

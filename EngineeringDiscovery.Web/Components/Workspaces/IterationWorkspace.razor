@@ -1,0 +1,100 @@
+@using EngineeringDiscovery.Core.Domain.Iteration
+@inject EngineeringDiscovery.Web.Services.IterationService IterationService
+@inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
+
+<div class="iteration-workspace ed-workspace">
+    <h3>Engineering Iteration</h3>
+
+    @if (CurrentIteration is null)
+    {
+        <div>
+            <label>Goal</label>
+            <input @bind="NewGoal" placeholder="Describe the small engineering goal" />
+            <button class="btn" @onclick="Start">Start Iteration</button>
+        </div>
+    }
+    else
+    {
+        <div class="iteration-current">
+            <h4>Goal</h4>
+            <div>@CurrentIteration.Goal</div>
+
+            <h4>Current Understanding</h4>
+            <div>@CurrentUnderstanding</div>
+
+            <h4>Latest Evidence</h4>
+            @if (CurrentIteration.Steps?.Count > 0)
+            {
+                var latest = CurrentIteration.Steps[^1];
+                <div><strong>Copilot Response:</strong><pre>@latest.CopilotResponse</pre></div>
+                <div><strong>Human Observation:</strong><pre>@latest.HumanObservation</pre></div>
+                <div><strong>Assessment:</strong><pre>@latest.Assessment</pre></div>
+            }
+            else
+            {
+                <div class="muted">No evidence recorded yet.</div>
+            }
+
+            <h4>Add Evidence / Result</h4>
+            <div>
+                <label>Copilot Response</label>
+                <textarea @bind="CopilotResponse"></textarea>
+                <label>Human Observation</label>
+                <textarea @bind="HumanObservation"></textarea>
+                <label>Assessment / Next Action</label>
+                <textarea @bind="Assessment"></textarea>
+                <button class="btn" @onclick="SubmitStep">Submit Evidence</button>
+            </div>
+
+            <h4>History</h4>
+            <ul>
+                @foreach (var s in IterationService.GetHistory())
+                {
+                    <li>@s.CreatedUtc.ToLocalTime(): <strong>@s.Goal</strong> — @s.Status — steps: @s.Steps?.Count</li>
+                }
+            </ul>
+
+            <button class="btn" @onclick="Complete">Complete Iteration</button>
+        </div>
+    }
+</div>
+
+@code {
+    private EngineeringIteration? CurrentIteration => IterationService.GetCurrentIteration();
+    private string NewGoal { get; set; } = string.Empty;
+    private string CurrentUnderstanding => WorkspaceState.ActiveWorkspace?.Investigation is null ? "Investigation not available." : "Investigation present";
+    private string CopilotResponse { get; set; } = string.Empty;
+    private string HumanObservation { get; set; } = string.Empty;
+    private string Assessment { get; set; } = string.Empty;
+
+    private void Start()
+    {
+        IterationService.StartIteration(NewGoal);
+        NewGoal = string.Empty;
+        StateHasChanged();
+    }
+
+    private void SubmitStep()
+    {
+        var it = CurrentIteration;
+        if (it == null) return;
+        var step = new EngineeringIterationStep
+        {
+            Prompt = it.Steps.Count == 0 ? "Initial prompt" : "Follow up",
+            CopilotResponse = CopilotResponse ?? string.Empty,
+            HumanObservation = HumanObservation ?? string.Empty,
+            Assessment = Assessment ?? string.Empty
+        };
+        IterationService.AddStep(it, step);
+        CopilotResponse = string.Empty; HumanObservation = string.Empty; Assessment = string.Empty;
+        StateHasChanged();
+    }
+
+    private void Complete()
+    {
+        var it = CurrentIteration;
+        if (it == null) return;
+        IterationService.CompleteIteration(it);
+        StateHasChanged();
+    }
+}
