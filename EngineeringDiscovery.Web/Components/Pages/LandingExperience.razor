@@ -47,13 +47,10 @@
 
     private async Task StartBuilding()
     {
+        // Navigate into the application and indicate Project Discovery startup via query parameter.
         try
         {
-            var ws = new EngineeringDiscovery.Core.Domain.Workspace.Workspace();
-            WorkspaceState.ReplaceWorkspace(ws);
-            // Mark that the UI should focus the composer when the ConversationExperience renders.
-            Startup.MarkForFocus("What would you like to build today?");
-            await Task.CompletedTask;
+            Nav.NavigateTo("/app?start=build");
         }
         catch { }
     }

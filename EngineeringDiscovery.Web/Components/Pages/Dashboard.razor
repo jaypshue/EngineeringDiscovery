@@ -1,4 +1,5 @@
 ﻿@page "/dashboard"
+@using Microsoft.AspNetCore.WebUtilities
 
 <PageTitle>Engineering Discovery</PageTitle>
 
@@ -35,6 +36,9 @@
 </div>
 
 @code {
+    [Inject]
+    private NavigationManager Nav { get; set; } = null!;
+
     private EngineeringRole SelectedRole { get; set; } = EngineeringRole.CurrentTask;
     private string? ViewModelProject { get; set; } = "(none)";
 
@@ -46,6 +50,25 @@
     protected override void OnInitialized()
     {
         WorkspaceState.OnChange += OnWorkspaceChanged;
+
+        // Read query string to allow navigation like /dashboard?role=Architect
+        try
+        {
+            var uri = new Uri(Nav.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            if (query.TryGetValue("role", out var roleValues))
+            {
+                var roleString = roleValues.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(roleString) && Enum.TryParse<EngineeringRole>(roleString, true, out var parsed))
+                {
+                    SelectedRole = parsed;
+                }
+            }
+        }
+        catch
+        {
+            // conservative: if query parsing fails, keep default SelectedRole
+        }
     }
 
     private void OnWorkspaceChanged()

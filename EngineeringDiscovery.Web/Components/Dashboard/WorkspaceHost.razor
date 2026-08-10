@@ -432,10 +432,12 @@
                     Startup.NotifyWorkspaceState(repoName, SelectedRepositoryPath ?? string.Empty, "None", "None", "Ready");
                 }
                 catch { }
-                // Navigate to /app to show the conversation. WorkspaceState already contains the workspace,
-                // so AppLanding will render the conversation on arrival.
+                // Navigate to the Dashboard and select the Architect role so the existing
+                // InvestigationDashboard (Explorer) is shown after import. WorkspaceState
+                // already contains the workspace and investigation.
                 var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);
-                Nav.NavigateTo($"/app?importedPath={encoded}", true);
+                // preserve importedPath for any downstream handling and set role=Architect
+                Nav.NavigateTo($"/dashboard?role=Architect&importedPath={encoded}", true);
             }
             catch { }
         }

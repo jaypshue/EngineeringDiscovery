@@ -1,5 +1,7 @@
+@using EngineeringDiscovery.Core.Services
 @using EngineeringDiscovery.Web.Components.Shared
 @namespace EngineeringDiscovery.Web.Components.Workspaces
+@inject WorkspaceState WorkspaceState
 
 <div class="recommendation-workspace ed-workspace">
     <CurrentTaskHeader />
@@ -17,7 +19,7 @@
 
         <!-- Current Understanding follows recommendation -->
         <section class="understanding-section">
-            <CurrentUnderstandingCard />
+            <CurrentUnderstandingCard Investigation="WorkspaceState.ActiveWorkspace?.Investigation" />
         </section>
 
         <!-- Artifacts: collapsed work contract to keep it visually secondary -->

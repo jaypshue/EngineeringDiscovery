@@ -34,17 +34,14 @@ namespace EngineeringDiscovery.E2ETests.Tests
             // Navigate to Free Range or EngineOS via stable href anchors when available
             try
             {
-                if (await page.QuerySelectorAsync("a[href='/free-range']") != null)
+                // Prefer explicit Start Building CTA on public home which now points at /app?start=build
+                if (await page.QuerySelectorAsync("a[href='/app?start=build']") != null)
                 {
-                    await page.ClickAsync("a[href='/free-range']");
+                    await page.ClickAsync("a[href='/app?start=build']");
                 }
-                else if (await page.QuerySelectorAsync("a[href='/engineos']") != null)
+                else if (await page.QuerySelectorAsync("text=Start Building") != null)
                 {
-                    await page.ClickAsync("a[href='/engineos']");
-                }
-                else if (await page.IsVisibleAsync("text=Free Range"))
-                {
-                    await page.ClickAsync("text=Free Range");
+                    await page.ClickAsync("text=Start Building");
                 }
             }
             catch { }
