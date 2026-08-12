@@ -37,8 +37,18 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
         public bool CanLoad(string repositoryRoot)
         {
             if (string.IsNullOrWhiteSpace(repositoryRoot) || !Directory.Exists(repositoryRoot)) return false;
-
-            return EnumerateBuildFiles(repositoryRoot).Any();
+            try
+            {
+                var files = EnumerateBuildFiles(repositoryRoot).ToList();
+                Console.WriteLine($"[PROV-DIAG] JavaRepositoryProvider.CanLoad received repoRoot='{repositoryRoot}' FoundBuildFiles={files.Count}");
+                foreach (var f in files) try { Console.WriteLine($"[PROV-DIAG] JavaRepositoryProvider.CanLoad buildfile: {f}"); } catch { }
+                return files.Any();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PROV-DIAG] JavaRepositoryProvider.CanLoad exception for repoRoot='{repositoryRoot}': {ex.Message}");
+                return false;
+            }
         }
 
         public IReadOnlyList<CompilationContext> Load(string repositoryRoot)

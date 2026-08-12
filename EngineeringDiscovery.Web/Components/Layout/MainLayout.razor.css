@@ -18,3 +18,125 @@
         right: 0.75rem;
         top: 0.5rem;
     }
+
+/* EngineOS drawer — moved from WorkspaceHost inline <style> to layout-scoped CSS.
+   Blazor scoped CSS does not apply to ::deep fixed overlays, so these rules intentionally
+   use global selectors (no ::deep) to match the drawer rendered outside the component tree. */
+
+/* Non-interactive dim backdrop */
+::deep .engineos-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.34);
+    z-index: 1100;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+}
+
+::deep .engineos-backdrop.visible {
+    opacity: 1;
+}
+
+/* Floating centred companion panel */
+::deep .engineos-drawer {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 72px;
+    width: min(1100px, 78vw);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    z-index: 1200;
+    transition: height 260ms ease, box-shadow 200ms ease, width 200ms ease;
+}
+
+/* Collapsed: compact bar anchored top-left, pass-through for underlying content */
+::deep .engineos-drawer.collapsed {
+    height: 48px;
+    pointer-events: none;
+    width: auto;
+    left: 24px;
+    right: auto;
+    transform: none;
+}
+
+::deep .engineos-drawer.collapsed .engineos-bar {
+    pointer-events: auto;
+}
+
+/* Expanded: companion-sized panel */
+::deep .engineos-drawer.expanded {
+    height: 68vh;
+    min-height: 360px;
+    max-height: 76vh;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.40);
+    pointer-events: auto;
+}
+
+::deep .engineos-bar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: #1a1f27;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    cursor: pointer;
+}
+
+::deep .engineos-panel {
+    background: #131820;
+    color: var(--text);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100% - 48px);
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+}
+
+::deep .engineos-conversation-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .engineos-conversation-wrapper > .conversation-host {
+    height: 100%;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .engineos-panel .conversation-host .messages {
+    flex: 1 1 75%;
+    overflow: auto;
+}
+
+::deep .engineos-panel .conversation-host .composer {
+    flex: 0 0 auto;
+    align-items: flex-end;
+}
+
+@media (max-width: 900px) {
+    ::deep .engineos-drawer {
+        width: min(900px, 92vw);
+    }
+}
+
+@media (max-width: 600px) {
+    ::deep .engineos-drawer.expanded {
+        height: 60vh;
+        min-height: 300px;
+    }
+}

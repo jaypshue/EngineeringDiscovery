@@ -12,25 +12,31 @@
     </aside>
 
     <main class="main-pane">
-        <h1>Engineering Discovery</h1>
+        <div class="main-content">
+            <h1>Engineering Discovery</h1>
 
-        <SectionHeader Title="Repository Summary" Subtitle="High level repository facts" />
-        <div class="cards-row">
-            <RepositoryCard Investigation="SampleInvestigation" />
-            <StatusCard Statuses="PipelineStatuses" />
-        </div>
-
-        <SectionHeader Title="Current Investigation" Subtitle="Investigation metadata and status" />
-        <div class="cards-row">
-            <div style="flex:1">
-                <WorkspaceHost Role="SelectedRole" />
+            <SectionHeader Title="Repository Summary" Subtitle="High level repository facts" />
+            <div class="cards-row">
+                <RepositoryCard Investigation="SampleInvestigation" />
+                <StatusCard Statuses="PipelineStatuses" />
             </div>
-            <ActionCard Title="Next Recommended Action">
-                <p>
-                    Roadmap generation will appear here. EngineeringDiscovery will recommend the next engineering
-                    milestone after repository analysis.
-                </p>
-            </ActionCard>
+
+            <SectionHeader Title="Current Investigation" Subtitle="Investigation metadata and status" />
+            <div class="cards-row">
+                <div style="flex:2;min-width:0;display:flex;justify-content:center;align-items:flex-start">
+                    <div style="width:100%">
+                        <WorkspaceHost Role="SelectedRole" />
+                    </div>
+                </div>
+                <div style="flex:1;min-width:240px">
+                    <ActionCard Title="Next Recommended Action">
+                        <p>
+                            Roadmap generation will appear here. EngineeringDiscovery will recommend the next engineering
+                            milestone after repository analysis.
+                        </p>
+                    </ActionCard>
+                </div>
+            </div>
         </div>
     </main>
 </div>

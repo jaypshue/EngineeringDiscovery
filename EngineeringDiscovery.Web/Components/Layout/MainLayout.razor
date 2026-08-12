@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using EngineeringDiscovery.Core.Services
+@using EngineeringDiscovery.Web.Components.Conversation
 @inject WorkspaceState WorkspaceState
 @implements IDisposable
 
@@ -39,7 +40,36 @@
     </div>
 </div>
 
+@* EngineOS collapsible drawer — lives at the layout level so it is viewport-independent of any
+   individual page component. Collapsed: compact bar anchored top-left. Expanded: centred companion
+   panel at 68vh. Preserves the same visual behaviour previously hosted in WorkspaceHost. *@
+<div class="engineos-backdrop @(EngineOSExpanded ? "visible" : string.Empty)" aria-hidden="true"></div>
+<div class="engineos-drawer @(EngineOSExpanded ? "expanded" : "collapsed")" aria-expanded="@(EngineOSExpanded)">
+    <div class="engineos-bar" @onclick="ToggleEngineOS">
+        <div style="display:flex;gap:12px;align-items:center">
+            <strong>EngineOS</strong>
+            <div style="font-size:0.9rem;color:var(--muted)">@(WorkspaceState.ActiveWorkspace?.RepositoryPath ?? string.Empty)</div>
+        </div>
+        <div style="font-weight:600;color:var(--accent)">@(EngineOSExpanded ? "Collapse" : "Expand")</div>
+    </div>
+    <div class="engineos-panel" style="display:@(EngineOSExpanded ? "flex" : "none");">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:600">EngineOS — @(WorkspaceState.ActiveWorkspace?.RepositoryPath ?? string.Empty)</div>
+        </div>
+        <div class="engineos-conversation-wrapper">
+            <div style="flex:1;display:flex;flex-direction:row;gap:12px;align-items:stretch;">
+                <div style="flex:1;min-width:0">
+                    <ConversationHost @ref="_conversationHost" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
+    private bool EngineOSExpanded { get; set; } = false;
+    private ConversationHost? _conversationHost;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -47,6 +77,24 @@
     }
 
     private void OnWorkspaceChanged() => InvokeAsync(StateHasChanged);
+
+    private void ToggleEngineOS()
+    {
+        EngineOSExpanded = !EngineOSExpanded;
+        StateHasChanged();
+        if (EngineOSExpanded)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    if (_conversationHost != null)
+                        await _conversationHost.FocusComposerAsync();
+                }
+                catch { }
+            });
+        }
+    }
 
     public void Dispose()
     {

@@ -76,7 +76,7 @@
                 }
                 else if (freshness == EngineeringDiscovery.Core.Services.WorkspaceState.EngineeringModelFreshness.RefreshRecommended)
                 {
-                    <p class="freshness--stale">? Repository Changed — Refresh Recommended</p>
+                    <p class="freshness--stale">? Repository Changed ï¿½ Refresh Recommended</p>
                     <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
                     <button class="btn" @onclick="BuildEngineeringModelAsync">Refresh Engineering Model</button>
                 }
@@ -86,24 +86,12 @@
                 }
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:6px">
-                <div><strong>Repository:</strong> @WorkspaceState.ActiveWorkspace?.RepositoryPath</div>
-                <div><strong>Repository Status:</strong> @DiscoveryStatus</div>
-                <div><strong>Investigation Status:</strong> @(SampleInvestigation?.Status.ToString() ?? "n/a")</div>
-            </div>
-                <div class="target-selector">
-                <input class="repo-input" @bind="SelectedRepositoryPath" @bind:event="oninput" placeholder="Repository root path" tabindex="0" aria-disabled="false" />
-                <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(!IsImportEnabled)">
-                    @if (IsBuilding)
-                    {
-                        <span class="spinner" aria-hidden="true"></span>
-                        <span>Importing Repository...</span>
-                    }
-                    else
-                    {
-                        <span>Import Repository</span>
-                    }
-                </button>
+            @* Keep repository context persistently visible in the active-workspace view. *@
+            <div class="workspace-header" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;padding:8px;border-radius:6px;">
+                <div style="font-size:0.95em;color:var(--muted-color);">Repository</div>
+                <div style="font-size:1.15em;font-weight:600;">@((WorkspaceState.ActiveWorkspace?.RepositoryPath != null) ? System.IO.Path.GetFileName(WorkspaceState.ActiveWorkspace.RepositoryPath) : "(unknown)")</div>
+                <div style="color:var(--muted-color);">@WorkspaceState.ActiveWorkspace?.RepositoryPath</div>
+                <div style="font-size:0.9em;color:var(--muted-color);">@DiscoveryStatus &middot; Investigation @(WorkspaceState.ActiveWorkspace?.Investigation?.Status.ToString() ?? "n/a")</div>
             </div>
             @if (!string.IsNullOrWhiteSpace(ErrorMessage))
             {
@@ -112,9 +100,62 @@
         }
     </section>
 
-    <div class="workspace-placeholder">
-        @RenderWorkspace()
+    @* Workspace perspective tabs (Overview / Develop / Iterate) - presentation-only replacement for the
+       previous Explorer / Developer / Drill Down buttons. These call the existing SelectView helpers
+       and preserve the underlying behavior. *@
+
+    <div class="workspace-tabs" style="display:flex;gap:12px;align-items:end;margin:8px 0 12px 0;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:6px">
+        <button class="btn btn-sm" style="@(TabStyle("Explorer"))" @onclick="SelectExplorer" aria-pressed="@(CurrentView=="Explorer")">Overview</button>
+        <button class="btn btn-sm" style="@(TabStyle("Developer"))" @onclick="SelectDeveloper" aria-pressed="@(CurrentView=="Developer")">Develop</button>
+        <button class="btn btn-sm" style="@(TabStyle("DrillDown"))" @onclick="SelectDrillDown" aria-pressed="@(CurrentView=="DrillDown")">Iterate</button>
     </div>
+
+    <div id="workspace-placeholder-original" class="workspace-placeholder">
+        <div id="workspace-main">
+        @if (CurrentView == "Explorer")
+        {
+            var inv = WorkspaceState.ActiveWorkspace?.Investigation;
+            Console.WriteLine($"[DIAG] WorkspaceHost: CurrentView={CurrentView}");
+            Console.WriteLine($"[DIAG] WorkspaceHost: WorkspaceState.HasWorkspace={WorkspaceState.HasWorkspace}");
+            Console.WriteLine($"[DIAG] WorkspaceHost: ActiveWorkspace is null={(WorkspaceState.ActiveWorkspace==null)}");
+            Console.WriteLine($"[DIAG] WorkspaceHost: Investigation is null={(inv==null)}");
+            if (inv is not null)
+            {
+                var tcount = inv.TypeObservations?.Count ?? 0;
+                var ncount = inv.NamespaceObservations?.Count ?? 0;
+                var mcount = inv.MemberObservations?.Count ?? 0;
+                Console.WriteLine($"[DIAG] WorkspaceHost: Investigation.TypeObservations={tcount}");
+                Console.WriteLine($"[DIAG] WorkspaceHost: Investigation.NamespaceObservations={ncount}");
+                Console.WriteLine($"[DIAG] WorkspaceHost: Investigation.MemberObservations={mcount}");
+            }
+            Console.WriteLine($"[DIAG] WorkspaceHost: DiscoveryStatus={DiscoveryStatus}");
+            // Only render the structural Explorer if the Investigation contains structured observations
+            // required by the InvestigationDashboard projection. This preserves the BuildViewModel
+            // contract which throws if no structured observations are present.
+            if (inv is not null && (
+                    (inv.TypeObservations != null && inv.TypeObservations.Any()) ||
+                    (inv.NamespaceObservations != null && inv.NamespaceObservations.Any()) ||
+                    (inv.MemberObservations != null && inv.MemberObservations.Any())))
+            {
+                Console.WriteLine("[DIAG] WorkspaceHost: Rendering InvestigationDashboard");
+                <InvestigationDashboard Investigation="inv" />
+            }
+            else
+            {
+                Console.WriteLine("[DIAG] WorkspaceHost: Skipping InvestigationDashboard because guard condition failed");
+            }
+        }
+        else if (CurrentView == "Developer")
+        {
+            <RecommendationWorkspace />
+        }
+        else if (CurrentView == "DrillDown")
+        {
+            <IterationWorkspace />
+        }
+        </div>
+    </div>
+
 </section>
 
 @code {
@@ -144,6 +185,12 @@
     private EngineeringDiscovery.Web.Services.IRepositorySelectionService RepoSelection { get; set; } = null!;
 
     private Action? _repoSelectionChangedHandler;
+
+    // Presentation-only view mode for the workspace shell. This is intentionally UI state and
+    // does not change any domain or persistence model. The current view drives which child
+    // component is rendered inside the shared workspace area.
+    // CurrentView is retained for internal composition but removed from main UI buttons per UX-XXX.
+    private string CurrentView { get; set; } = "Explorer";
 
     private string Title => Role switch
     {
@@ -412,11 +459,15 @@
             var ws = WorkspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
             if (ws.ImportedRepositories == null) ws.ImportedRepositories = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository>();
             ws.ImportedRepositories.Add(imported);
+            Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost BEFORE ReplaceWorkspace - ImportedRepository path={imported.RepositoryPath} InvestigationId={(investigation==null?"NULL":investigation.Id.ToString())} TypeObservations={(investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(investigation?.MemberObservations?.Count ?? 0)}");
             WorkspaceState.ReplaceWorkspace(ws);
+            Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost AFTER ReplaceWorkspace - ActiveWorkspaceInvestigationId={(WorkspaceState.ActiveWorkspace?.Investigation==null?"NULL":WorkspaceState.ActiveWorkspace.Investigation.Id.ToString())} TypeObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.MemberObservations?.Count ?? 0)}");
             // Persist investigation for this workspace (keeps UI in sync). Note: SetInvestigation updates the
             // workspace-level Investigation. Individual ImportedRepository.Investigation objects remain the
             // canonical per-repo discovery results.
+            Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost BEFORE SetInvestigation - InvestigationId={(investigation==null?"NULL":investigation.Id.ToString())} TypeObservations={(investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(investigation?.MemberObservations?.Count ?? 0)}");
             WorkspaceState.SetInvestigation(investigation);
+            Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost AFTER SetInvestigation - ActiveWorkspaceInvestigationId={(WorkspaceState.ActiveWorkspace?.Investigation==null?"NULL":WorkspaceState.ActiveWorkspace.Investigation.Id.ToString())} TypeObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.MemberObservations?.Count ?? 0)}");
             // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
 
             // Create an engineering session and ingest a RepoAttached observation immediately
@@ -509,5 +560,28 @@
             EngineeringRole.Reviewer => (__builder) => { __builder.OpenComponent(0, typeof(RecommendationWorkspace)); __builder.CloseComponent(); },
             _ => (__builder) => { __builder.AddContent(0, "Workspace content."); }
         };
+    }
+
+    // UI-only handlers for the workspace shell view selector and EngineOS Man controls.
+    // These are intentionally presentation-only and do not modify WorkspaceState or persistence.
+    private void SelectView(string mode)
+    {
+        CurrentView = string.IsNullOrWhiteSpace(mode) ? "Explorer" : mode;
+        StateHasChanged();
+    }
+
+    // Navigation buttons removed; keep SelectView helpers for internal reuse.
+    private void SelectExplorer() => SelectView("Explorer");
+    private void SelectDeveloper() => SelectView("Developer");
+    private void SelectDrillDown() => SelectView("DrillDown");
+
+    private string TabStyle(string tabFor)
+    {
+        // Subtle active tab treatment: slightly brighter text and underline via box-shadow mimic
+        if (string.Equals(CurrentView, tabFor, StringComparison.OrdinalIgnoreCase))
+        {
+            return "color:var(--text-color);font-weight:600;box-shadow:inset 0 -2px 0 0 var(--accent-color);";
+        }
+        return "color:var(--muted-color);background:transparent;border:0;padding:4px 8px;";
     }
 }

@@ -25,6 +25,10 @@ body{background:var(--bg);color:var(--text);font-family:Segoe UI,Segoe,Arial,san
 .ed-body{display:flex;flex:1;overflow:hidden}
 .ed-nav{width:240px;background:var(--panel);border-right:1px solid rgba(255,255,255,0.03);padding:12px;box-sizing:border-box}
 .ed-workspace{flex:1;padding:20px;overflow:auto}
+/* Main content container to center and widen workspace content */
+.main-content{max-width:1400px;margin:0 auto;padding:8px 20px;box-sizing:border-box}
+.cards-row{display:flex;gap:12px;align-items:flex-start}
+.cards-row > .card, .cards-row > RepositoryCard, .cards-row > .StatusCard { flex:1 }
 .conversation-area{display:flex;flex-direction:column;gap:12px}
 .conversation-stream{background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);padding:12px;border-radius:8px;min-height:360px}
 .composer{margin-top:8px}
@@ -43,6 +47,10 @@ body{background:var(--bg);color:var(--text);font-family:Segoe UI,Segoe,Arial,san
 
 /* ConversationExperience specific tweaks */
 .conversation-experience-shell{max-width:1200px;margin:0 auto}
+
+/* Allow workspace host to stretch within the main content area while keeping readable max widths
+   for inner components. This prevents the workspace from being confined to the far-left column. */
+.workspace-placeholder, .workspace-placeholder > #workspace-main { width:100%; min-width:0; }
 .conversation-column{min-height:480px}
 .engineering-context-compact{opacity:0.95}
 .ed-statusbar{height:36px;background:#071021;border-top:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:0.85rem;color:var(--muted)}

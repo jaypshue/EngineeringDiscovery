@@ -7,8 +7,8 @@
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
 @inject EngineeringDiscovery.Web.Services.WorkContractService ContractService
 
-<div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto">
-    <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;background:var(--surface)">
+<div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto;height:100%">
+    <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(0,0,0,0.06);border-radius:6px;background:transparent;max-height:100%;box-sizing:border-box">
         @foreach (var m in Messages)
         {
             <div class="message" style="margin-bottom:8px">
@@ -50,7 +50,7 @@
     }
 
     <div class="composer" style="display:flex;gap:8px;align-items:flex-end">
-        <textarea @ref="_composerRef" id="composer-textarea" rows="3" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);resize:vertical" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
+        <textarea @ref="_composerRef" id="composer-textarea" rows="2" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.06);resize:none;height:3.2rem;line-height:1.2rem" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
         <button class="btn btn-primary" @onclick="SendAsync" disabled="@IsSending || string.IsNullOrWhiteSpace(Draft)">Send</button>
     </div>
 </div>

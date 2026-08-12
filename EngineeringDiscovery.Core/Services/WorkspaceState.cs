@@ -171,6 +171,19 @@ namespace EngineeringDiscovery.Core.Services
             if (ActiveWorkspace is null) ActiveWorkspace = new Workspace();
             // Store investigation at workspace-level for backward compatibility. Do not overwrite per-repo investigations.
             ActiveWorkspace.Investigation = investigation;
+            try
+            {
+                // Lightweight diagnostic tracing for investigation shape at the state boundary
+                var id = investigation is null ? "NULL" : investigation.Id.ToString();
+                var typeCount = investigation?.TypeObservations?.Count ?? 0;
+                var nsCount = investigation?.NamespaceObservations?.Count ?? 0;
+                var memberCount = investigation?.MemberObservations?.Count ?? 0;
+                Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceState.SetInvestigation id={id} TypeObservations={typeCount} NamespaceObservations={nsCount} MemberObservations={memberCount}");
+            }
+            catch
+            {
+                // Intentionally do not swallow or change behavior; diagnostic best-effort only
+            }
             // Persist changes
             Save();
             NotifyStateChanged();

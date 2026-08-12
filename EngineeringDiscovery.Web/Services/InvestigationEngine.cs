@@ -150,7 +150,23 @@ namespace EngineeringDiscovery.Web.Services
                 try
                 {
                     var repoRoot = effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? string.Empty;
+                    Console.WriteLine($"[PROV-DIAG] RepositoryLoader.Load called with repoRoot='{repoRoot}' Exists={System.IO.Directory.Exists(repoRoot)}");
                     var contexts = loader.Load(repoRoot);
+                    Console.WriteLine($"[PROV-DIAG] RepositoryLoader.Load returned { (contexts==null?0:contexts.Count) } CompilationContexts for repoRoot='{repoRoot}'");
+                    if (contexts != null)
+                    {
+                        foreach (var c in contexts)
+                        {
+                            try
+                            {
+                                var sourceRootsCount = 0;
+                                try { sourceRootsCount = c.JavaLayout != null ? c.JavaLayout.SourceRoots.Count : 0; } catch { }
+                                Console.WriteLine($"[PROV-DIAG] CompilationContext: Language={c.Language} ProjectFilePath={c.ProjectFilePath} SourceRoots={sourceRootsCount}");
+                            }
+                            catch { }
+                        }
+                    }
+
                     foreach (var c in contexts) try { context.CompilationContexts.Add(c); } catch { }
                 }
                 catch { }

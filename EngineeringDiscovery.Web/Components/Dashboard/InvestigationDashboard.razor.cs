@@ -23,8 +23,8 @@ namespace EngineeringDiscovery.Web.Components.Dashboard
         protected HashSet<string> ExpandedProjects { get; } = new();
         protected HashSet<string> ExpandedNamespaces { get; } = new();
         protected HashSet<string> ExpandedTypes { get; } = new();
-        protected string ExplorationQuestion { get; set; } = string.Empty;
-        protected string CurrentExplorationGoal { get; set; } = string.Empty;
+        private string ExplorationQuestion { get; set; } = string.Empty;
+        private string CurrentExplorationGoal { get; set; } = string.Empty;
 
         protected override void OnParametersSet()
         {

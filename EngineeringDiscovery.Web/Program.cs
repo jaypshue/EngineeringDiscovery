@@ -109,7 +109,21 @@ using (var scope = app.Services.CreateScope())
     if (loaded is not null)
     {
         // Replace canonical workspace in core state. WorkspaceState.ReplaceWorkspace will perform a
-        // non-destructive migration from legacy RepositoryPath into ImportedRepositories when needed.
+        // non-destructive migration from legacy Reposi
+        try
+        {
+            // Diagnostic: log investigation counts immediately after restore to see if persisted Investigation is incomplete
+            var inv = loaded.Investigation;
+            var id = inv is null ? "NULL" : inv.Id.ToString();
+            var typeCount = inv?.TypeObservations?.Count ?? 0;
+            var nsCount = inv?.NamespaceObservations?.Count ?? 0;
+            var memberCount = inv?.MemberObservations?.Count ?? 0;
+            Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} Persistence.LoadAsync restored workspace Investigation id={id} TypeObservations={typeCount} NamespaceObservations={nsCount} MemberObservations={memberCount}");
+        }
+        catch
+        {
+            // best-effort diagnostic; do not change startup behavior
+        }
         workspaceState.ReplaceWorkspace(loaded);
 
         // Mirror a presentation-friendly summary into the WorkspaceStateService. Presentation state
