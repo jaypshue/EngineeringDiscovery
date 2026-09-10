@@ -181,7 +181,55 @@ namespace EngineeringDiscovery.Wpf.Tests
             await confirmCommand.LastTask!;
 
             Assert.Contains(vm.Messages, message => message.Text.Contains(expectedText, StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(vm.Messages, message =>
+                message.Text.Contains("Status:", StringComparison.OrdinalIgnoreCase) &&
+                message.Text.Contains("exit code", StringComparison.OrdinalIgnoreCase) &&
+                message.Text.Contains("elapsed", StringComparison.OrdinalIgnoreCase));
             executor.Verify(e => e.ExecuteAsync(operation, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Confirmed_Operation_Status_Names_Requested_Operation_While_Running()
+        {
+            var partner = new Mock<IEngineeringPartner>();
+            var structured = new Mock<IStructuredConversationPartner>();
+            var executor = new Mock<IConfirmedEngineeringOperationExecutor>();
+            var completion = new TaskCompletionSource<DevelopmentCommandResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var model = new EngineeringModel { Id = Guid.NewGuid() };
+            partner.Setup(p => p.StartSessionAsync(It.IsAny<string>())).ReturnsAsync(model);
+            structured.Setup(p => p.SendStructuredReadOnlyMessageAsync(
+                    It.IsAny<Guid>(), "Run the tests", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new StructuredConversationResult(
+                    ConversationResponseKind.ConfirmationRequired,
+                    "Confirmation required.",
+                    "Run tests",
+                    "Run the repository test operation",
+                    Operation: EngineeringOperationKind.Test));
+            executor.Setup(e => e.ExecuteAsync(EngineeringOperationKind.Test, It.IsAny<CancellationToken>()))
+                .Returns(completion.Task);
+
+            var vm = new WorkspaceConversationViewModel(partner.Object, structured.Object, executor.Object);
+            await vm.InitializeAsync();
+            vm.Draft = "Run the tests";
+            await vm.SendCurrentMessageAsync();
+
+            var confirmCommand = Assert.IsType<AsyncRelayCommand>(vm.ConfirmActionCommand);
+            confirmCommand.Execute(null);
+
+            Assert.True(vm.IsConfirming);
+            Assert.Equal("Running confirmed tests…", vm.StatusText);
+
+            completion.SetResult(new DevelopmentCommandResult(
+                DevelopmentCommandKind.Test,
+                "dotnet test",
+                0,
+                TimeSpan.FromSeconds(1),
+                Array.Empty<ProblemItem>(),
+                "captured output"));
+            await confirmCommand.LastTask!;
+
+            Assert.False(vm.IsConfirming);
+            Assert.Equal("Ready", vm.StatusText);
         }
 
         [Fact]

@@ -96,6 +96,20 @@ public enum DevelopmentCommandKind
     Test
 }
 
+public enum DevelopmentWorkbenchView
+{
+    Files,
+    Search,
+    Problems,
+    Changes,
+    Rounds,
+    Review,
+    Output,
+    Diff,
+    Results,
+    PromptArtifact
+}
+
 public sealed record DevelopmentCommandResult(
     DevelopmentCommandKind Kind,
     string Command,

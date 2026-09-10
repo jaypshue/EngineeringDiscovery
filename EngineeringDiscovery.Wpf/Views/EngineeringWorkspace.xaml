@@ -179,13 +179,13 @@
                                     DockPanel.Dock="Right"
                                     Style="{StaticResource AccentButton}"
                                     Padding="14,5"
-                                    ToolTip="Execute the confirmed Build or Test operation" />
+                                    ToolTip="Confirm and run only this requested Build or Test operation. Output, Problems, and Results will show the evidence." />
                             <StackPanel Margin="0,0,8,0">
                                 <TextBlock Text="{Binding Conversation.ConfirmationText}"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource PrimaryTextBrush}"
                                            TextWrapping="Wrap" />
-                                <TextBlock Text="This confirmation is visible and deliberate. Conversation will execute only the confirmed Build or Test capability."
+                                <TextBlock Text="Explicit confirmation is required. Only the requested Build or Test operation will run; Output, Problems, and Results will show the evidence."
                                            Foreground="{StaticResource SecondaryTextBrush}"
                                            TextWrapping="Wrap"
                                            Margin="0,2,0,0" />
@@ -227,11 +227,6 @@
                                             DataContext="{Binding DevelopmentSurface.Steering}" />
         </Grid>
 
-        <ScrollViewer Grid.Row="2"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto"
-                      CanContentScroll="False">
-            <views:DevelopmentSurface DataContext="{Binding DevelopmentSurface}" />
-        </ScrollViewer>
+        <views:DevelopmentSurface Grid.Row="2" DataContext="{Binding DevelopmentSurface}" />
     </Grid>
 </UserControl>

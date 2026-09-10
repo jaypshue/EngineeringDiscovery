@@ -129,7 +129,15 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             {
                 if (IsInitializing) return "Connecting to EngineOS…";
                 if (IsSending) return "EngineOS is thinking…";
-                if (IsConfirming) return "Executing the confirmed operation…";
+                if (IsConfirming)
+                {
+                    return _pendingOperation switch
+                    {
+                        EngineeringOperationKind.Build => "Running confirmed build…",
+                        EngineeringOperationKind.Test => "Running confirmed tests…",
+                        _ => "Running the confirmed operation…"
+                    };
+                }
                 if (_initializationFailed) return "Conversation is unavailable. Send a message to retry.";
                 return !SessionId.HasValue || SessionId.Value == Guid.Empty ? "Ready to connect" : "Ready";
             }
@@ -156,7 +164,7 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public bool HasPendingConfirmation => !string.IsNullOrWhiteSpace(PendingAction);
         public string ConfirmationText => HasPendingConfirmation
-            ? $"Confirmation required before: {PendingAction}"
+            ? $"Explicit confirmation required before running: {PendingAction}"
             : string.Empty;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -432,9 +440,10 @@ namespace EngineeringDiscovery.Wpf.ViewModels
                 return $"{label} could not be executed. No result was available; see Output and Problems for details.";
             }
 
+            var evidence = $"Status: {result.DisplayStatus}; exit code {result.ExitCode}; {result.Problems.Count} problem(s); elapsed {result.Duration.TotalSeconds:0.0}s.";
             return result.Succeeded
-                ? $"{label} completed successfully. See Output and Results for the captured evidence."
-                : $"{label} failed. See Output and Problems for details.";
+                ? $"{label} completed successfully. {evidence} See Output and Results for the captured evidence."
+                : $"{label} failed. {evidence} See Output and Problems for details.";
         }
 
         private static string FormatOperation(EngineeringOperationKind operation) => operation switch

@@ -31,6 +31,7 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
     private GitChange? _selectedChange;
     private string _diffText = "Select a changed file to view its diff.";
     private FileSearchResult? _selectedSearchResult;
+    private DevelopmentWorkbenchView _selectedWorkbenchView = DevelopmentWorkbenchView.Files;
     private bool _disposed;
 
     public DevelopmentSurfaceViewModel(
@@ -57,8 +58,8 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
         Results = new ObservableCollection<DevelopmentResultViewModel>();
 
         RefreshCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(InitializeAsync, () => !IsBusy);
-        SearchFilesCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SearchFilesAsync, () => !IsBusy);
-        SearchTextCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SearchTextAsync, () => !IsBusy);
+        SearchFilesCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SearchFilesAsync, CanSearch);
+        SearchTextCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SearchTextAsync, CanSearch);
         SaveCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SaveActiveAsync, () => ActiveDocument is { IsDirty: true });
         SaveAllCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SaveAllAsync, () => OpenDocuments.Any(document => document.IsDirty));
         BuildCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(RunBuildAsync, () => !IsBusy && HasRepository);
@@ -106,7 +107,11 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
     public string SearchQuery
     {
         get => _searchQuery;
-        set => SetProperty(ref _searchQuery, value);
+        set
+        {
+            if (!SetProperty(ref _searchQuery, value)) return;
+            RaiseCommandStates();
+        }
     }
     public string StatusText
     {
@@ -154,6 +159,11 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
         get => _diffText;
         private set => SetProperty(ref _diffText, value);
     }
+    public DevelopmentWorkbenchView SelectedWorkbenchView
+    {
+        get => _selectedWorkbenchView;
+        set => SetProperty(ref _selectedWorkbenchView, value);
+    }
 
     public async Task InitializeAsync()
     {
@@ -165,6 +175,9 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
             RepositoryName = string.IsNullOrWhiteSpace(path) ? "No repository loaded" : Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             OnPropertyChanged(nameof(HasRepository));
         }
+
+        OnPropertyChanged(nameof(HasRepository));
+        RaiseCommandStates();
 
         if (!HasRepository)
         {
@@ -307,6 +320,8 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
         var node = new RepositoryFileNode(Path.GetFileName(result.FullPath), result.FullPath, result.RelativePath, false);
         await OpenFileAsync(node).ConfigureAwait(true);
     }
+
+    private bool CanSearch() => !IsBusy && HasRepository && !string.IsNullOrWhiteSpace(SearchQuery);
 
     private async Task RunSearchAsync(
         Func<string, string, CancellationToken, Task<IReadOnlyList<FileSearchResult>>> search,
