@@ -1,47 +1,50 @@
 @page "/app"
 @layout Layout.AppLayout
 
+@using EngineeringDiscovery.Web.Components.Pages
+
+<PageTitle>EngineOS</PageTitle>
+
+@inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
+@inject EngineeringDiscovery.Web.Services.SessionStartupService Startup
+@inject NavigationManager Nav
+
 @code {
-    [Inject]
-    private NavigationManager Nav { get; set; } = null!;
+    private bool IsBuildStart { get; set; }
+    private bool ShowNewProjectConversation { get; set; }
 
     protected override void OnInitialized()
     {
-        // Subscribe to workspace changes so this selector updates when workspace state changes.
         WorkspaceState.OnChange += WorkspaceState_OnChange;
 
-        // If a query parameter asks to start build, create a workspace and focus composer.
         try
         {
             var uri = Nav.ToAbsoluteUri(Nav.Uri);
             var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            var start = q.Get("start");
-            if (string.Equals(start, "build", StringComparison.OrdinalIgnoreCase))
+            IsBuildStart = string.Equals(q.Get("start"), "build", StringComparison.OrdinalIgnoreCase);
+            if (IsBuildStart)
             {
-                var ws = new EngineeringDiscovery.Core.Domain.Workspace.Workspace();
-                // Create an empty Investigation to mark the workspace as non-empty so
-                // the conversation experience can render immediately for Project Discovery.
-                ws.Investigation = new EngineeringDiscovery.Core.Domain.Investigation.Investigation();
-                WorkspaceState.ReplaceWorkspace(ws);
                 Startup.MarkForFocus("What would you like to build today?");
             }
-            // If there is no persisted workspace and no explicit start intent, do not invent a default entry mode.
-            // The UX model leaves this case undefined; hosts may supply explicit intent via navigation.
         }
-        catch { }
+        catch
+        {
+            IsBuildStart = false;
+        }
     }
 }
 
-@using EngineeringDiscovery.Web.Components.Pages
-
-<PageTitle>Engineering Workspace</PageTitle>
-
-@inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
-@inject EngineeringDiscovery.Web.Services.SessionStartupService Startup
-
 @{
-    // Strict two-state invariant: conversation is shown only when WorkspaceState.HasWorkspace is true.
-    var showConversation = WorkspaceState.HasWorkspace;
+    var activeWorkspace = WorkspaceState.ActiveWorkspace;
+    var hasActiveProject = activeWorkspace?.ActiveProject is not null;
+    var hasLegacyWorkspace = activeWorkspace is not null && !hasActiveProject && !activeWorkspace.IsEmpty();
+    var hasNoWorkspace = activeWorkspace is null || activeWorkspace.IsEmpty();
+
+    // Only an active project owns the workspace conversation. A legacy workspace without
+    // an active project returns to the launcher, as does an empty/no workspace. The explicit
+    // New Project action remains the only exception so existing new-project behavior is kept.
+    var showConversation = ShowNewProjectConversation ||
+        (hasActiveProject && !hasLegacyWorkspace && !hasNoWorkspace);
 }
 
 @if (showConversation)
@@ -50,30 +53,21 @@
 }
 else
 {
-    @* No welcome UI here. If the app was navigated with an entry intent, handle it in OnInitialized. Otherwise, immediately navigate to the repository import screen as the default anchor mode. *@
-    @* Entry intent handled in the component's main OnInitialized; render nothing here. *@
+    <ProjectLauncher OnNewProjectSelected="HandleNewProjectSelected" />
 }
 
 @code {
+    private void HandleNewProjectSelected()
+    {
+        ShowNewProjectConversation = true;
+        Startup.MarkForFocus("What would you like to build?");
+        StateHasChanged();
+    }
+
     private void WorkspaceState_OnChange() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         try { WorkspaceState.OnChange -= WorkspaceState_OnChange; } catch { }
-    }
-
-    private async Task StartBuilding()
-    {
-        try
-        {
-            var ws = new EngineeringDiscovery.Core.Domain.Workspace.Workspace();
-            // Ensure new workspace is treated as a valid workspace so ConversationExperience renders.
-            ws.Investigation = new EngineeringDiscovery.Core.Domain.Investigation.Investigation();
-            WorkspaceState.ReplaceWorkspace(ws);
-            // Mark that the UI should focus the composer when the ConversationExperience renders.
-            Startup.MarkForFocus("What would you like to build today?");
-            await Task.CompletedTask;
-        }
-        catch { }
     }
 }

@@ -15,7 +15,8 @@ namespace EngineeringDiscovery.Core.Services
         Task<Workspace?> LoadAsync();
 
         /// <summary>
-        /// Persist the provided workspace.
+        /// Persist the provided workspace. Implementations must propagate failures so the
+        /// canonical WorkspaceState boundary can report that durability was not achieved.
         /// </summary>
         Task SaveAsync(Workspace? workspace);
     }

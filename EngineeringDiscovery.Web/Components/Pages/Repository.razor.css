@@ -1,0 +1,175 @@
+.repository-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 24px;
+}
+
+.repository-header {
+    margin-bottom: 32px;
+}
+
+.repository-header h1 {
+    font-size: 1.8rem;
+    margin: 0 0 8px 0;
+    color: var(--text);
+}
+
+.repository-lead {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 700px;
+}
+
+/* Connected software state */
+.software-connected {
+    margin-bottom: 32px;
+}
+
+.software-identity {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 20px 24px;
+    border: 1px solid rgba(96, 165, 250, 0.15);
+    border-radius: 10px;
+    background: rgba(96, 165, 250, 0.03);
+    margin-bottom: 20px;
+}
+
+.software-icon {
+    font-size: 1.6rem;
+    color: #4ade80;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.software-info h2 {
+    margin: 0 0 4px 0;
+    font-size: 1.3rem;
+    color: var(--text);
+}
+
+.software-path {
+    margin: 0 0 6px 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+.software-stats {
+    margin: 0 0 4px 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.software-project {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.software-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.software-hint {
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.software-hint p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Pending state */
+.software-pending {
+    margin-bottom: 24px;
+}
+
+.pending-banner {
+    padding: 16px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.pending-banner p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Guide steps */
+.repository-guide {
+    margin-bottom: 32px;
+}
+
+.guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.guide-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.step-number {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #001833;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.guide-step strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.guide-step p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Workspace section */
+.repository-workspace {
+    margin-bottom: 32px;
+}
+
+/* Footer */
+.repository-footer {
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.repository-footer a {
+    color: var(--muted);
+    font-size: 0.9rem;
+}

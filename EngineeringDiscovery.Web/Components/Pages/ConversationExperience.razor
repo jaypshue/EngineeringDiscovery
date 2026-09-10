@@ -1,121 +1,58 @@
 @namespace EngineeringDiscovery.Web.Components.Pages
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using System.Linq
 @using EngineeringDiscovery.Web.Services
 @using EngineeringDiscovery.Web.Components.Conversation
-@using EngineeringDiscovery.Web.Components.Workspace
 @using EngineeringDiscovery.Web.Components.Shared
 @inject SessionStartupService Startup
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
 @inject EngineeringDiscovery.Core.Services.WorkspaceState CoreWorkspaceState
-@using EngineeringDiscovery.Web.Models
 
-<div class="conversation-experience-shell" style="background:var(--surface-2);padding:18px;border-radius:8px;min-height:520px;display:flex;flex-direction:column;align-items:center;gap:12px">
-    <!-- Header: Current Task / Goal -->
-    <!-- CurrentTaskHeader removed per UX-104: header did not contribute meaningful information in the conversation-first flow -->
-
-    <!-- Engineering context (compact orientation) -->
-    <div class="engineering-context-compact" style="width:100%">
-        <EngineeringContextCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" ActiveRepositoryName="@WorkspaceState.ActiveRepositoryName" ActiveRepositoryPath="@WorkspaceState.ActiveRepositoryPath" CurrentGoalTitle="@WorkspaceState.CurrentGoalTitle" CurrentStoryTitle="@WorkspaceState.CurrentStoryTitle" Status="@WorkspaceState.Status" ActiveWorkContractTitle="@WorkspaceState.ActiveWorkContractTitle" ActiveWorkContractStatus="@WorkspaceState.ActiveWorkContractStatus" ActiveWorkContractHumanReady="@WorkspaceState.ActiveWorkContractHumanReady" ActiveWorkContractEngineOSReady="@WorkspaceState.ActiveWorkContractEngineOSReady" ActiveWorkContractLastUpdatedBy="@WorkspaceState.ActiveWorkContractLastUpdatedBy" ActiveNextRecommendedAction="@WorkspaceState.ActiveNextRecommendedAction" DefineGoal="EventCallback.Factory.Create(this, OnDefineGoal)" CreateStory="EventCallback.Factory.Create(this, OnCreateStory)" ContinueSession="EventCallback.Factory.Create(this, OnContinueSession)" />
-    </div>
-
-    <!-- Main conversation-first column -->
-    <div class="conversation-column" style="width:100%;display:flex;flex-direction:column;gap:12px">
-        <section class="conversation-section" style="flex:1;min-height:360px">
-            <ConversationHost @ref="_conversationHost" />
-        </section>
-
-        <!-- Recommendation immediately follows conversation -->
-        <section class="recommendation-section">
-            <RecommendationCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" />
-            <div style="margin-top:10px">
-                <button class="btn btn-secondary" @onclick="OnSendToExtension" disabled="@(!IsSendToExtensionReady)">Send to Extension</button>
-            </div>
-        </section>
-
-        <!-- Current Understanding follows recommendation -->
-        <section class="understanding-section">
-            <CurrentUnderstandingCard Investigation="@CoreWorkspaceState.ActiveWorkspace?.Investigation" />
-        </section>
-
-        <!-- Implementation Package: read-only live projection of the staging area -->
-        <section class="artifacts-section">
-            <details class="artifacts-details">
-                <summary>Implementation Package ▾</summary>
-                <div style="margin-top:8px">
-                    <WorkContractEditor />
-                </div>
-            </details>
-        </section>
-    </div>
+<div class="conversation-experience-shell">
+    <DesktopEngineeringWorkspace @ref="_desktopWorkspace"
+                                  Investigation="@ActiveInvestigation"
+                                  ShowUnderstanding="@ShowUnderstanding"
+                                  OnConversationStart="HandleConversationStart" />
 </div>
 
 @code {
-    private ConversationHost? _conversationHost;
+    private DesktopEngineeringWorkspace? _desktopWorkspace;
 
-    private bool HasContract => ContractService.CurrentContract is not null;
+    private Investigation? ActiveInvestigation =>
+        CoreWorkspaceState.ActiveWorkspace?.Investigation
+        ?? CoreWorkspaceState.ActiveWorkspace?.ImportedRepositories?
+            .FirstOrDefault(repository => repository.Investigation is not null)?.Investigation;
 
-    [Inject]
-    private WorkContractService ContractService { get; set; } = null!;
+    private bool ShowUnderstanding =>
+        CoreWorkspaceState.ActiveWorkspace?.ActiveProject is not null
+        && ActiveInvestigation is not null;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Ensure a Work Contract exists so the editor is the primary surface
-            if (ContractService.CurrentContract == null)
-            {
-                ContractService.CreateEmptyDraft();
-                // Let the editor render
-                await InvokeAsync(StateHasChanged);
-            }
-
-            // If LandingExperience requested a focus/placeholder, consume and apply it once
             if (Startup.ConsumeShouldFocus())
             {
                 var placeholder = Startup.ConsumePlaceholder();
-                if (_conversationHost != null)
+                if (_desktopWorkspace != null)
                 {
-                    if (!string.IsNullOrEmpty(placeholder)) await _conversationHost.SetComposerPlaceholderAsync(placeholder);
+                    if (!string.IsNullOrEmpty(placeholder)) await _desktopWorkspace.SetComposerPlaceholderAsync(placeholder);
                     await Task.Delay(50);
-                    await _conversationHost.FocusComposerAsync();
+                    await _desktopWorkspace.FocusComposerAsync();
                 }
             }
-            // Subscribe to workspace state changes so the card updates
             WorkspaceState.StateChanged += StateHasChanged;
+            CoreWorkspaceState.OnChange += OnCoreStateChanged;
         }
     }
 
-    private void OnDefineGoal() { /* UI hook - left unimplemented for ED-302 (future story) */ }
-    private void OnCreateStory() { /* UI hook - left unimplemented for ED-302 (future story) */ }
-    private void OnContinueSession()
-    {
-        // Create an empty Work Contract draft in response to the dashboard CTA
-        var draft = new WorkContract
-        {
-            RepositoryName = WorkspaceState.ActiveRepositoryName,
-            RepositoryPath = WorkspaceState.ActiveRepositoryPath
-        };
-        ContractService.CreateDraft(draft);
-        StateHasChanged();
-    }
+    private void OnCoreStateChanged() => InvokeAsync(StateHasChanged);
 
-    private void OnSendToExtension()
+    private async Task HandleConversationStart(string prompt)
     {
-        // Placeholder callback for future extension handoff. No implementation per UX-104.
-    }
-
-    private bool IsSendToExtensionReady => ContractService.IsReady();
-
-    // Presentation-only helper: try to return the canonical Investigation from the core WorkspaceState
-    // Kept for backward compatibility; prefer injecting CoreWorkspaceState directly.
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? WorkspaceStateServiceToInvestigation()
-    {
-        try
+        if (_desktopWorkspace != null)
         {
-            return CoreWorkspaceState.ActiveWorkspace?.Investigation;
-        }
-        catch
-        {
-            return null;
+            await _desktopWorkspace.FocusComposerAsync();
         }
     }
 }

@@ -26,6 +26,13 @@ namespace EngineeringDiscovery.Wpf
                 {
                     // Register WPF host services, ViewModels, and Core services
                     services.AddSingleton<EngineeringDiscovery.Wpf.Services.IWindowManager, EngineeringDiscovery.Wpf.Services.WindowManager>();
+                    services.AddSingleton<EngineeringDiscovery.Wpf.Services.WindowPlacementService>(_ =>
+                        new EngineeringDiscovery.Wpf.Services.WindowPlacementService(
+                            System.IO.Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                "EngineeringDiscovery",
+                                "window-placement.json"),
+                            new EngineeringDiscovery.Wpf.Services.ScreenWorkAreaProvider()));
                     services.AddSingleton<EngineeringDiscovery.Wpf.Services.IDialogService, EngineeringDiscovery.Wpf.Services.DialogService>();
                     // Repository providers are web-specific; WPF uses the InvestigationEngine directly.
                     // Keep registration minimal here; the WorkspaceHostViewModel will construct the Investigation via WPF services.
@@ -36,6 +43,14 @@ namespace EngineeringDiscovery.Wpf
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IWorkspacePersistence, EngineeringDiscovery.Core.Services.FileWorkspacePersistence>(sp =>
                         new EngineeringDiscovery.Core.Services.FileWorkspacePersistence(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
                     services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IProjectStateService, EngineeringDiscovery.Core.Services.ProjectStateService>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringStateQuery, EngineeringDiscovery.Core.Services.EngineeringStateQuery>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringIterationService, EngineeringDiscovery.Core.Services.EngineeringIterationService>();
+                    services.AddSingleton<EngineeringDiscovery.Wpf.Services.IGitStatusService, EngineeringDiscovery.Wpf.Services.GitStatusService>();
+                    services.AddSingleton<EngineeringDiscovery.Wpf.Services.IRepositoryFileService, EngineeringDiscovery.Wpf.Services.RepositoryFileService>();
+                    services.AddSingleton<EngineeringDiscovery.Wpf.Services.IGitChangesService, EngineeringDiscovery.Wpf.Services.GitChangesService>();
+                    services.AddSingleton<EngineeringDiscovery.Wpf.Services.IDevelopmentCommandService, EngineeringDiscovery.Wpf.Services.DevelopmentCommandService>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringOperationGateway, EngineeringDiscovery.Wpf.Services.WpfEngineeringOperationGateway>();
 
                     // Production repo fingerprint service
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IRepoFingerprintService, EngineeringDiscovery.Core.Services.FileRepoFingerprintService>();
@@ -47,6 +62,7 @@ namespace EngineeringDiscovery.Wpf
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.MainWindowViewModel>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.ActivityViewModel>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.WorkspaceHostViewModel>();
+                    services.AddTransient<EngineeringDiscovery.Wpf.ViewModels.DevelopmentSurfaceViewModel>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.RepositoryExplorerViewModel>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.InspectorViewModel>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.ViewModels.OutputViewModel>();
@@ -64,6 +80,7 @@ namespace EngineeringDiscovery.Wpf
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEnginerringConversationOrchestrator, EngineeringDiscovery.Core.Services.EnginerringConversationOrchestrator>();
 
                     // Register EngineeringPartner so WPF views can resolve the conversation session owner
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringConversationCapabilityService, EngineeringDiscovery.Core.Services.EngineeringConversationCapabilityService>();
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
 
                     // Register AI-backed conversation service and its HttpClient
@@ -90,10 +107,8 @@ namespace EngineeringDiscovery.Wpf
                 }
                     else
                     {
-                        // ED-300: when there is no persisted workspace, create initial Workspace and ProductDiscovery activity
-                        var ws = new EngineeringDiscovery.Core.Domain.Workspace.Workspace();
-                        ws.CurrentActivity = new EngineeringDiscovery.Core.Domain.Activity.ProductDiscoveryActivity();
-                        workspaceState.ReplaceWorkspace(ws);
+                        // No project is open: keep the authoritative state empty so the launcher is shown.
+                        workspaceState.ReplaceWorkspace(new EngineeringDiscovery.Core.Domain.Workspace.Workspace());
                     }
             }
 

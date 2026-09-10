@@ -1,0 +1,391 @@
+<UserControl x:Class="EngineeringDiscovery.Wpf.Views.DevelopmentSurface"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonEdit="clr-namespace:ICSharpCode.AvalonEdit;assembly=ICSharpCode.AvalonEdit"
+             xmlns:models="clr-namespace:EngineeringDiscovery.Wpf.Models"
+             Background="{StaticResource BackgroundBrush}"
+             Foreground="{StaticResource PrimaryTextBrush}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- DevelopmentSurface owns its contrast boundary. The application palette is dark,
+             while the legacy SurfaceBrush token is light, so controls in this view must not
+             fall back to WPF defaults or inherit an unsafe light-panel combination. -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{StaticResource BorderBrushColor}" />
+                    <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DevelopmentAccentButton" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{StaticResource BorderBrushColor}" />
+                    <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}" />
+            <Setter Property="SelectionTextBrush" Value="{StaticResource AccentForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TreeView">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style TargetType="TreeViewItem">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Padding" Value="3,2" />
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="240" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="EVIDENCE / DEVELOPMENT SURFACE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="Files, source, problems, changes, and recorded results" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
+                    <TextBlock Text="{Binding RepositoryPath, StringFormat='Folder: {0}'}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" MaxWidth="520" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Refresh evidence" Command="{Binding RefreshCommand}" Margin="4,0" Padding="10,4" />
+                    <Button Content="Save" Command="{Binding SaveCommand}" Margin="4,0" Padding="10,4" />
+                    <Button Content="Save All" Command="{Binding SaveAllCommand}" Margin="4,0" Padding="10,4" />
+                    <Button Content="Build" Command="{Binding BuildCommand}" Style="{StaticResource DevelopmentAccentButton}" Margin="4,0" Padding="10,4" />
+                    <Button Content="Test" Command="{Binding TestCommand}" Style="{StaticResource DevelopmentAccentButton}" Margin="4,0" Padding="10,4" />
+                    <TextBlock Text="{Binding StatusText}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <!-- Supporting evidence: repository, files, source, problems, and changes. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" MinWidth="180" />
+                    <ColumnDefinition Width="6" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="6" />
+                    <ColumnDefinition Width="270" MinWidth="220" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" Padding="6">
+                    <TabControl>
+                        <TabItem Header="Files">
+                            <TreeView x:Name="RepositoryTree" ItemsSource="{Binding RootNodes}" SelectedItemChanged="RepositoryTree_SelectedItemChanged" Margin="0,6,0,0">
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType="{x:Type models:RepositoryFileNode}" ItemsSource="{Binding Children}">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource PrimaryTextBrush}" />
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                            </TreeView>
+                        </TabItem>
+                        <TabItem Header="Search">
+                            <Grid Margin="0,6,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="6" />
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,6">
+                                    <Button Content="File names" Command="{Binding SearchFilesCommand}" Padding="6,3" Margin="0,0,4,0" />
+                                    <Button Content="Source text" Command="{Binding SearchTextCommand}" Padding="6,3" />
+                                </StackPanel>
+                                <TabControl Grid.Row="2">
+                                    <TabItem Header="Files">
+                                        <ListBox ItemsSource="{Binding SearchResults}" SelectedItem="{Binding SelectedSearchResult, Mode=TwoWay}" DisplayMemberPath="Location" />
+                                    </TabItem>
+                                    <TabItem Header="Text">
+                                        <ListBox ItemsSource="{Binding TextSearchResults}" SelectedItem="{Binding SelectedSearchResult, Mode=TwoWay}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Location}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding Preview}" Foreground="{StaticResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </TabItem>
+                                </TabControl>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+
+                <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrushColor}" />
+
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TabControl x:Name="DocumentTabs" Grid.Row="0" ItemsSource="{Binding OpenDocuments}" SelectedItem="{Binding ActiveDocument, Mode=TwoWay}" SelectionChanged="DocumentTabs_SelectionChanged">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel LastChildFill="False">
+                                    <TextBlock Text="{Binding TabHeader}" Foreground="{StaticResource PrimaryTextBrush}" Margin="4,0,8,0" VerticalAlignment="Center" />
+                                    <Button Content="×" Command="{Binding DataContext.CloseDocumentCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" CommandParameter="{Binding}" Padding="3,0" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                    </TabControl>
+                    <Border Grid.Row="1" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" Background="{StaticResource BackgroundBrush}">
+                        <avalonEdit:TextEditor x:Name="CodeEditor" ShowLineNumbers="True" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource PrimaryTextBrush}" Background="{StaticResource BackgroundBrush}" LineNumbersForeground="{StaticResource SecondaryTextBrush}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="4" />
+                    </Border>
+                </Grid>
+
+                <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrushColor}" />
+
+                <Border Grid.Column="4" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1">
+                    <TabControl>
+                        <TabItem Header="Problems">
+                            <Grid Margin="6">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Problems.Count, StringFormat='Problems ({0})'}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,6" />
+                                <ListBox Grid.Row="1" ItemsSource="{Binding Problems}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,3">
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="{StaticResource PrimaryTextBrush}" />
+                                                <TextBlock Text="{Binding DisplayLocation}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Changes">
+                            <Grid Margin="6">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button Content="Refresh" Command="{Binding RefreshChangesCommand}" DockPanel.Dock="Right" Padding="6,3" />
+                                    <TextBlock Text="{Binding GitChanges.Count, StringFormat='Changed files ({0})'}" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}" />
+                                </DockPanel>
+                                <ListBox Grid.Row="1" ItemsSource="{Binding GitChanges}" SelectedItem="{Binding SelectedChange, Mode=TwoWay}" DisplayMemberPath="DisplayName" />
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Round history is the primary bottom region; raw command evidence remains available beside it. -->
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.35*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                        <TextBlock Text="DEVELOPMENT ROUNDS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <TextBlock Text="{Binding Steering.DevelopmentRounds.Count, StringFormat='  ({0})'}" Foreground="{StaticResource SecondaryTextBrush}" />
+                    </DockPanel>
+                    <Grid Grid.Row="1">
+                        <ListBox ItemsSource="{Binding Steering.DevelopmentRounds}" BorderThickness="0">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                    <Setter Property="Margin" Value="0,1" />
+                                    <Setter Property="Padding" Value="4" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                            <Setter Property="BorderThickness" Value="1" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsHistorical}" Value="True">
+                                            <Setter Property="Opacity" Value="0.72" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="125" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Number, StringFormat='{}{0:00}'}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Margin="4,0,8,0">
+                                            <TextBlock Text="{Binding Goal}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding PromptStatus}" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Text="{Binding LatestStep}" FontSize="11" Foreground="{StaticResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="CURRENT" Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibility}}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource PrimaryTextBrush}" />
+                                            <TextBlock Text="{Binding StepCount}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Text="{Binding StartCompletionState}" FontSize="10" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="No development rounds recorded." Visibility="{Binding Steering.HasNoDevelopmentRounds, Converter={StaticResource BoolToVisibility}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="2,8" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrushColor}" />
+
+            <TabControl Grid.Column="2">
+                <TabItem Header="Prompt">
+                    <DockPanel Margin="8">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <StackPanel>
+                                <TextBlock Text="PROMPT ARTIFACT" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="{Binding Steering.PromptReadiness}" Foreground="{StaticResource PrimaryTextBrush}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding Steering.PromptAssociation}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding Steering.PromptStatus}" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <TextBox Text="{Binding Steering.PromptText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="8" />
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Review">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="8">
+                            <TextBlock Text="CURRENT ROUND REVIEW" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="What is recorded so far for the current or most recent round." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,10" />
+                            <TextBlock Text="SUMMARY" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundSummary}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                            <TextBlock Text="CHANGES" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundChanges}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                            <TextBlock Text="TESTS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundTests}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                            <TextBlock Text="PROBLEMS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundProblems}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                            <TextBlock Text="AGENT RESPONSE" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundAgentResponse}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                            <TextBlock Text="ENGINEOS ASSESSMENT" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="{Binding Steering.CurrentRoundAssessment}" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Output">
+                    <DockPanel Margin="6">
+                        <Button Content="Clear" Command="{Binding ClearOutputCommand}" DockPanel.Dock="Top" HorizontalAlignment="Right" Padding="8,3" />
+                        <ListBox ItemsSource="{Binding Output}" BorderThickness="0" FontFamily="Consolas" FontSize="12" DisplayMemberPath="DisplayText" />
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Diff">
+                    <TextBox Text="{Binding DiffText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" Padding="8" />
+                </TabItem>
+                <TabItem Header="Results">
+                    <ListBox ItemsSource="{Binding Results}" DisplayMemberPath="DisplayText" Margin="6" />
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Grid>
+</UserControl>

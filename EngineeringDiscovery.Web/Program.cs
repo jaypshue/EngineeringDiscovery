@@ -26,9 +26,21 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<IWorkspacePersistence>(sp => new FileWorkspacePersistence(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EngineeringDiscovery")));
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.WorkspaceState>();
 // Presentation helper to coordinate one-time startup interactions between Landing and Conversation
+// Authoritative Engineering State services
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IProjectStateService, EngineeringDiscovery.Core.Services.ProjectStateService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringStateQuery, EngineeringDiscovery.Core.Services.EngineeringStateQuery>();
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringIterationService, EngineeringDiscovery.Core.Services.EngineeringIterationService>();
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringOperationGateway, EngineeringDiscovery.Web.Services.WebEngineeringOperationGateway>();
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringConversationCapabilityService, EngineeringDiscovery.Core.Services.EngineeringConversationCapabilityService>();
 builder.Services.AddSingleton<EngineeringDiscovery.Web.Services.SessionStartupService>();
-// Register EngineeringPartner abstraction
-builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner, EngineeringDiscovery.Core.Services.EngineeringPartner>();
+// Register EngineeringPartner abstraction (factory to inject optional state services)
+builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringPartner>(sp =>
+    new EngineeringDiscovery.Core.Services.EngineeringPartner(
+        sp.GetRequiredService<EngineeringDiscovery.Core.Services.IEngineeringModelRepository>(),
+        sp.GetService<EngineeringDiscovery.Core.Services.IEngineeringConversationService>(),
+        sp.GetService<EngineeringDiscovery.Core.Services.IEngineeringStateQuery>(),
+        sp.GetService<EngineeringDiscovery.Core.Services.IProjectStateService>(),
+        sp.GetService<EngineeringDiscovery.Core.Services.IEngineeringConversationCapabilityService>()));
 // Register in-memory engineering model repository (same as WPF host)
 builder.Services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringModelRepository, EngineeringDiscovery.Core.Services.InMemoryEngineeringModelRepository>();
 // Production repo fingerprint service

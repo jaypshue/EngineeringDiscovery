@@ -20,11 +20,13 @@ namespace EngineeringDiscovery.Wpf.Services
     public class RepositorySelectionService : IDisposable
     {
         private readonly WorkspaceState _workspaceState;
+        private readonly IWorkspacePersistence _persistence;
         private CancellationTokenSource? _cts;
 
-        public RepositorySelectionService(WorkspaceState workspaceState)
+        public RepositorySelectionService(WorkspaceState workspaceState, IWorkspacePersistence persistence)
         {
             _workspaceState = workspaceState ?? throw new ArgumentNullException(nameof(workspaceState));
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
         }
 
         public string? SelectedPath { get; private set; }
@@ -52,7 +54,7 @@ namespace EngineeringDiscovery.Wpf.Services
 
         public Task SelectPathAsync(string? path)
         {
-            SelectedPath = path;
+            SelectedPath = global::EngineeringDiscovery.Core.Domain.Workspace.Workspace.NormalizeRepositoryPath(path);
             _ = DoServerDetectAsync();
             Notify();
             return Task.CompletedTask;
@@ -63,62 +65,66 @@ namespace EngineeringDiscovery.Wpf.Services
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
+            var selectedPath = SelectedPath;
             IsDetecting = true;
             ErrorMessage = null;
             Notify();
 
             try
             {
-                if (string.IsNullOrWhiteSpace(SelectedPath) || !Directory.Exists(SelectedPath))
-                {
-                    DetectedType = RepoType.None;
-                    ErrorMessage = "Folder does not exist.";
-                    IsImportEnabled = false;
-                    return;
-                }
-
-                DetectedName = Path.GetFileName(SelectedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                var slnCount = Directory.EnumerateFiles(SelectedPath, "*.sln", SearchOption.TopDirectoryOnly).Count();
-                var slnxCount = Directory.EnumerateFiles(SelectedPath, "*.slnx", SearchOption.TopDirectoryOnly).Count();
-                var csprojCount = Directory.EnumerateFiles(SelectedPath, "*.csproj", SearchOption.AllDirectories).Count();
-                var pomCount = Directory.EnumerateFiles(SelectedPath, "pom.xml", SearchOption.AllDirectories).Count();
-                var gradleCount =
-                    Directory.EnumerateFiles(SelectedPath, "build.gradle", SearchOption.AllDirectories).Count() +
-                    Directory.EnumerateFiles(SelectedPath, "build.gradle.kts", SearchOption.AllDirectories).Count() +
-                    Directory.EnumerateFiles(SelectedPath, "settings.gradle", SearchOption.AllDirectories).Count() +
-                    Directory.EnumerateFiles(SelectedPath, "settings.gradle.kts", SearchOption.AllDirectories).Count();
-
-                DetectedProjectCount = Math.Max(csprojCount, Math.Max(pomCount, gradleCount));
-                if (slnCount > 0 || slnxCount > 0 || csprojCount > 0)
-                {
-                    DetectedType = RepoType.DotNet;
-                }
-                else if (pomCount > 0)
-                {
-                    DetectedType = RepoType.JavaMaven;
-                }
-                else if (gradleCount > 0)
-                {
-                    DetectedType = RepoType.JavaGradle;
-                }
-                else
-                {
-                    DetectedType = RepoType.None;
-                    ErrorMessage = "No supported project files found (.csproj, pom.xml, build.gradle).";
-                }
-
-                IsImportEnabled = DetectedType != RepoType.None;
+                var result = await Task.Run(() => DetectRepository(selectedPath, ct), ct).ConfigureAwait(true);
+                DetectedName = result.Name;
+                DetectedProjectCount = result.ProjectCount;
+                DetectedType = result.Type;
+                ErrorMessage = result.ErrorMessage;
+                IsImportEnabled = result.Type != RepoType.None;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
+                IsImportEnabled = false;
             }
             finally
             {
                 IsDetecting = false;
                 Notify();
             }
+        }
+
+        private static DetectionResult DetectRepository(string? path, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return new DetectionResult(string.Empty, 0, RepoType.None, "Folder does not exist.");
+            }
+
+            var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            var slnCount = Directory.EnumerateFiles(path, "*.sln", SearchOption.TopDirectoryOnly).Count();
+            var slnxCount = Directory.EnumerateFiles(path, "*.slnx", SearchOption.TopDirectoryOnly).Count();
+            var csprojCount = Directory.EnumerateFiles(path, "*.csproj", SearchOption.AllDirectories).Count();
+            var pomCount = Directory.EnumerateFiles(path, "pom.xml", SearchOption.AllDirectories).Count();
+            var gradleCount =
+                Directory.EnumerateFiles(path, "build.gradle", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(path, "build.gradle.kts", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(path, "settings.gradle", SearchOption.AllDirectories).Count() +
+                Directory.EnumerateFiles(path, "settings.gradle.kts", SearchOption.AllDirectories).Count();
+
+            ct.ThrowIfCancellationRequested();
+            var projectCount = Math.Max(csprojCount, Math.Max(pomCount, gradleCount));
+            var type = slnCount > 0 || slnxCount > 0 || csprojCount > 0
+                ? RepoType.DotNet
+                : pomCount > 0
+                    ? RepoType.JavaMaven
+                    : gradleCount > 0
+                        ? RepoType.JavaGradle
+                        : RepoType.None;
+            var error = type == RepoType.None
+                ? "No supported project files found (.csproj, pom.xml, build.gradle)."
+                : null;
+
+            return new DetectionResult(name, projectCount, type, error);
         }
 
         public async Task<bool> ImportAsync()
@@ -141,14 +147,90 @@ namespace EngineeringDiscovery.Wpf.Services
                     return false;
                 }
 
-                var ws = _workspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
-                ws.ImportedRepositories.Add(new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
+                var now = DateTime.UtcNow;
+                var ws = CloneWorkspace(_workspaceState.ActiveWorkspace);
+                ws.RepositoryPath = SelectedPath;
+
+                var existingProject = ws.FindProjectForRepositoryPath(SelectedPath);
+                global::EngineeringDiscovery.Core.Domain.Workspace.Project project;
+                global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository imported;
+
+                if (existingProject is not null)
                 {
-                    RepositoryPath = SelectedPath,
-                    Investigation = investigation
-                });
+                    project = existingProject;
+                    ws.ActiveProjectId = project.Id;
+                    ws.ProjectState = project.State;
+
+                    var importedIndex = ws.ImportedRepositories.FindIndex(repository =>
+                        global::EngineeringDiscovery.Core.Domain.Workspace.Workspace.PathsEqual(repository.RepositoryPath, SelectedPath));
+                    if (importedIndex >= 0)
+                    {
+                        var previous = ws.ImportedRepositories[importedIndex];
+                        imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
+                        {
+                            RepositoryPath = SelectedPath,
+                            ProjectId = project.Id,
+                            Investigation = investigation,
+                            CreatedUtc = previous.CreatedUtc,
+                            LastBuiltUtc = previous.LastBuiltUtc,
+                            RepositoryFingerprint = previous.RepositoryFingerprint
+                        };
+                        ws.ImportedRepositories[importedIndex] = imported;
+                    }
+                    else
+                    {
+                        imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
+                        {
+                            RepositoryPath = SelectedPath,
+                            ProjectId = project.Id,
+                            Investigation = investigation,
+                            CreatedUtc = now
+                        };
+                        ws.ImportedRepositories.Add(imported);
+                    }
+                }
+                else
+                {
+                    var projectName = Path.GetFileName(SelectedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    if (string.IsNullOrWhiteSpace(projectName)) projectName = "Imported Project";
+
+                    project = new global::EngineeringDiscovery.Core.Domain.Workspace.Project();
+                    project.State.Identity = new global::EngineeringDiscovery.Core.Domain.ProjectState.ProjectIdentity
+                    {
+                        Name = projectName,
+                        Description = $"Imported from {SelectedPath}",
+                        EstablishedUtc = now,
+                        LastUpdatedUtc = now
+                    };
+                    project.RepositoryPaths.Add(SelectedPath);
+                    ws.Projects.Add(project);
+                    ws.ActiveProjectId = project.Id;
+                    ws.ProjectState = project.State;
+
+                    imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
+                    {
+                        RepositoryPath = SelectedPath,
+                        ProjectId = project.Id,
+                        Investigation = investigation,
+                        CreatedUtc = now
+                    };
+                    ws.ImportedRepositories.Add(imported);
+                }
+
+                // Keep legacy workspace-level values as compatibility projections while
+                // the linked imported folder and Project.State remain authoritative.
+                ws.Investigation = investigation;
+
+                var builtUtc = DateTime.UtcNow;
+                var fingerprint = _workspaceState.ComputeRepositoryFingerprint(SelectedPath);
+                ws.SetFreshness(builtUtc, fingerprint);
+                imported.LastBuiltUtc = builtUtc;
+                imported.RepositoryFingerprint = fingerprint;
+
+                // Persist the candidate before replacing the authoritative in-memory state.
+                // A failed switch therefore leaves the currently active project untouched.
+                await _persistence.SaveAsync(ws).ConfigureAwait(false);
                 _workspaceState.ReplaceWorkspace(ws);
-                _workspaceState.SetInvestigation(investigation);
                 return true;
             }
             catch (Exception ex)
@@ -161,6 +243,34 @@ namespace EngineeringDiscovery.Wpf.Services
                 IsDetecting = false;
                 Notify();
             }
+        }
+
+        private sealed record DetectionResult(string Name, int ProjectCount, RepoType Type, string? ErrorMessage);
+
+        private static global::EngineeringDiscovery.Core.Domain.Workspace.Workspace CloneWorkspace(
+            global::EngineeringDiscovery.Core.Domain.Workspace.Workspace? source)
+        {
+            if (source is null) return new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
+
+            return new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace
+            {
+                Id = source.Id,
+                SchemaVersion = source.SchemaVersion,
+                RepositoryPath = source.RepositoryPath,
+                Investigation = source.Investigation,
+                CurrentTask = source.CurrentTask,
+                SelectedRole = source.SelectedRole,
+                CreatedUtc = source.CreatedUtc,
+                LastModifiedUtc = source.LastModifiedUtc,
+                ImportedRepositories = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository>(source.ImportedRepositories ?? new()),
+                CurrentActivity = source.CurrentActivity,
+                Iterations = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Iteration.EngineeringIteration>(source.Iterations ?? new()),
+                ProjectState = source.ProjectState,
+                Projects = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.Project>(source.Projects ?? new()),
+                ActiveProjectId = source.ActiveProjectId,
+                LastBuiltUtc = source.LastBuiltUtc,
+                RepositoryFingerprint = source.RepositoryFingerprint
+            };
         }
 
         private void Notify() => StateChanged?.Invoke();

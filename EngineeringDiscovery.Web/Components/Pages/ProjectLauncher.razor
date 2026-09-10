@@ -1,0 +1,279 @@
+@namespace EngineeringDiscovery.Web.Components.Pages
+@using EngineeringDiscovery.Web.Services
+
+@inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
+@inject EngineeringDiscovery.Core.Services.IEngineeringPartner EngineeringPartner
+@inject EngineeringDiscovery.Core.Services.IObservationService ObservationService
+@inject EngineeringDiscovery.Web.Services.IRepositorySelectionService RepoSelection
+@inject EngineeringDiscovery.Web.Services.SessionStartupService Startup
+@inject NavigationManager Nav
+
+@if (CurrentState == LauncherState.Choice)
+{
+    <div class="launcher">
+        <div class="launcher-header">
+            <h1 class="launcher-title">What would you like to do?</h1>
+        </div>
+        <div class="launcher-paths">
+            <button class="launcher-path" @onclick="SelectNewProject">
+                <div class="launcher-path-title">New Project</div>
+                <div class="launcher-path-desc">Start a conversation about what you want to build.</div>
+            </button>
+            <button class="launcher-path" @onclick="SelectExistingSoftware">
+                <div class="launcher-path-title">Existing Software</div>
+                <div class="launcher-path-desc">Point EngineOS at your project folder.</div>
+            </button>
+        </div>
+    </div>
+}
+else if (CurrentState == LauncherState.ImportFlow)
+{
+    <div class="launcher">
+        <div class="launcher-header">
+            <button class="launcher-back" @onclick="BackToChoice">&larr; Back</button>
+            <h2 class="launcher-subtitle">Connect Existing Software</h2>
+            <p class="launcher-lead">Select your project's root folder — where the solution file or main build configuration lives.</p>
+        </div>
+
+        <div class="import-section">
+            <label class="import-label">Project folder</label>
+            <div class="import-input-row">
+                <input class="import-input" @bind="SelectedPath" @bind:event="oninput" @onblur="OnPathBlur" @onkeydown="OnPathKeyDown" placeholder="Enter or paste the project root path" />
+                <button class="btn btn-outline" @onclick="BrowseAsync" disabled="@IsImporting">Browse</button>
+            </div>
+
+            @if (RepoSelection.IsDetecting)
+            {
+                <div class="import-status"><em>Detecting repository...</em></div>
+            }
+            else if (RepoSelection.DetectedType != RepoType.None)
+            {
+                <div class="import-detected">
+                    <div class="import-detected-type">@GetTypeLabel(RepoSelection.DetectedType)</div>
+                    <div class="import-detected-name">@RepoSelection.DetectedName</div>
+                    @if (RepoSelection.DetectedProjectCount > 0)
+                    {
+                        <div class="import-detected-projects">@RepoSelection.DetectedProjectCount project(s) detected</div>
+                    }
+                </div>
+
+                <div class="import-path-confirm">
+                    <div class="import-path-label">Repository Root</div>
+                    <div class="import-path-value">@SelectedPath</div>
+                </div>
+
+                <button class="btn btn-primary btn-lg import-action" @onclick="ImportAsync" disabled="@(!RepoSelection.IsImportEnabled || IsImporting)">
+                    @if (IsImporting)
+                    {
+                        <span class="spinner"></span>
+                        <span>Inspecting repository...</span>
+                    }
+                    else
+                    {
+                        <span>Import Repository</span>
+                    }
+                </button>
+            }
+            else if (!string.IsNullOrWhiteSpace(SelectedPath))
+            {
+                <div class="import-status error">No supported repository detected at this path. Supported: .NET, Java (Maven), Java (Gradle).</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="import-status error">@ErrorMessage</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback OnNewProjectSelected { get; set; }
+
+    private enum LauncherState { Choice, ImportFlow }
+    private LauncherState CurrentState { get; set; } = LauncherState.Choice;
+    private string? SelectedPath { get; set; }
+    private bool IsImporting { get; set; }
+    private string? ErrorMessage { get; set; }
+    private Action? _repoSelectionHandler;
+
+    protected override void OnInitialized()
+    {
+        _repoSelectionHandler = () => InvokeAsync(StateHasChanged);
+        RepoSelection.StateChanged += _repoSelectionHandler;
+    }
+
+    private async Task SelectNewProject()
+    {
+        await OnNewProjectSelected.InvokeAsync();
+    }
+
+    private void SelectExistingSoftware()
+    {
+        CurrentState = LauncherState.ImportFlow;
+    }
+
+    private void BackToChoice()
+    {
+        CurrentState = LauncherState.Choice;
+        ErrorMessage = null;
+    }
+
+    private void OnPathBlur(Microsoft.AspNetCore.Components.Web.FocusEventArgs args)
+    {
+        _ = RepoSelection.SelectPathAsync(SelectedPath);
+    }
+
+    private void OnPathKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") _ = RepoSelection.SelectPathAsync(SelectedPath);
+    }
+
+    private Task BrowseAsync()
+    {
+        // For server-side Blazor, the browse capability requires JS interop which is handled
+        // by the existing IRepositorySelectionService. For now, the user types/pastes the path.
+        // A future enhancement can add JS directory picker here.
+        return Task.CompletedTask;
+    }
+
+    private async Task ImportAsync()
+    {
+        if (IsImporting) return;
+        ErrorMessage = null;
+
+        var effectivePath = SelectedPath;
+        if (string.IsNullOrWhiteSpace(effectivePath) || !System.IO.Directory.Exists(effectivePath))
+        {
+            effectivePath = RepoSelection.SelectedPath;
+        }
+        if (string.IsNullOrWhiteSpace(effectivePath) || !System.IO.Directory.Exists(effectivePath))
+        {
+            ErrorMessage = $"The path '{effectivePath ?? SelectedPath ?? "(empty)"}' does not exist or is not accessible. Please enter the full absolute path to the project folder.";
+            return;
+        }
+
+        IsImporting = true;
+        StateHasChanged();
+
+        try
+        {
+            // Run investigation
+            var engine = new InvestigationEngine();
+            var investigation = await Task.Run(() => engine.CreateInvestigation(effectivePath, null));
+
+            if (investigation is null)
+            {
+                ErrorMessage = "Investigation could not be completed. Please verify the folder contains a supported project.";
+                return;
+            }
+
+            // Build ImportedRepository
+            var imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
+            {
+                RepositoryPath = effectivePath,
+                Investigation = investigation,
+                CreatedUtc = DateTime.UtcNow
+            };
+
+            // Build workspace with Project entity
+            var ws = WorkspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
+            if (ws.ImportedRepositories == null) ws.ImportedRepositories = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository>();
+            ws.ImportedRepositories.Add(imported);
+
+            var projectFolderName = string.Empty;
+            try { projectFolderName = System.IO.Path.GetFileName(effectivePath.TrimEnd('\\', '/')); } catch { }
+            if (string.IsNullOrWhiteSpace(projectFolderName)) projectFolderName = "Imported Project";
+
+            var project = new global::EngineeringDiscovery.Core.Domain.Workspace.Project();
+            project.State.Identity = new global::EngineeringDiscovery.Core.Domain.ProjectState.ProjectIdentity
+            {
+                Name = projectFolderName,
+                Description = $"Imported from {effectivePath}",
+                EstablishedUtc = DateTime.UtcNow,
+                LastUpdatedUtc = DateTime.UtcNow
+            };
+            project.RepositoryPaths.Add(effectivePath);
+            if (ws.Projects == null) ws.Projects = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.Project>();
+            ws.Projects.Add(project);
+            ws.ActiveProjectId = project.Id;
+            ws.ProjectState = project.State;
+
+            // Activate workspace and investigation
+            WorkspaceState.ReplaceWorkspace(ws);
+            WorkspaceState.SetInvestigation(investigation);
+
+            // Record and persist freshness after the investigation/project state has been
+            // assembled. SetInvestigation performs an earlier save, so this explicit save is
+            // required to make the final fingerprint survive restart.
+            try
+            {
+                var builtUtc = DateTime.UtcNow;
+                var fingerprint = WorkspaceState.ComputeRepositoryFingerprint(effectivePath);
+                ws.SetFreshness(builtUtc, fingerprint);
+                imported.LastBuiltUtc = builtUtc;
+                imported.RepositoryFingerprint = fingerprint;
+            }
+            catch { }
+
+            if (!WorkspaceState.Save())
+            {
+                ErrorMessage = "The repository was inspected, but EngineOS could not persist the workspace. The import remains only in memory; resolve the storage problem and try again.";
+                return;
+            }
+
+            // Create conversation session and inject investigation summary
+            try
+            {
+                var model = await EngineeringPartner.StartSessionAsync(string.Empty, reuseExisting: false);
+                var sessionId = model?.Id;
+                if (sessionId.HasValue)
+                {
+                    var obs = new EngineeringDiscovery.Core.Observations.Observation
+                    {
+                        Type = "RepoAttached",
+                        Source = "RepositoryImporter",
+                        SessionId = sessionId,
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = effectivePath })
+                    };
+                    await ObservationService.IngestAsync(obs);
+                    await EngineeringPartner.SendMessageAsync(sessionId.Value, $"Repository imported at {effectivePath}");
+                }
+            }
+            catch { }
+
+            // Notify startup service
+            try
+            {
+                var repoName = System.IO.Path.GetFileName(effectivePath) ?? string.Empty;
+                Startup.NotifyWorkspaceState(repoName, effectivePath, "None", "None", "Ready");
+            }
+            catch { }
+
+            // Navigate to the conversation (client-side, preserves state)
+            Nav.NavigateTo("/app?start=build");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Import failed: {ex.Message}";
+        }
+        finally
+        {
+            IsImporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetTypeLabel(RepoType type) => type switch
+    {
+        RepoType.DotNet => ".NET Repository",
+        RepoType.JavaMaven => "Java (Maven) Repository",
+        RepoType.JavaGradle => "Java (Gradle) Repository",
+        _ => "Repository"
+    };
+
+    public void Dispose()
+    {
+        if (_repoSelectionHandler != null) RepoSelection.StateChanged -= _repoSelectionHandler;
+    }
+}

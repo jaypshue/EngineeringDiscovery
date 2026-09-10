@@ -1,0 +1,216 @@
+@namespace EngineeringDiscovery.Web.Components.Shared
+@using System.Linq
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Core.Models
+@inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
+@inject NavigationManager Nav
+
+@if (Investigation != null && HasMeaningfulData)
+{
+    <section style="display:flex;flex-direction:column;gap:16px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px">
+        <h2 style="font-size:1.15rem;font-weight:600;color:#e6eef8;margin:0">EngineOS has inspected your software.</h2>
+
+        @if (Investigation.Findings != null && Investigation.Findings.Count > 0)
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <h3 style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin:0">Engineering Findings</h3>
+                @foreach (var f in Investigation.Findings.Take(6))
+                {
+                    <div style="font-size:0.9rem;color:#e6eef8;padding:2px 0">@f.Description</div>
+                }
+            </div>
+        }
+
+        @if (Projects.Count > 0)
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <h3 style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin:0">Project Structure</h3>
+                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+                    <span style="font-size:1.1rem;font-weight:700;color:#e6eef8">@RepositoryName</span>
+                    @if (Technologies.Count > 0)
+                    {
+                        <span style="font-size:0.8rem;color:#60a5fa;background:rgba(96,165,250,0.08);padding:2px 8px;border-radius:10px">@string.Join(" · ", Technologies.Take(3))</span>
+                    }
+                    <span style="font-size:0.85rem;color:#94a3b8">@Projects.Count project@(Projects.Count != 1 ? "s" : "")</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+                    @foreach (var proj in Projects.Take(8))
+                    {
+                        <span style="font-size:0.8rem;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:#e6eef8">@proj.Name@(string.IsNullOrEmpty(proj.Layer) ? "" : $" ({proj.Layer})")</span>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Summary != null && (Summary.TypeCount > 0 || Summary.NamespaceCount > 0 || Summary.MemberCount > 0))
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <h3 style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin:0">Codebase</h3>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.9rem;color:#e6eef8">
+                    @if (Summary.TypeCount > 0) { <span><strong style="color:#60a5fa">@Summary.TypeCount</strong> types</span> }
+                    @if (Summary.NamespaceCount > 0) { <span><strong style="color:#60a5fa">@Summary.NamespaceCount</strong> namespaces</span> }
+                    @if (Summary.MemberCount > 0) { <span><strong style="color:#60a5fa">@Summary.MemberCount</strong> members</span> }
+                </div>
+            </div>
+        }
+
+        @if (LayerRelationships.Count > 0 || HasGraph)
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <h3 style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin:0">Architecture</h3>
+                @foreach (var rel in LayerRelationships.Take(6))
+                {
+                    <div style="font-size:0.9rem;color:#e6eef8;padding:2px 0">@rel</div>
+                }
+                @if (HasGraph)
+                {
+                    <a href="/graph" style="font-size:0.85rem;color:#60a5fa;text-decoration:none;margin-top:4px">Explore the architectural relationship graph →</a>
+                }
+            </div>
+        }
+
+        @if (Summary != null && Summary.TotalArtifacts > 0)
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <h3 style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin:0">Observations</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    @foreach (var obs in ObservationSummaryItems.Take(5))
+                    {
+                        <span style="font-size:0.8rem;padding:3px 10px;border-radius:4px;background:rgba(255,180,50,0.06);border:1px solid rgba(255,180,50,0.15);color:#e6eef8">@obs</span>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnConversationStart { get; set; }
+
+    private Investigation? Investigation
+    {
+        get
+        {
+            var ws = WorkspaceState.ActiveWorkspace;
+            if (ws == null) return null;
+            if (ws.Investigation != null) return ws.Investigation;
+            if (ws.ImportedRepositories != null && ws.ImportedRepositories.Count > 0)
+            {
+                var first = ws.ImportedRepositories.FirstOrDefault(r => r.Investigation != null);
+                if (first != null) return first.Investigation;
+            }
+            return null;
+        }
+    }
+
+    private InvestigationSummary? Summary { get; set; }
+    private string RepositoryName { get; set; } = string.Empty;
+    private List<ProjectInfo> Projects { get; set; } = new();
+    private List<string> Technologies { get; set; } = new();
+    private List<string> LayerRelationships { get; set; } = new();
+    private List<string> ObservationSummaryItems { get; set; } = new();
+    private int InheritanceCount { get; set; }
+    private int DependencyCount { get; set; }
+    private int ImplementationCount { get; set; }
+    private bool HasGraph { get; set; }
+
+    private record ProjectInfo(string Name, string Layer);
+
+    private bool HasMeaningfulData =>
+        Projects.Count > 0
+        || (Summary != null && (Summary.TypeCount > 0 || Summary.NamespaceCount > 0 || Summary.MemberCount > 0))
+        || LayerRelationships.Count > 0
+        || HasGraph
+        || (Summary != null && Summary.TotalArtifacts > 0)
+        || (Investigation?.Findings != null && Investigation.Findings.Count > 0);
+
+    protected override void OnParametersSet() => BuildViewModel();
+
+    protected override void OnInitialized()
+    {
+        WorkspaceState.OnChange += OnStateChanged;
+        BuildViewModel();
+    }
+
+    private void OnStateChanged()
+    {
+        BuildViewModel();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void BuildViewModel()
+    {
+        var inv = Investigation;
+        if (inv == null) { Summary = null; return; }
+
+        Summary = InvestigationSummary.CreateFrom(inv);
+        RepositoryName = Summary.RepositoryName;
+        if (string.IsNullOrWhiteSpace(RepositoryName))
+            try { RepositoryName = System.IO.Path.GetFileName((inv.RepositoryPath ?? "").TrimEnd('\\', '/')); } catch { }
+
+        var projectNames = (inv.TypeObservations ?? Array.Empty<TypeObservation>())
+            .Where(t => !string.IsNullOrWhiteSpace(t.Project))
+            .Select(t => t.Project!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        var layerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (inv.Findings != null)
+            foreach (var f in inv.Findings)
+            {
+                if (f.Description == null) continue;
+                var idx = f.Description.IndexOf(" appears to be the ", StringComparison.OrdinalIgnoreCase);
+                if (idx > 0)
+                {
+                    var projName = f.Description.Substring(0, idx).Trim();
+                    var rest = f.Description.Substring(idx + " appears to be the ".Length).TrimEnd('.', ' ');
+                    var layer = rest.Replace(" layer", "", StringComparison.OrdinalIgnoreCase).Trim();
+                    if (!string.IsNullOrWhiteSpace(projName) && !string.IsNullOrWhiteSpace(layer))
+                        layerMap[projName] = layer;
+                }
+            }
+
+        Projects = projectNames.Select(p => { layerMap.TryGetValue(p, out var layer); return new ProjectInfo(p, layer ?? ""); }).ToList();
+
+        var techs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (inv.TypeObservations != null && inv.TypeObservations.Count > 0) techs.Add(".NET");
+        foreach (var p in projectNames)
+        {
+            var lower = p.ToLowerInvariant();
+            if (lower.Contains("web")) techs.Add("Blazor/Web");
+            if (lower.Contains("api")) techs.Add("ASP.NET API");
+            if (lower.Contains("wpf")) techs.Add("WPF");
+            if (lower.Contains("test") || lower.Contains("tests")) techs.Add("xUnit");
+        }
+        Technologies = techs.ToList();
+
+        LayerRelationships = new List<string>();
+        if (inv.Findings != null)
+            foreach (var f in inv.Findings)
+                if (f.Description != null && f.Description.Contains(" depends on ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var desc = f.Description.TrimEnd('.');
+                    var parts = desc.Split(new[] { " depends on " }, StringSplitOptions.None);
+                    if (parts.Length == 2)
+                        LayerRelationships.Add($"{parts[0].Replace(" layer", "").Trim()} → {parts[1].Replace(" layer", "").Trim()}");
+                }
+        LayerRelationships = LayerRelationships.Distinct().ToList();
+
+        HasGraph = inv.RelationshipGraph != null;
+        InheritanceCount = DependencyCount = ImplementationCount = 0;
+        if (inv.RelationshipGraph != null)
+        {
+            try { InheritanceCount = inv.RelationshipGraph.GetRelationships(RelationshipType.Inheritance).Count(); } catch { }
+            try { DependencyCount = inv.RelationshipGraph.GetRelationships(RelationshipType.Dependency).Count(); } catch { }
+            try { ImplementationCount = inv.RelationshipGraph.GetRelationships(RelationshipType.Implementation).Count(); } catch { }
+        }
+
+        ObservationSummaryItems = new List<string>();
+        if (Summary.LargeTypes > 0) ObservationSummaryItems.Add($"{Summary.LargeTypes} large type{(Summary.LargeTypes > 1 ? "s" : "")}");
+        if (Summary.LayerViolations > 0) ObservationSummaryItems.Add($"{Summary.LayerViolations} layer violation{(Summary.LayerViolations > 1 ? "s" : "")}");
+        if (Summary.LongMethods > 0) ObservationSummaryItems.Add($"{Summary.LongMethods} long method{(Summary.LongMethods > 1 ? "s" : "")}");
+        if (Summary.CircularProjectReferences > 0) ObservationSummaryItems.Add($"{Summary.CircularProjectReferences} circular reference{(Summary.CircularProjectReferences > 1 ? "s" : "")}");
+    }
+
+    private async Task StartConversation(string prompt) => await OnConversationStart.InvokeAsync(prompt);
+
+    public void Dispose() => WorkspaceState.OnChange -= OnStateChanged;
+}

@@ -1,75 +1,61 @@
+@using Microsoft.JSInterop
 @using EngineeringDiscovery.Core.Services
 @using EngineeringDiscovery.Core.Domain.EngineeringModel
 @using EngineeringDiscovery.Core.Observations
+@using System.Linq
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 @inject IEngineeringPartner Partner
-@inject EngineeringDiscovery.Core.Services.LunaConversationService Luna
 @inject IObservationService ObservationService
 @inject EngineeringDiscovery.Web.Services.WorkspaceStateService WorkspaceState
 @inject EngineeringDiscovery.Web.Services.WorkContractService ContractService
 
-<div class="conversation-host" style="display:flex;flex-direction:column;gap:8px;max-width:960px;margin:0 auto;height:100%">
-    <div class="messages" style="flex:1;overflow:auto;padding:12px;border:1px solid rgba(0,0,0,0.06);border-radius:6px;background:transparent;max-height:100%;box-sizing:border-box">
+<style>
+    @@keyframes ed-pulse {
+        0% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.4); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 0.9; }
+    }
+</style>
+
+<div class="conversation-host">
+    <div class="messages" @ref="_messagesRef">
         @foreach (var m in Messages)
         {
             <div class="message" style="margin-bottom:8px">
-                <div class="speaker" style="font-weight:600;font-size:0.9rem">@m.Speaker</div>
-                <div class="text" style="margin-top:4px">@m.Text</div>
+                <div class="speaker" style="font-weight:600;font-size:0.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:2px">@m.Speaker</div>
+                <div class="text" style="margin-top:2px;line-height:1.42;color:var(--text)">@((MarkupString)RenderMarkdown(m.Text))</div>
             </div>
         }
     </div>
-    <div style="margin-top:8px;font-size:0.9rem;color:var(--muted)">
-        Active Artifact: <strong>Work Contract</strong> — @(!string.IsNullOrEmpty(WorkspaceState.ActiveWorkContractTitle) ? WorkspaceState.ActiveWorkContractTitle : "(none)")
-    </div>
-    @if (!string.IsNullOrWhiteSpace(CurrentRecommendation))
-    {
-        <div class="recommendation" style="margin:12px 0;padding:10px;border-left:4px solid #2b8aef;background:rgba(43,138,239,0.06);border-radius:4px">
-            <div style="font-weight:700">Recommendation</div>
-            <div style="margin-top:6px">@CurrentRecommendation</div>
-            @if (!string.IsNullOrWhiteSpace(CurrentCoordination))
-            {
-                <div style="margin-top:8px;font-size:0.9rem;color:var(--muted)">Coordination: @CurrentCoordination</div>
-            }
-            <div style="margin-top:8px;display:flex;gap:8px">
-                <button class="btn btn-sm btn-outline" @onclick="AcknowledgeRecommendationAsync">Acknowledge</button>
-                <button class="btn btn-sm btn-primary" @onclick="GenerateWorkContractAsync">Generate Work Contract</button>
-                <button class="btn btn-sm" @onclick="ProposeContractEditAsync">Propose Edit</button>
+
+    <div class="composer">
+        @if (PendingImage is not null)
+        {
+            <div class="pending-attachment">
+                <img src="@PendingImage.DataUrl" alt="Pasted image preview" />
+                <div class="pending-attachment-details">
+                    <span>@PendingImage.FileName</span>
+                    <button type="button" class="btn btn-outline btn-sm" @onclick="ClearPendingImage">Remove</button>
+                </div>
+            </div>
+        }
+
+        <div class="composer-input-row">
+            <textarea @ref="_composerRef" rows="2" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:var(--text);resize:none;height:2.5rem;line-height:1.42;font-size:0.88rem;font-family:inherit" value="@Draft" @oninput="HandleDraftInput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                <button class="btn btn-primary" @onclick="SendAsync" disabled="@(IsSending || string.IsNullOrWhiteSpace(Draft))">Send</button>
+                @if (IsSending)
+                {
+                    <div style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:6px">
+                        <span style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;animation: ed-pulse 1s infinite linear"></span>
+                        <span>EngineOS is thinking…</span>
+                    </div>
+                }
             </div>
         </div>
-    }
-
-    @if (IsProposalPending && !string.IsNullOrWhiteSpace(ProposedChangePreview))
-    {
-        <div class="proposal-preview" style="margin:12px 0;padding:10px;border-left:4px solid #8a2be2;background:rgba(138,43,226,0.06);border-radius:4px">
-            <div style="font-weight:700">Proposed Change Preview</div>
-            <div style="margin-top:6px">@ProposedChangePreview</div>
-            <div style="margin-top:8px;display:flex;gap:8px">
-                <button class="btn btn-sm btn-primary" @onclick="AcceptProposal">Accept Proposal</button>
-                <button class="btn btn-sm btn-outline" @onclick="RejectProposal">Reject</button>
-            </div>
-        </div>
-    }
-
-    <div class="composer" style="display:flex;gap:8px;align-items:flex-end">
-        <textarea @ref="_composerRef" id="composer-textarea" rows="2" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.06);resize:none;height:3.2rem;line-height:1.2rem" @bind="Draft" @bind:event="oninput" placeholder="@(_composerPlaceholder)" @onkeydown="HandleKeyDown"></textarea>
-        <button class="btn btn-primary" @onclick="SendAsync" disabled="@IsSending || string.IsNullOrWhiteSpace(Draft)">Send</button>
     </div>
 </div>
-
-@* Lightweight client-side script to toggle the Send button immediately on input events. *@
-<script>
-    (function () {
-        try {
-            var ta = document.getElementById('composer-textarea');
-            if (!ta) return;
-            ta.addEventListener('input', function () {
-                try {
-                    var b = ta.parentElement.querySelector('button');
-                    if (b) b.disabled = ta.value.trim() === '';
-                } catch { }
-            });
-        } catch { }
-    })();
-</script>
 
 @code {
     private List<(string Speaker, string Text)> Messages { get; } = new();
@@ -79,9 +65,46 @@
     private string CurrentRecommendation { get; set; } = string.Empty;
     private string CurrentCoordination { get; set; } = string.Empty;
     private ElementReference _composerRef;
+    private ElementReference _messagesRef;
+    private IJSObjectReference? _conversationInterop;
+    private bool _scrollToBottomAfterRender;
+    private DotNetObjectReference<ConversationHost>? _dotNetRef;
+    private PendingImageAttachment? PendingImage { get; set; }
     private string _composerPlaceholder = "Describe what you're working on... (Enter to send, Shift+Enter for newline)";
     private bool IsProposalPending { get; set; }
     private string ProposedChangePreview { get; set; } = string.Empty;
+
+    private sealed record PendingImageAttachment(string DataUrl, string MimeType, string FileName, long Size);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _conversationInterop = await JS.InvokeAsync<IJSObjectReference>("import", "./js/conversationInterop.js");
+                _dotNetRef = DotNetObjectReference.Create(this);
+                await _conversationInterop.InvokeVoidAsync("attachPasteHandler", _composerRef, _dotNetRef);
+            }
+            catch
+            {
+                // Clipboard preview and scroll anchoring are progressive enhancements; text composition remains available if interop fails.
+            }
+        }
+
+        if (_scrollToBottomAfterRender && _conversationInterop is not null)
+        {
+            _scrollToBottomAfterRender = false;
+            try
+            {
+                await _conversationInterop.InvokeVoidAsync("scrollToBottom", _messagesRef);
+            }
+            catch
+            {
+                // The conversation remains usable if the scroll element is unavailable during teardown.
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,6 +137,8 @@
         {
             Messages.Add(("EngineOS", "The Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns."));
         }
+
+        _scrollToBottomAfterRender = true;
     }
 
 
@@ -135,13 +160,72 @@
         return Task.CompletedTask;
     }
 
+    public Task SetDraftAsync(string text)
+    {
+        Draft = text ?? string.Empty;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable("HandlePastedImage")]
+    public Task HandlePastedImageAsync(string dataUrl, string mimeType, string fileName, long size)
+    {
+        if (string.IsNullOrWhiteSpace(dataUrl)
+            || string.IsNullOrWhiteSpace(mimeType)
+            || !mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            || size <= 0
+            || size > 4_000_000)
+        {
+            return Task.CompletedTask;
+        }
+
+        PendingImage = new PendingImageAttachment(
+            dataUrl,
+            mimeType,
+            string.IsNullOrWhiteSpace(fileName) ? "pasted-image" : fileName,
+            size);
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearPendingImage() => PendingImage = null;
+
+    private void HandleDraftInput(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        Draft = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task AppendMessageAsync(string speaker, string text)
+    {
+        _scrollToBottomAfterRender = await IsNearBottomAsync();
+        Messages.Add((speaker, text));
+    }
+
+    private async Task<bool> IsNearBottomAsync()
+    {
+        if (_conversationInterop is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            return await _conversationInterop.InvokeAsync<bool>("isNearBottom", _messagesRef, 64);
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
     private async Task SendAsync()
     {
         var text = (Draft ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(text)) return;
 
-        Messages.Add(("You", text));
+        await AppendMessageAsync("You", text);
         Draft = string.Empty;
+        PendingImage = null;
         IsSending = true;
 
         try
@@ -156,25 +240,10 @@
             var obs = new Observation { Type = "UserMessage", Source = "User", SessionId = SessionId, PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { text = text }) };
             await ObservationService.IngestAsync(obs);
 
-            // Spike path: if environment variable ENGINEOS_SPIKE_LUNA=true then call Luna and display reply directly
-            string reply = string.Empty;
-            try
-            {
-                var spike = Environment.GetEnvironmentVariable("ENGINEOS_SPIKE_LUNA") ?? string.Empty;
-                if (string.Equals(spike, "true", StringComparison.OrdinalIgnoreCase))
-                {
-                    var system = "You are EngineOS Man, an engineering partner. Talk naturally with the human. Understand what the human is asking before deciding what to do. Do not assume every message is an engineering task. Do not force the conversation into a predefined workflow.";
-                    reply = await Luna.SendMessageAsync(text, system);
-                }
-                else
-                {
-                    reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
-                }
-            }
-            catch { }
+            var reply = await Partner.SendMessageAsync(SessionId ?? Guid.Empty, text);
             if (!string.IsNullOrWhiteSpace(reply))
             {
-                Messages.Add(("EngineOS", reply));
+                await AppendMessageAsync("EngineOS", reply);
             }
 
             // Refresh recommendation display from updated model
@@ -182,7 +251,7 @@
         }
         catch (Exception ex)
         {
-            Messages.Add(("EngineOS", "Failed to send message: " + ex.Message));
+            await AppendMessageAsync("EngineOS", "Failed to send message: " + ex.Message);
         }
         finally
         {
@@ -236,7 +305,7 @@
             await ObservationService.IngestAsync(obs);
 
             // Reflect acknowledgement in the conversation
-            Messages.Add(("You", "Acknowledged recommendation: " + CurrentRecommendation));
+            await AppendMessageAsync("You", "Acknowledged recommendation: " + CurrentRecommendation);
             await LoadRecommendationAsync();
         }
         catch { }
@@ -262,13 +331,13 @@
             // Display the preview in the conversation messages and add Accept/Reject actions as follow-ups.
             ProposedChangePreview = CurrentRecommendation;
             IsProposalPending = true;
-            Messages.Add(("EngineOS", "Proposed Contract Edit (preview available)."));
+            await AppendMessageAsync("EngineOS", "Proposed Contract Edit (preview available).");
             await InvokeAsync(StateHasChanged);
         }
         catch { }
     }
 
-    private void AcceptProposal()
+    private async Task AcceptProposal()
     {
         // Apply proposal: for this implementation we translate CurrentRecommendation into a simple Title/Objectives update.
         if (string.IsNullOrWhiteSpace(CurrentRecommendation) || ContractService.CurrentContract == null) return;
@@ -280,18 +349,18 @@
             else c.Objective = (c.Objective + "\n" + CurrentRecommendation).Trim();
         }, "EngineOS");
 
-        Messages.Add(("You", "Accepted proposal and updated Work Contract."));
+        await AppendMessageAsync("You", "Accepted proposal and updated Work Contract.");
         IsProposalPending = false;
         ProposedChangePreview = string.Empty;
         // Refresh workspace recommendation area and UI
         _ = LoadRecommendationAsync();
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void RejectProposal()
+    private async Task RejectProposal()
     {
-        Messages.Add(("You", "Rejected the proposed contract edit."));
-        InvokeAsync(StateHasChanged);
+        await AppendMessageAsync("You", "Rejected the proposed contract edit.");
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task GenerateWorkContractAsync()
@@ -312,9 +381,85 @@
         ContractService.ApplyProposal(c => { }, "EngineOS");
 
         // Add a message to the conversation to indicate the action
-        Messages.Add(("You", "Generated Work Contract from recommendation"));
+        await AppendMessageAsync("You", "Generated Work Contract from recommendation");
         // Refresh recommendation area (it may be cleared by ingestion)
         await LoadRecommendationAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_conversationInterop is not null)
+            {
+                try { await _conversationInterop.InvokeVoidAsync("detachPasteHandler", _composerRef); } catch { }
+            }
+        }
+        finally
+        {
+            _dotNetRef?.Dispose();
+            if (_conversationInterop is not null)
+            {
+                try { await _conversationInterop.DisposeAsync(); } catch { }
+            }
+        }
+    }
+
+    private static string RenderMarkdown(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        var html = System.Net.WebUtility.HtmlEncode(text);
+
+        // Code blocks
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"```\s*([\s\S]*?)```",
+            m => "<pre style=\"background:rgba(255,255,255,0.03);padding:8px;border-radius:4px;overflow-x:auto;font-size:0.78rem;line-height:1.35;margin:6px 0\"><code>" + m.Groups[1].Value.Trim() + "</code></pre>");
+
+        // Inline code
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"`([^`]+)`",
+            "<code style=\"background:rgba(255,255,255,0.06);padding:0 3px;border-radius:3px;font-size:0.84rem\">$1</code>");
+
+        // Headings
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"^###\s+(.+)$", "<h4 style=\"margin:7px 0 3px 0;font-size:0.86rem\">$1</h4>",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"^##\s+(.+)$", "<h3 style=\"margin:8px 0 4px 0;font-size:0.96rem\">$1</h3>",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"^#\s+(.+)$", "<h2 style=\"margin:10px 0 4px 0;font-size:1.06rem\">$1</h2>",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Bold
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+
+        // Italic
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", "<em>$1</em>");
+
+        // List items
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"^-\s+(.+)$", "<li style=\"margin:1px 0\">$1</li>",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"((?:<li[^>]*>.*?</li>\s*)+)",
+            m => "<ul style=\"margin:3px 0;padding-left:16px\">" + m.Value + "</ul>");
+
+        // Horizontal rules
+        html = System.Text.RegularExpressions.Regex.Replace(html,
+            @"^---+$", "<hr style=\"margin:8px 0;border:0;border-top:1px solid rgba(255,255,255,0.08)\">",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Paragraphs
+        html = html.Replace("\r\n", "\n");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\n\n+", "</p><p style=\"margin:4px 0\">");
+        html = html.Replace("\n", "<br>");
+        html = "<p style=\"margin:0\">" + html + "</p>";
+        html = html.Replace("<p style=\"margin:0\"></p>", "");
+        html = html.Replace("<p style=\"margin:8px 0\"></p>", "");
+
+        return html;
     }
 }

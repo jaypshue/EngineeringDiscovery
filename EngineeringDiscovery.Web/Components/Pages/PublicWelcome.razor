@@ -1,22 +1,46 @@
 @page "/"
 @layout Layout.PublicLayout
 
-<PageTitle>EngineOS — Welcome</PageTitle>
+<PageTitle>EngineOS — Your Engineering Partner</PageTitle>
 
-<div class="public-welcome">
-    <h1>EngineOS</h1>
-    <p>EngineOS helps engineering teams discover, understand, and act on software insights.</p>
-    <p>
-        This site provides product information and documentation. To launch the interactive
-        Engineering Workspace (conversation-first), open the application at
-        <a href="/app">/app</a>.
+<div class="welcome-hero">
+    <h1 class="welcome-title">EngineOS</h1>
+    <p class="welcome-subtitle">Your engineering partner.</p>
+    <p class="welcome-description">
+        Understand the work. Keep the context. Coordinate the workers.
     </p>
-    <p style="display:flex;gap:12px">
-        <a class="btn btn-primary" href="/app?start=build">Start Building</a>
-        <a class="btn btn-secondary" href="/repository">Work with Existing Software</a>
-    </p>
+
+    <div class="welcome-explanation">
+        <p>
+            EngineOS maintains durable engineering context across sessions.
+            It knows what your project is, what has been accomplished, what remains,
+            and what should happen next — without depending on conversation history.
+        </p>
+        <p>
+            Coding agents like GitHub Copilot and Kiro perform the implementation.
+            EngineOS prepares the right context, hands off to the right worker,
+            evaluates the result, and keeps the engineering state current.
+        </p>
+    </div>
+
+    <div class="welcome-actions">
+        <a class="btn btn-primary btn-lg" href="/app?start=build">Start Building</a>
+        <a class="btn btn-outline btn-lg" href="/repository">Work with Existing Software</a>
+    </div>
+
+    <div class="welcome-detail">
+        <div class="welcome-card">
+            <h3>Start Building</h3>
+            <p>Begin with an idea. Describe your project in conversation and EngineOS will establish the engineering context, track decisions, and coordinate work.</p>
+        </div>
+        <div class="welcome-card">
+            <h3>Work with Existing Software</h3>
+            <p>Point EngineOS at an existing repository. It discovers the engineering structure, builds an understanding, and becomes your ongoing engineering partner.</p>
+        </div>
+    </div>
 </div>
 
 @code {
-    // Public marketing/documentation entry point. The application experience is hosted at /app.
+    // Root welcome page. Entry point for EngineOS.
+    // Two paths: conversation-first (Start Building) or repository-first (Existing Software).
 }

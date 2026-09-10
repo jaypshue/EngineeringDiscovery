@@ -4,31 +4,24 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Engineering Discovery" Height="800" Width="1200" Background="{StaticResource BackgroundBrush}">
+        Title="Engineering Discovery"
+        Height="800"
+        Width="1200"
+        MinHeight="600"
+        MinWidth="900"
+        WindowStartupLocation="Manual"
+        Background="{StaticResource BackgroundBrush}">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
-                <MenuItem Header="New Investigation" Command="{Binding NewInvestigationCommand}" />
-                <MenuItem Header="Open Repository" Command="{Binding OpenRepositoryCommand}" />
+                <MenuItem Header="Open Project" Command="{Binding OpenRepositoryCommand}" />
+                <MenuItem Header="Close Project" Command="{Binding CloseProjectCommand}" />
                 <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="View" />
-            <MenuItem Header="Navigate">
-                <MenuItem Header="Welcome" Click="NavigateToWelcome_Click" />
-                <MenuItem Header="Corporate Workspace" Click="NavigateToCorporate_Click" />
-                <MenuItem Header="Free Range Workspace" Click="NavigateToFreeRange_Click" />
-                <Separator />
-                <MenuItem Header="Knowledge Graph (Placeholder)" Click="NavigateToKnowledgeGraph_Click" />
-                <MenuItem Header="Inspector (Placeholder)" Click="NavigateToInspector_Click" />
-            </MenuItem>
             <MenuItem Header="Help" />
         </Menu>
-        <ToolBar DockPanel.Dock="Top">
-            <Button Content="New" Command="{Binding NewInvestigationCommand}" />
-            <Button Content="Open" Command="{Binding OpenRepositoryCommand}" />
-        </ToolBar>
-
         <ContentControl x:Name="HostContent" />
     </DockPanel>
 </Window>

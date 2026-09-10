@@ -1,15 +1,185 @@
 @page "/repository"
 @using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Core.Domain.Models
+@using EngineeringDiscovery.Core.Domain.ProjectState
 @inject EngineeringDiscovery.Core.Services.WorkspaceState WorkspaceState
+@inject NavigationManager Nav
 
-<PageTitle>Repository</PageTitle>
+<PageTitle>EngineOS — Connect Your Software</PageTitle>
 
-<h2>Repository Import</h2>
-<p>Opens the existing Repository Import workflow.</p>
-<div>
-    <WorkspaceHost Role="EngineeringDiscovery.Core.Domain.Models.EngineeringRole.Developer" />
+<div class="repository-page">
+    <header class="repository-header">
+        <h1>Connect Your Software</h1>
+        <p class="repository-lead">
+            Point EngineOS at your repository to discover the engineering structure and
+            establish a project workspace.
+        </p>
+    </header>
+
+    @if (WorkspaceState.HasWorkspace && HasConnectedSoftware())
+    {
+        <section class="software-connected">
+            <div class="software-identity">
+                <div class="software-icon">&#x2713;</div>
+                <div class="software-info">
+                    <h2>@GetSoftwareName()</h2>
+                    <p class="software-path">@GetRepositoryPath()</p>
+                    @if (GetDiscoveryStats() is var stats && !string.IsNullOrEmpty(stats))
+                    {
+                        <p class="software-stats">@stats</p>
+                    }
+                    @if (GetProjectName() is var projectName && !string.IsNullOrEmpty(projectName))
+                    {
+                        <p class="software-project">Project: @projectName</p>
+                    }
+                </div>
+            </div>
+
+            <div class="software-actions">
+                <a class="btn btn-primary btn-lg" href="/app?start=build">Open Project Workspace</a>
+                <a class="btn btn-outline" href="/dashboard">View Engineering Model</a>
+            </div>
+
+            @if (!HasProjectIdentity())
+            {
+                <div class="software-hint">
+                    <p>
+                        EngineOS has discovered the software structure. To establish the project context
+                        (what this project is, what it aims to accomplish), open the workspace and describe
+                        your project in conversation.
+                    </p>
+                </div>
+            }
+        </section>
+    }
+    else if (WorkspaceState.HasWorkspace && !HasConnectedSoftware())
+    {
+        <section class="software-pending">
+            <div class="pending-banner">
+                <p>
+                    A workspace exists but no software has been connected yet.
+                    Select a repository folder below to discover your codebase, or
+                    <a href="/app?start=build">start a conversation</a> to establish your project first.
+                </p>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="repository-guide">
+            <div class="guide-steps">
+                <div class="guide-step">
+                    <span class="step-number">1</span>
+                    <div>
+                        <strong>Choose a repository folder</strong>
+                        <p>Select the root folder — where the solution file, pom.xml, or build.gradle lives.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <span class="step-number">2</span>
+                    <div>
+                        <strong>EngineOS discovers the structure</strong>
+                        <p>Projects, namespaces, types, dependencies, and architecture are analyzed.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <span class="step-number">3</span>
+                    <div>
+                        <strong>Open your project workspace</strong>
+                        <p>EngineOS becomes your engineering partner — ask questions, get recommendations, coordinate work.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <section class="repository-workspace">
+        <WorkspaceHost Role="EngineeringDiscovery.Core.Domain.Models.EngineeringRole.Developer" />
+    </section>
+
+    <footer class="repository-footer">
+        <a href="/">&#x2190; Back to Home</a>
+    </footer>
 </div>
 
 @code {
-    private EngineeringDiscovery.Core.Domain.Investigation.Investigation? SampleInvestigation => WorkspaceState.ActiveWorkspace?.Investigation;
+    private bool HasConnectedSoftware()
+    {
+        // Software is connected when we have a repository path from imports
+        var repos = WorkspaceState.ActiveWorkspace?.ImportedRepositories;
+        if (repos != null && repos.Count > 0 && !string.IsNullOrWhiteSpace(repos[0].RepositoryPath))
+            return true;
+        if (!string.IsNullOrWhiteSpace(WorkspaceState.ActiveWorkspace?.RepositoryPath))
+            return true;
+        return false;
+    }
+
+    private bool HasProjectIdentity()
+    {
+        var identity = WorkspaceState.ActiveWorkspace?.ProjectState?.Identity;
+        return identity != null && !string.IsNullOrWhiteSpace(identity.Name) && identity.Name != "Unnamed";
+    }
+
+    private string GetProjectName()
+    {
+        var identity = WorkspaceState.ActiveWorkspace?.ProjectState?.Identity;
+        if (identity != null && !string.IsNullOrWhiteSpace(identity.Name) && identity.Name != "Unnamed")
+            return identity.Name;
+        return string.Empty;
+    }
+
+    private string GetSoftwareName()
+    {
+        try
+        {
+            // Try to derive software name from the repository folder name
+            var path = GetRepositoryPath();
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                var folderName = System.IO.Path.GetFileName(path.TrimEnd('\\', '/'));
+                if (!string.IsNullOrWhiteSpace(folderName))
+                    return folderName;
+            }
+        }
+        catch { }
+        return "Connected Software";
+    }
+
+    private string GetRepositoryPath()
+    {
+        try
+        {
+            var repos = WorkspaceState.ActiveWorkspace?.ImportedRepositories;
+            if (repos != null && repos.Count > 0 && !string.IsNullOrWhiteSpace(repos[0].RepositoryPath))
+                return repos[0].RepositoryPath;
+            var legacy = WorkspaceState.ActiveWorkspace?.RepositoryPath;
+            if (!string.IsNullOrWhiteSpace(legacy))
+                return legacy;
+        }
+        catch { }
+        return string.Empty;
+    }
+
+    private string GetDiscoveryStats()
+    {
+        try
+        {
+            var inv = WorkspaceState.ActiveWorkspace?.Investigation;
+            if (inv == null) return string.Empty;
+
+            var types = inv.TypeObservations?.Count ?? 0;
+            var namespaces = inv.NamespaceObservations?.Count ?? 0;
+            var members = inv.MemberObservations?.Count ?? 0;
+
+            if (types == 0 && namespaces == 0 && members == 0) return string.Empty;
+
+            var parts = new System.Collections.Generic.List<string>();
+            if (types > 0) parts.Add($"{types} types");
+            if (namespaces > 0) parts.Add($"{namespaces} namespaces");
+            if (members > 0) parts.Add($"{members} members");
+            return "Discovered: " + string.Join(", ", parts);
+        }
+        catch { }
+        return string.Empty;
+    }
 }

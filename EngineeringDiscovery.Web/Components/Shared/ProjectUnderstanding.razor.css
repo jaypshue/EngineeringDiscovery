@@ -1,0 +1,172 @@
+.understanding {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 0 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    margin-bottom: 16px;
+}
+
+.understanding-headline {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.understanding-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.understanding-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0;
+}
+
+.understanding-identity {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.understanding-project-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.understanding-tech-badge {
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: rgba(96, 165, 250, 0.08);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.understanding-meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.understanding-projects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.understanding-project-chip {
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+
+.understanding-project-chip--more {
+    color: var(--muted);
+    font-style: italic;
+    border: none;
+    background: none;
+}
+
+.understanding-metrics {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.understanding-metric strong {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.understanding-relationships {
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.understanding-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.understanding-layer-rel {
+    font-size: 0.9rem;
+    color: var(--text);
+    padding: 2px 0;
+}
+
+.understanding-graph-link {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 6px;
+    display: inline-block;
+}
+
+.understanding-graph-link:hover {
+    text-decoration: underline;
+}
+
+.understanding-text {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.understanding-observations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.understanding-observation {
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(255, 180, 50, 0.06);
+    border: 1px solid rgba(255, 180, 50, 0.15);
+    color: var(--text);
+}
+
+.understanding-actions-section {
+    padding-top: 8px;
+}
+
+.understanding-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.understanding-action {
+    font-size: 0.85rem;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.understanding-action:hover {
+    border-color: var(--accent);
+    background: rgba(96, 165, 250, 0.05);
+}

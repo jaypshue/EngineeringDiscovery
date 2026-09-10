@@ -34,7 +34,7 @@
                     }
                     else if (DetectedType != RepoType.None)
                     {
-                        <p><strong>?</strong> <strong>@GetTypeLabel(DetectedType)</strong></p>
+                        <p><strong>@GetTypeLabel(DetectedType)</strong></p>
                         <p><strong>@DetectedName</strong></p>
                         @if (DetectedProjectCount > 0)
                         {
@@ -46,6 +46,13 @@
                         <p class="error">No supported repository detected. Supported: .NET, Java (Maven), Java (Gradle).</p>
                     }
                 </div>
+                @if (DetectedType != RepoType.None && !string.IsNullOrWhiteSpace(SelectedRepositoryPath))
+                {
+                    <div class="selected-path-summary" style="margin:12px 0;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+                        <div style="font-size:0.8rem;color:var(--muted-color);margin-bottom:4px;">Repository Root</div>
+                        <div style="font-size:0.95rem;font-weight:600;word-break:break-all;">@SelectedRepositoryPath</div>
+                    </div>
+                }
                 <button class="btn" @onclick="BuildEngineeringModelAsync" disabled="@(!IsImportEnabled)">
                     @if (IsBuilding)
                     {
@@ -76,13 +83,29 @@
                 }
                 else if (freshness == EngineeringDiscovery.Core.Services.WorkspaceState.EngineeringModelFreshness.RefreshRecommended)
                 {
-                    <p class="freshness--stale">? Repository Changed � Refresh Recommended</p>
+                    <p class="freshness--stale">? Repository Changed — Refresh Recommended</p>
                     <p>Last Built: @WorkspaceState.ActiveWorkspace?.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
+                    <button class="btn" @onclick="BuildEngineeringModelAsync">Refresh Engineering Model</button>
+                }
+                else if (freshness == EngineeringDiscovery.Core.Services.WorkspaceState.EngineeringModelFreshness.RefreshRequired)
+                {
+                    <p class="freshness--stale">Engineering Model available — refresh recommended</p>
+                    @if (WorkspaceState.ActiveWorkspace?.LastBuiltUtc != null)
+                    {
+                        <p>Last Built: @WorkspaceState.ActiveWorkspace.LastBuiltUtc?.ToLocalTime().ToString("f")</p>
+                    }
                     <button class="btn" @onclick="BuildEngineeringModelAsync">Refresh Engineering Model</button>
                 }
                 else
                 {
-                    <p>Engineering Model status: Unknown</p>
+                    @if (WorkspaceState.ActiveWorkspace?.Investigation != null)
+                    {
+                        <p>Engineering Model: Available (Investigation @(WorkspaceState.ActiveWorkspace.Investigation.Status.ToString()))</p>
+                    }
+                    else
+                    {
+                        <p>Engineering Model status: Unknown</p>
+                    }
                 }
             </div>
 
@@ -421,12 +444,26 @@
 
         // If a workspace already exists, importing will append an ImportedRepository. Proceed without replace confirmation.
 
+        // Resolve the effective repository path. Prefer the bound input (full server path for typed/pasted).
+        // Fall back to the RepoSelection service's validated path for client-side picks.
+        var effectivePath = SelectedRepositoryPath;
+        if (string.IsNullOrWhiteSpace(effectivePath) || !System.IO.Directory.Exists(effectivePath))
+        {
+            effectivePath = RepoSelection.SelectedPath;
+        }
+        if (string.IsNullOrWhiteSpace(effectivePath))
+        {
+            DiscoveryStatus = "Discovery Failed";
+            ErrorMessage = "No valid repository path available.";
+            return;
+        }
+
         IsBuilding = true;
         DiscoveryStatus = "Building Engineering Model...";
         StateHasChanged();
 
         Console.WriteLine($"[DIAG] BuildEngineeringModelAsync started at {DateTime.UtcNow:o}");
-        Console.WriteLine($"[DIAG] SelectedRepositoryPath (at build start)='{SelectedRepositoryPath}'");
+        Console.WriteLine($"[DIAG] effectivePath (at build start)='{effectivePath}'");
 
         try
         {
@@ -435,7 +472,7 @@
 
             // Run discovery and create the Investigation off the UI thread
             Console.WriteLine($"[DIAG] Before CreateInvestigation Task.Run at {DateTime.UtcNow:o}");
-            var investigation = await Task.Run(() => engine.CreateInvestigation(SelectedRepositoryPath, null));
+            var investigation = await Task.Run(() => engine.CreateInvestigation(effectivePath, null));
             Console.WriteLine($"[DIAG] After CreateInvestigation returned at {DateTime.UtcNow:o}; investigation is {(investigation==null?"NULL":"NOT_NULL")}");
 
             if (investigation is null)
@@ -450,7 +487,7 @@
             // Build a complete ImportedRepository and append it to the Workspace's ImportedRepositories
             var imported = new global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository
             {
-                RepositoryPath = SelectedRepositoryPath,
+                RepositoryPath = effectivePath,
                 Investigation = investigation,
                 CreatedUtc = DateTime.UtcNow
             };
@@ -459,6 +496,23 @@
             var ws = WorkspaceState.ActiveWorkspace ?? new global::EngineeringDiscovery.Core.Domain.Workspace.Workspace();
             if (ws.ImportedRepositories == null) ws.ImportedRepositories = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.ImportedRepository>();
             ws.ImportedRepositories.Add(imported);
+            // Create a Project entity so ActiveProjectId is set and ConversationExperience shows project context.
+            var projectFolderName = string.Empty;
+            try { projectFolderName = System.IO.Path.GetFileName(effectivePath.TrimEnd('\\', '/')); } catch { }
+            if (string.IsNullOrWhiteSpace(projectFolderName)) projectFolderName = "Imported Project";
+            var project = new global::EngineeringDiscovery.Core.Domain.Workspace.Project();
+            project.State.Identity = new global::EngineeringDiscovery.Core.Domain.ProjectState.ProjectIdentity
+            {
+                Name = projectFolderName,
+                Description = $"Imported from {effectivePath}",
+                EstablishedUtc = DateTime.UtcNow,
+                LastUpdatedUtc = DateTime.UtcNow
+            };
+            project.RepositoryPaths.Add(effectivePath);
+            if (ws.Projects == null) ws.Projects = new System.Collections.Generic.List<global::EngineeringDiscovery.Core.Domain.Workspace.Project>();
+            ws.Projects.Add(project);
+            ws.ActiveProjectId = project.Id;
+            ws.ProjectState = project.State;
             Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost BEFORE ReplaceWorkspace - ImportedRepository path={imported.RepositoryPath} InvestigationId={(investigation==null?"NULL":investigation.Id.ToString())} TypeObservations={(investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(investigation?.MemberObservations?.Count ?? 0)}");
             WorkspaceState.ReplaceWorkspace(ws);
             Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost AFTER ReplaceWorkspace - ActiveWorkspaceInvestigationId={(WorkspaceState.ActiveWorkspace?.Investigation==null?"NULL":WorkspaceState.ActiveWorkspace.Investigation.Id.ToString())} TypeObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.MemberObservations?.Count ?? 0)}");
@@ -468,6 +522,15 @@
             Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost BEFORE SetInvestigation - InvestigationId={(investigation==null?"NULL":investigation.Id.ToString())} TypeObservations={(investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(investigation?.MemberObservations?.Count ?? 0)}");
             WorkspaceState.SetInvestigation(investigation);
             Console.WriteLine($"[INV-DIAG] UTC {DateTime.UtcNow:o} WorkspaceHost AFTER SetInvestigation - ActiveWorkspaceInvestigationId={(WorkspaceState.ActiveWorkspace?.Investigation==null?"NULL":WorkspaceState.ActiveWorkspace.Investigation.Id.ToString())} TypeObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.TypeObservations?.Count ?? 0)} NamespaceObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.NamespaceObservations?.Count ?? 0)} MemberObservations={(WorkspaceState.ActiveWorkspace?.Investigation?.MemberObservations?.Count ?? 0)}");
+            // Record freshness metadata so the Engineering Model is recognized after restart
+            try
+            {
+                var fingerprint = WorkspaceState.ComputeRepositoryFingerprint(effectivePath);
+                var wsForFreshness = WorkspaceState.ActiveWorkspace;
+                if (wsForFreshness != null) wsForFreshness.SetFreshness(DateTime.UtcNow, fingerprint);
+                WorkspaceState.Save();
+            }
+            catch { }
             // CurrentTaskState seeding removed; UI reads from WorkspaceState directly
 
             // Create an engineering session and ingest a RepoAttached observation immediately
@@ -486,31 +549,42 @@
                             Type = "RepoAttached",
                             Source = "RepositoryImporter",
                             SessionId = sessionId,
-                            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = SelectedRepositoryPath })
+                            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { path = effectivePath })
                         };
                         // Ingest observation so ObservationEngine updates the EngineeringModel immediately
                         Console.WriteLine($"[DIAG] About to call ObservationService.IngestAsync at {DateTime.UtcNow:o}");
                         await ObservationService.IngestAsync(obs).ConfigureAwait(false);
                         Console.WriteLine($"[DIAG] Returned from ObservationService.IngestAsync at {DateTime.UtcNow:o}");
+
+                        // Inject investigation summary into the conversation by sending "Repository imported" message.
+                        // This triggers ComposeRepositoryUnderstanding in EngineeringPartner which uses InvestigationSummary.
+                        try
+                        {
+                            Console.WriteLine($"[DIAG] About to call SendMessageAsync for repository summary at {DateTime.UtcNow:o}");
+                            await EngineeringPartner.SendMessageAsync(sessionId.Value, $"Repository imported at {effectivePath}").ConfigureAwait(false);
+                            Console.WriteLine($"[DIAG] Returned from SendMessageAsync for repository summary at {DateTime.UtcNow:o}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[DIAG] SendMessageAsync for repository summary failed: {ex.Message}");
+                        }
                 }
 
                 // Notify SessionStartupService so UI components can react to the imported repository.
                 try
                 {
                     var repoName = string.Empty;
-                    try { repoName = System.IO.Path.GetFileName(SelectedRepositoryPath ?? string.Empty) ?? string.Empty; } catch { }
+                    try { repoName = System.IO.Path.GetFileName(effectivePath) ?? string.Empty; } catch { }
                     Console.WriteLine($"[DIAG] About to call Startup.NotifyWorkspaceState at {DateTime.UtcNow:o}");
-                    Startup.NotifyWorkspaceState(repoName, SelectedRepositoryPath ?? string.Empty, "None", "None", "Ready");
+                    Startup.NotifyWorkspaceState(repoName, effectivePath, "None", "None", "Ready");
                     Console.WriteLine($"[DIAG] Returned from Startup.NotifyWorkspaceState at {DateTime.UtcNow:o}");
                 }
                 catch { }
-                // Navigate to the Dashboard and select the Architect role so the existing
-                // InvestigationDashboard (Explorer) is shown after import. WorkspaceState
-                // already contains the workspace and investigation.
-                var encoded = System.Uri.EscapeDataString(SelectedRepositoryPath ?? string.Empty);
-                // preserve importedPath for any downstream handling and set role=Architect
+                // Navigate to the conversation experience so the user sees the investigation summary.
+                // Use client-side navigation (no forceLoad) to preserve Singleton state
+                // (EngineeringPartner session, conversation history, in-memory repositories).
                     Console.WriteLine($"[DIAG] About to call Nav.NavigateTo at {DateTime.UtcNow:o}");
-                    Nav.NavigateTo($"/dashboard?role=Architect&importedPath={encoded}", true);
+                    Nav.NavigateTo("/app?start=build");
                     Console.WriteLine($"[DIAG] Returned from Nav.NavigateTo at {DateTime.UtcNow:o}");
             }
             catch { }

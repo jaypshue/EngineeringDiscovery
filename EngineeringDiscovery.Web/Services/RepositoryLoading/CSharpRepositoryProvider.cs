@@ -152,6 +152,92 @@ namespace EngineeringDiscovery.Web.Services.RepositoryLoading
             }
             catch { }
 
+            // Final fallback: if MSBuild workspace produced nothing (e.g., MSBuild assemblies already loaded
+            // in the AppDomain when running inside Blazor Server), use regex-based loose file scanning.
+            if (result.Count == 0)
+            {
+                try
+                {
+                    var csFiles = Directory.GetFiles(repositoryRoot, "*.cs", SearchOption.AllDirectories)
+                        .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+                        .ToArray();
+
+                    if (csFiles.Length > 0)
+                    {
+                        // Group by project: find the nearest .csproj for each file
+                        var csprojFiles = Directory.GetFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories);
+                        var projectGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                        foreach (var csFile in csFiles)
+                        {
+                            var projectName = "Unknown";
+                            var csDir = Path.GetDirectoryName(csFile) ?? string.Empty;
+                            var dir = new DirectoryInfo(csDir);
+                            while (dir != null)
+                            {
+                                var csproj = dir.GetFiles("*.csproj").FirstOrDefault();
+                                if (csproj != null)
+                                {
+                                    projectName = Path.GetFileNameWithoutExtension(csproj.Name);
+                                    break;
+                                }
+                                if (string.Equals(dir.FullName, Path.GetFullPath(repositoryRoot), StringComparison.OrdinalIgnoreCase)) break;
+                                dir = dir.Parent;
+                            }
+                            if (!projectGroups.ContainsKey(projectName)) projectGroups[projectName] = new List<string>();
+                            projectGroups[projectName].Add(csFile);
+                        }
+
+                        foreach (var group in projectGroups)
+                        {
+                            var ctx = new CompilationContext
+                            {
+                                Language = RepositoryLanguage.CSharp,
+                                ProjectName = group.Key,
+                                ProjectFilePath = csprojFiles.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p).Equals(group.Key, StringComparison.OrdinalIgnoreCase))
+                            };
+
+                            foreach (var csFile in group.Value)
+                            {
+                                try
+                                {
+                                    var scanned = FallbackParsing.LooseFileTypeScanner.ScanCsFile(csFile);
+                                    foreach (var (ns, typeName, kind, filePath) in scanned)
+                                    {
+                                        var engineKind = kind switch
+                                        {
+                                            "interface" => EngineeringTypeKind.Interface,
+                                            "struct" => EngineeringTypeKind.Struct,
+                                            "enum" => EngineeringTypeKind.Enum,
+                                            "delegate" => EngineeringTypeKind.Delegate,
+                                            "record" => EngineeringTypeKind.Record,
+                                            _ => EngineeringTypeKind.Class
+                                        };
+                                        ctx.Types.Add(new TypeDescriptor
+                                        {
+                                            Namespace = ns,
+                                            TypeName = typeName,
+                                            QualifiedName = $"{group.Key}:{ns}.{typeName}",
+                                            Kind = engineKind,
+                                            Accessibility = EngineeringAccessibility.Public,
+                                            SourceFilePath = filePath
+                                        });
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            if (ctx.Types.Count > 0)
+                            {
+                                result.Add(ctx);
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+
             return result;
         }
 

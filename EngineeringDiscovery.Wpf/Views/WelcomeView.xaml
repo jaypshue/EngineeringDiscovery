@@ -15,42 +15,36 @@
     </UserControl.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
-        </Grid.RowDefinitions>
-
-        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="EngineOS" Style="{StaticResource WelcomeTitle}" />
-            <TextBlock Text="Engineering is understanding." Style="{StaticResource WelcomeSubtitle}" />
-            <TextBlock Text="Where does your engineering begin?" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="520">
+            <TextBlock Text="EngineOS" Style="{StaticResource WelcomeTitle}" HorizontalAlignment="Center" />
+            <TextBlock Text="Open a project to begin." Style="{StaticResource WelcomeSubtitle}" HorizontalAlignment="Center" Margin="0,8,0,24" />
+            <Button Name="OpenProjectButton" HorizontalAlignment="Center" Click="OpenProjectButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                Open Project
+            </Button>
+            <StackPanel Margin="0,18,0,0" HorizontalAlignment="Center">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <ProgressBar Width="300" Height="6" IsIndeterminate="True" />
+                <TextBlock Text="{Binding LoadingStatusText}" Margin="0,10,0,0" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" />
+            </StackPanel>
         </StackPanel>
-
-        <Grid Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Width="880">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="40" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
-                <StackPanel Margin="8">
-                    <TextBlock Text="Corporate Engineering" Foreground="{StaticResource PrimaryTextBrush}" FontWeight="Bold" FontSize="18" />
-                    <TextBlock Text="Join an existing engineering effort." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,12" />
-                    <TextBlock Text="Recover understanding from an existing codebase and accelerate development." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,18" />
-                    <Button Style="{StaticResource PrimaryButton}" Name="CorporateButton" HorizontalAlignment="Left" Click="CorporateButton_Click">Open Repository</Button>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2" Style="{StaticResource CardStyle}">
-                <StackPanel Margin="8">
-                    <TextBlock Text="Free Range Engineering" Foreground="{StaticResource PrimaryTextBrush}" FontWeight="Bold" FontSize="18" />
-                    <TextBlock Text="Independent product development." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,12" />
-                    <TextBlock Text="Discover the product, architecture, and implementation before writing code." Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,18" />
-                    <Button Style="{StaticResource PrimaryButton}" Name="FreeRangeButton" HorizontalAlignment="Right" Click="FreeRangeButton_Click">Start Building</Button>
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>

@@ -83,7 +83,7 @@ namespace EngineeringDiscovery.Wpf.Views
             var win = System.Windows.Window.GetWindow(this) as MainWindow ?? System.Windows.Application.Current?.MainWindow as MainWindow;
             if (win != null)
             {
-                // Return to the central Engineering Workspace instead of ProductDiscoveryPlaceholder
+                // Return to the central Engineering Workspace.
                 win.HostContent.Content = new EngineeringWorkspace();
             }
         }

@@ -1,0 +1,123 @@
+<UserControl x:Class="EngineeringDiscovery.Wpf.Views.EngineeringSteeringPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource CardBrush}"
+             Foreground="{StaticResource PrimaryTextBrush}">
+    <Border Background="{StaticResource CardBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1"
+            Padding="14">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="ENGINEERING STEERING"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Text="Where we are and what happens next"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Margin="0,2,0,14"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Text="CURRENT DIRECTION"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Text="{Binding CurrentDirection}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,3,0,0" />
+                <TextBlock Text="{Binding CurrentTaskTitle, StringFormat='Task: {0}'}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,3,0,12" />
+
+                <Border Background="{StaticResource BackgroundBrush}"
+                        BorderBrush="{StaticResource BorderBrushColor}"
+                        BorderThickness="1"
+                        Padding="8"
+                        Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="CURRENT ROUND"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentBrush}" />
+                        <DockPanel Margin="0,3,0,0">
+                            <TextBlock Text="{Binding CurrentRound}"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource PrimaryTextBrush}" />
+                            <TextBlock Text="{Binding CurrentRoundStatus}"
+                                       DockPanel.Dock="Right"
+                                       Foreground="{StaticResource SecondaryTextBrush}"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding CurrentRoundGoal}"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,3,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="LAST COMPLETED"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Text="{Binding LastCompleted}"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,3,0,12" />
+
+                <TextBlock Text="NEXT HANDOFF"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+                <DockPanel Margin="0,3,0,0">
+                    <TextBlock Text="{Binding HandoffStatus}"
+                               DockPanel.Dock="Right"
+                               Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding NextHandoff}"
+                               Foreground="{StaticResource PrimaryTextBrush}"
+                               TextWrapping="Wrap" />
+                </DockPanel>
+
+                <TextBlock Text="CONFIDENCE"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}"
+                           Margin="0,12,0,0" />
+                <TextBlock Text="{Binding Confidence}"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Margin="0,3,0,0" />
+
+                <TextBlock Text="HUMAN ATTENTION"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}"
+                           Margin="0,12,0,0" />
+                <TextBlock Text="{Binding HumanAttention}"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,3,0,0" />
+
+                <Button Content="Generate Prompt"
+                        Command="{Binding GeneratePromptCommand}"
+                        Style="{StaticResource AccentButton}"
+                        HorizontalAlignment="Left"
+                        Padding="10,5"
+                        Margin="0,14,0,0" />
+                <TextBlock Text="{Binding PromptReadiness}"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0" />
+                <TextBlock Text="{Binding PromptStatus}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,3,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

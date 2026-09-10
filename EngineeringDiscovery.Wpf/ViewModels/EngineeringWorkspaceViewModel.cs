@@ -43,13 +43,20 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public EngineeringStateViewModel EngineeringState { get; private set; }
 
-        public EngineeringWorkspaceViewModel(IEngineeringPartner partner)
+        public EngineeringStatePanelViewModel? EngineeringStatePanel { get; private set; }
+        public DevelopmentSurfaceViewModel? DevelopmentSurface { get; }
+
+        public EngineeringWorkspaceViewModel(IEngineeringPartner partner, DevelopmentSurfaceViewModel? developmentSurface = null)
         {
             if (partner == null) throw new ArgumentNullException(nameof(partner));
 
+            DevelopmentSurface = developmentSurface ??
+                EngineeringDiscovery.Wpf.App.ServiceProvider?.GetService(typeof(DevelopmentSurfaceViewModel)) as DevelopmentSurfaceViewModel;
+            _ = DevelopmentSurface?.InitializeAsync();
+
             // Create child VMs synchronously so they are fully initialized before exposure to the view
             Package = new EngineeringPackageViewModel();
-            Conversation = new WorkspaceConversationViewModel(partner);
+            Conversation = new WorkspaceConversationViewModel(partner, operationExecutor: DevelopmentSurface);
 
             // Asynchronously initialize conversation without blocking construction
             _ = InitializeAsync();
@@ -77,6 +84,14 @@ namespace EngineeringDiscovery.Wpf.ViewModels
                 if (_workspaceState != null)
                 {
                     _workspaceState.OnChange += WorkspaceState_OnChange;
+                }
+
+                var stateQuery = sp?.GetService(typeof(IEngineeringStateQuery)) as IEngineeringStateQuery;
+                var gitStatusService = sp?.GetService(typeof(EngineeringDiscovery.Wpf.Services.IGitStatusService)) as EngineeringDiscovery.Wpf.Services.IGitStatusService;
+                if (_workspaceState != null && stateQuery != null && gitStatusService != null)
+                {
+                    EngineeringStatePanel = new EngineeringStatePanelViewModel(stateQuery, gitStatusService, _workspaceState);
+                    OnPropertyChanged(nameof(EngineeringStatePanel));
                 }
 
                 var repoPath = ws?.ActiveWorkspace?.RepositoryPath;

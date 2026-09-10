@@ -1,0 +1,433 @@
+@namespace EngineeringDiscovery.Web.Components.Pages
+@using System
+@using System.Collections.Generic
+@using System.IO
+@using System.Linq
+@using EngineeringDiscovery.Core.Domain.Investigation
+@using EngineeringDiscovery.Web.Components.Conversation
+@using EngineeringDiscovery.Web.Components.Shared
+
+<div class="desktop-engineering-workspace">
+    <aside class="workspace-surface repository-surface">
+        <header class="workspace-surface-header">
+            <span>Repository Explorer</span>
+            <span class="workspace-surface-meta">@Projects.Count project@(Projects.Count == 1 ? "" : "s")</span>
+        </header>
+
+        <div class="workspace-surface-body repository-tree">
+            @if (Projects.Count == 0)
+            {
+                <div class="workspace-empty-state">No structured repository observations are available.</div>
+            }
+            else
+            {
+                <ul class="tree-list tree-root-list">
+                    @foreach (var project in Projects)
+                    {
+                        <li class="tree-item">
+                            <div class="tree-row">
+                                <button type="button" class="tree-toggle" @onclick="() => ToggleProject(project.Name)">@((ExpandedProjects.Contains(project.Name)) ? "▼" : "▶")</button>
+                                <span class="tree-label tree-project">@project.Name</span>
+                            </div>
+
+                            @if (ExpandedProjects.Contains(project.Name))
+                            {
+                                <ul class="tree-list tree-child-list">
+                                    @foreach (var ns in project.Namespaces)
+                                    {
+                                        var namespaceId = GetNamespaceId(project.Name, ns.Name);
+                                        <li class="tree-item">
+                                            <div class="tree-row">
+                                                <button type="button" class="tree-toggle" @onclick="() => ToggleNamespace(namespaceId)">@((ExpandedNamespaces.Contains(namespaceId)) ? "▼" : "▶")</button>
+                                                <span class="tree-label tree-namespace">@ns.Name</span>
+                                            </div>
+
+                                            @if (ExpandedNamespaces.Contains(namespaceId))
+                                            {
+                                                <ul class="tree-list tree-child-list">
+                                                    @foreach (var type in ns.Types)
+                                                    {
+                                                        var typeId = GetTypeId(project.Name, ns.Name, type.Name);
+                                                        <li class="tree-item">
+                                                            <div class="tree-row">
+                                                                <button type="button" class="tree-toggle" @onclick="() => ToggleType(typeId)">@((ExpandedTypes.Contains(typeId)) ? "▼" : "▶")</button>
+                                                                <button type="button" class="tree-label tree-type @(ReferenceEquals(SelectedType, type) ? "is-selected" : "")" @onclick="() => SelectTypeAsync(type)">
+                                                                    @type.Name <span class="tree-kind">(@type.Kind)</span>
+                                                                </button>
+                                                            </div>
+
+                                                            @if (ExpandedTypes.Contains(typeId))
+                                                            {
+                                                                <ul class="tree-list tree-child-list">
+                                                                    @foreach (var member in type.Members)
+                                                                    {
+                                                                        <li class="tree-item">
+                                                                            <button type="button" class="tree-label tree-member @(ReferenceEquals(SelectedMember, member) ? "is-selected" : "")" @onclick="() => SelectMemberAsync(member)">
+                                                                                @member.Name
+                                                                            </button>
+                                                                        </li>
+                                                                    }
+                                                                </ul>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </aside>
+
+    <section class="workspace-surface work-area-surface">
+        <header class="workspace-surface-header">
+            <span>Work Area</span>
+            @if (SelectedType is not null || SelectedMember is not null)
+            {
+                <span class="workspace-surface-meta">@(SelectedType?.Name ?? SelectedMember?.Name)</span>
+            }
+        </header>
+
+        <div class="workspace-surface-body work-area-body">
+            @if (IsLoadingSource)
+            {
+                <div class="workspace-empty-state">Loading source…</div>
+            }
+            else if (SourceText is not null)
+            {
+                <div class="source-file-header">
+                    <span>@SelectedSourcePath</span>
+                </div>
+                <pre class="source-code"><code>@SourceText</code></pre>
+            }
+            else
+            {
+                <div class="workspace-empty-state">
+                    <strong>Select a type or member</strong>
+                    <span>Choose a source-backed type or member from the repository explorer to view its file.</span>
+                    @if (!string.IsNullOrWhiteSpace(SourceStatus))
+                    {
+                        <span class="workspace-status">@SourceStatus</span>
+                    }
+                </div>
+            }
+
+            @if (ShowUnderstanding)
+            {
+                <div class="workspace-secondary-context">
+                    <ProjectUnderstanding OnConversationStart="OnConversationStart" />
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="workspace-surface luna-surface">
+        <header class="workspace-surface-header">
+            <span>Luna</span>
+            <span class="workspace-surface-meta">Conversation</span>
+        </header>
+        <div class="luna-body">
+            <ConversationHost @ref="_conversationHost" />
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter] public Investigation? Investigation { get; set; }
+    [Parameter] public bool ShowUnderstanding { get; set; }
+    [Parameter] public EventCallback<string> OnConversationStart { get; set; }
+
+    private readonly List<ProjectNode> Projects = new();
+    private readonly HashSet<string> ExpandedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> ExpandedNamespaces = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> ExpandedTypes = new(StringComparer.OrdinalIgnoreCase);
+    private Guid? _treeInvestigationId;
+    private ConversationHost? _conversationHost;
+    private TypeNode? SelectedType { get; set; }
+    private MemberNode? SelectedMember { get; set; }
+    private string? SelectedSourcePath { get; set; }
+    private string? SourceText { get; set; }
+    private string SourceStatus { get; set; } = string.Empty;
+    private bool IsLoadingSource { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (_treeInvestigationId == Investigation?.Id)
+        {
+            return;
+        }
+
+        _treeInvestigationId = Investigation?.Id;
+        BuildTree();
+    }
+
+    public Task FocusComposerAsync() => _conversationHost?.FocusComposerAsync() ?? Task.CompletedTask;
+
+    public Task SetComposerPlaceholderAsync(string placeholder)
+        => _conversationHost?.SetComposerPlaceholderAsync(placeholder) ?? Task.CompletedTask;
+
+    private void BuildTree()
+    {
+        Projects.Clear();
+        ExpandedProjects.Clear();
+        ExpandedNamespaces.Clear();
+        ExpandedTypes.Clear();
+        SelectedType = null;
+        SelectedMember = null;
+        SelectedSourcePath = null;
+        SourceText = null;
+        SourceStatus = string.Empty;
+
+        if (Investigation is null)
+        {
+            return;
+        }
+
+        foreach (var observation in Investigation.NamespaceObservations)
+        {
+            var project = GetOrCreateProject(DisplayOrUnknown(observation.Project));
+            GetOrCreateNamespace(project, DisplayOrUnknown(observation.NamespaceName));
+        }
+
+        foreach (var observation in Investigation.TypeObservations)
+        {
+            var project = GetOrCreateProject(DisplayOrUnknown(observation.Project));
+            var ns = GetOrCreateNamespace(project, DisplayOrUnknown(observation.Namespace));
+            GetOrCreateType(ns, DisplayOrUnknown(observation.TypeName), observation.Kind.ToString().ToLowerInvariant(), null);
+        }
+
+        foreach (var observation in Investigation.MemberObservations)
+        {
+            var project = GetOrCreateProject(DisplayOrUnknown(observation.Project));
+            var ns = GetOrCreateNamespace(project, DisplayOrUnknown(observation.Namespace));
+            var type = GetOrCreateType(ns, DisplayOrUnknown(observation.Type), "class", observation.SourceFilePath);
+            if (string.IsNullOrWhiteSpace(observation.MemberName))
+            {
+                continue;
+            }
+
+            if (!type.Members.Any(m => string.Equals(m.Name, observation.MemberName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(m.SourceFilePath, observation.SourceFilePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                type.Members.Add(new MemberNode(observation.MemberName, observation.SourceFilePath));
+            }
+        }
+
+        foreach (var project in Projects)
+        {
+            project.Namespaces.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Name, right.Name));
+            foreach (var ns in project.Namespaces)
+            {
+                ns.Types.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Name, right.Name));
+                foreach (var type in ns.Types)
+                {
+                    type.Members.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Name, right.Name));
+                }
+            }
+        }
+
+        Projects.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Name, right.Name));
+    }
+
+    private ProjectNode GetOrCreateProject(string name)
+    {
+        var project = Projects.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (project is not null)
+        {
+            return project;
+        }
+
+        project = new ProjectNode(name);
+        Projects.Add(project);
+        return project;
+    }
+
+    private static NamespaceNode GetOrCreateNamespace(ProjectNode project, string name)
+    {
+        var ns = project.Namespaces.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (ns is not null)
+        {
+            return ns;
+        }
+
+        ns = new NamespaceNode(name);
+        project.Namespaces.Add(ns);
+        return ns;
+    }
+
+    private static TypeNode GetOrCreateType(NamespaceNode ns, string name, string kind, string? sourceFilePath)
+    {
+        var type = ns.Types.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (type is not null)
+        {
+            type.SetSourceFilePath(sourceFilePath);
+            return type;
+        }
+
+        type = new TypeNode(name, kind, sourceFilePath);
+        ns.Types.Add(type);
+        return type;
+    }
+
+    private void ToggleProject(string project)
+    {
+        Toggle(ExpandedProjects, project);
+    }
+
+    private void ToggleNamespace(string namespaceId)
+    {
+        Toggle(ExpandedNamespaces, namespaceId);
+    }
+
+    private void ToggleType(string typeId)
+    {
+        Toggle(ExpandedTypes, typeId);
+    }
+
+    private static void Toggle(HashSet<string> values, string value)
+    {
+        if (!values.Remove(value))
+        {
+            values.Add(value);
+        }
+    }
+
+    private Task SelectTypeAsync(TypeNode type)
+    {
+        SelectedType = type;
+        SelectedMember = null;
+        return LoadSourceAsync(type.SourceFilePath);
+    }
+
+    private Task SelectMemberAsync(MemberNode member)
+    {
+        SelectedType = null;
+        SelectedMember = member;
+        return LoadSourceAsync(member.SourceFilePath);
+    }
+
+    private async Task LoadSourceAsync(string? sourceFilePath)
+    {
+        SelectedSourcePath = null;
+        SourceText = null;
+        SourceStatus = string.Empty;
+        IsLoadingSource = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(sourceFilePath))
+            {
+                SourceStatus = "This item has no source path in the investigation.";
+                return;
+            }
+
+            var repositoryRoot = Investigation?.RepositoryPath;
+            if (string.IsNullOrWhiteSpace(repositoryRoot))
+            {
+                SourceStatus = "The active repository root is unavailable.";
+                return;
+            }
+
+            var root = Path.GetFullPath(repositoryRoot);
+            var candidate = Path.IsPathRooted(sourceFilePath)
+                ? sourceFilePath
+                : Path.Combine(root, sourceFilePath);
+            var fullPath = Path.GetFullPath(candidate);
+            var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar)
+                ? root
+                : root + Path.DirectorySeparatorChar;
+
+            if (!string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase)
+                && !fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
+            {
+                SourceStatus = "The selected source path is outside the active repository.";
+                return;
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                SourceStatus = "The selected source file is not available.";
+                return;
+            }
+
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length > 2 * 1024 * 1024)
+            {
+                SourceStatus = "The selected source file is too large for the read-only viewer.";
+                return;
+            }
+
+            SelectedSourcePath = fullPath;
+            SourceText = await File.ReadAllTextAsync(fullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            SourceStatus = "The selected source file could not be read.";
+        }
+        finally
+        {
+            IsLoadingSource = false;
+        }
+    }
+
+    private static string DisplayOrUnknown(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "<unknown>" : value;
+
+    private static string GetNamespaceId(string project, string ns) => $"{project}:{ns}";
+
+    private static string GetTypeId(string project, string ns, string type) => $"{project}:{ns}:{type}";
+
+    private sealed class ProjectNode
+    {
+        public ProjectNode(string name) => Name = name;
+        public string Name { get; }
+        public List<NamespaceNode> Namespaces { get; } = new();
+    }
+
+    private sealed class NamespaceNode
+    {
+        public NamespaceNode(string name) => Name = name;
+        public string Name { get; }
+        public List<TypeNode> Types { get; } = new();
+    }
+
+    private sealed class TypeNode
+    {
+        public TypeNode(string name, string kind, string? sourceFilePath)
+        {
+            Name = name;
+            Kind = kind;
+            SourceFilePath = sourceFilePath;
+        }
+
+        public string Name { get; }
+        public string Kind { get; }
+        public string? SourceFilePath { get; private set; }
+        public List<MemberNode> Members { get; } = new();
+
+        public void SetSourceFilePath(string? sourceFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(SourceFilePath) && !string.IsNullOrWhiteSpace(sourceFilePath))
+            {
+                SourceFilePath = sourceFilePath;
+            }
+        }
+    }
+
+    private sealed class MemberNode
+    {
+        public MemberNode(string name, string? sourceFilePath)
+        {
+            Name = name;
+            SourceFilePath = sourceFilePath;
+        }
+
+        public string Name { get; }
+        public string? SourceFilePath { get; }
+    }
+}

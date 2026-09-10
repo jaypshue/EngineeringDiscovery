@@ -1,0 +1,176 @@
+.launcher {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 40px 0;
+}
+
+.launcher-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.launcher-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text);
+}
+
+.launcher-subtitle {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+}
+
+.launcher-lead {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.launcher-back {
+    background: none;
+    border: none;
+    color: var(--link);
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    align-self: flex-start;
+}
+
+.launcher-paths {
+    display: flex;
+    gap: 16px;
+}
+
+.launcher-path {
+    flex: 1;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.launcher-path:hover {
+    border-color: var(--accent);
+    background: rgba(96, 165, 250, 0.04);
+}
+
+.launcher-path-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.launcher-path-desc {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.import-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.import-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.import-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.import-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.import-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.import-detected {
+    padding: 12px 16px;
+    background: rgba(96, 165, 250, 0.06);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.import-detected-type {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.import-detected-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.import-detected-projects {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.import-path-confirm {
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+}
+
+.import-path-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.import-path-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    word-break: break-all;
+    color: var(--text);
+}
+
+.import-action {
+    align-self: flex-start;
+    margin-top: 4px;
+}
+
+.import-status {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.import-status.error {
+    color: #ff6b6b;
+}
+
+@media (max-width: 600px) {
+    .launcher-paths {
+        flex-direction: column;
+    }
+}

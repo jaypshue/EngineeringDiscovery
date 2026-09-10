@@ -1,0 +1,62 @@
+.public-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+}
+
+.public-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: linear-gradient(90deg, #071025, #0b1220);
+}
+
+.public-logo,
+.public-logo:link,
+.public-logo:visited,
+.public-logo:hover {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text) !important;
+    text-decoration: none !important;
+}
+
+.public-nav {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.public-nav a,
+.public-nav a:link,
+.public-nav a:visited,
+.public-nav a:active {
+    color: var(--muted);
+    text-decoration: none !important;
+    font-size: 0.95rem;
+    transition: color 0.15s;
+}
+
+.public-nav a:hover {
+    color: var(--text);
+    text-decoration: none !important;
+}
+
+.public-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+}
+
+.public-footer {
+    padding: 16px 32px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+}

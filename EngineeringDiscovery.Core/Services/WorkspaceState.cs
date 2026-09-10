@@ -80,18 +80,40 @@ namespace EngineeringDiscovery.Core.Services
             try
             {
                 if (ActiveWorkspace is null) return EngineeringModelFreshness.Unknown;
-                if (ActiveWorkspace.Investigation is null) return EngineeringModelFreshness.Unknown;
-                // Use the repository path from the first imported repository when available. Legacy code
-                // used ActiveWorkspace.RepositoryPath as the canonical path; prefer ImportedRepositories now.
-                var repoPath = ActiveWorkspace.RepositoryPath;
-                if (ActiveWorkspace.ImportedRepositories != null && ActiveWorkspace.ImportedRepositories.Count > 0)
+
+                var activeProject = ActiveWorkspace.ActiveProject;
+                var linkedRepository = activeProject is null
+                    ? null
+                    : ActiveWorkspace.FindImportedRepositoryForProject(activeProject.Id);
+                var repoPath = linkedRepository?.RepositoryPath;
+                if (string.IsNullOrWhiteSpace(repoPath) && activeProject?.RepositoryPaths is not null)
                 {
-                    repoPath = ActiveWorkspace.ImportedRepositories[0].RepositoryPath;
+                    repoPath = activeProject.RepositoryPaths.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+                }
+                if (string.IsNullOrWhiteSpace(repoPath))
+                {
+                    repoPath = ActiveWorkspace.RepositoryPath;
+                }
+                if (string.IsNullOrWhiteSpace(repoPath) && ActiveWorkspace.ImportedRepositories is not null)
+                {
+                    repoPath = ActiveWorkspace.ImportedRepositories.FirstOrDefault()?.RepositoryPath;
                 }
                 if (string.IsNullOrWhiteSpace(repoPath)) return EngineeringModelFreshness.Unknown;
 
+                var investigation = linkedRepository?.Investigation ?? ActiveWorkspace.Investigation;
+                if (investigation is null && ActiveWorkspace.ImportedRepositories is not null)
+                {
+                    investigation = ActiveWorkspace.ImportedRepositories
+                        .FirstOrDefault(repository => Domain.Workspace.Workspace.PathsEqual(repository.RepositoryPath, repoPath))
+                        ?.Investigation;
+                }
+                if (investigation is null) return EngineeringModelFreshness.Unknown;
+
+                var builtUtc = linkedRepository?.LastBuiltUtc ?? ActiveWorkspace.LastBuiltUtc;
+                var fingerprint = linkedRepository?.RepositoryFingerprint ?? ActiveWorkspace.RepositoryFingerprint;
+
                 // Host-provided service evaluates freshness according to configured policy
-                var task = _fingerprintService.EvaluateFreshnessAsync(repoPath, ActiveWorkspace.LastBuiltUtc, ActiveWorkspace.RepositoryFingerprint);
+                var task = _fingerprintService.EvaluateFreshnessAsync(repoPath, builtUtc, fingerprint);
                 var result = task.GetAwaiter().GetResult();
                 return result switch
                 {
@@ -107,17 +129,33 @@ namespace EngineeringDiscovery.Core.Services
             }
         }
 
-        // Persistence delegated to IWorkspacePersistence implementation supplied by host
-        public void Save()
+        // Persistence delegated to IWorkspacePersistence implementation supplied by host.
+        // The boolean result is intentionally observable by workflows that must not present
+        // an in-memory-only operation as successful.
+        public bool Save()
         {
             try
             {
                 _persistence.SaveAsync(ActiveWorkspace).GetAwaiter().GetResult();
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore save failures; host logging can report if desired.
+                _logger?.LogError(ex, "Failed to persist workspace state.");
+                return false;
             }
+        }
+
+        /// <summary>
+        /// Persists current state and notifies listeners. The notification still occurs
+        /// when persistence fails so observers can surface the in-memory state transition;
+        /// callers can inspect the returned result when durability is required.
+        /// </summary>
+        public bool PersistAndNotify()
+        {
+            var persisted = Save();
+            NotifyStateChanged();
+            return persisted;
         }
 
         // Presentation wiring removed from Core in ED-205. Hosts should implement persistence adapters
@@ -159,6 +197,59 @@ namespace EngineeringDiscovery.Core.Services
             catch
             {
                 // Swallow migration failures to avoid preventing workspace activation
+            }
+
+            // Migration: if persisted workspace has legacy ProjectState but empty Projects list,
+            // create a Project from the legacy state and promote it.
+            try
+            {
+                if (workspace != null && workspace.ProjectState != null && (workspace.Projects == null || workspace.Projects.Count == 0))
+                {
+                    var legacyProject = new Domain.Workspace.Project
+                    {
+                        State = workspace.ProjectState,
+                        CreatedUtc = workspace.ProjectState.CreatedUtc,
+                        LastOpenedUtc = DateTime.UtcNow
+                    };
+
+                    // Migrate repository paths from ImportedRepositories to the project
+                    if (workspace.ImportedRepositories != null)
+                    {
+                        foreach (var repo in workspace.ImportedRepositories)
+                        {
+                            if (!string.IsNullOrWhiteSpace(repo.RepositoryPath))
+                            {
+                                legacyProject.RepositoryPaths.Add(repo.RepositoryPath);
+                            }
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(workspace.RepositoryPath))
+                    {
+                        legacyProject.RepositoryPaths.Add(workspace.RepositoryPath);
+                    }
+
+                    if (workspace.Projects == null) workspace.Projects = new System.Collections.Generic.List<Domain.Workspace.Project>();
+                    workspace.Projects.Add(legacyProject);
+                    workspace.ActiveProjectId = legacyProject.Id;
+
+                    // Clear legacy field to avoid dual-state (but keep for serialization compat)
+                    // workspace.ProjectState = null; // Uncomment once migration is confirmed stable
+                }
+            }
+            catch
+            {
+                // Swallow migration failures to avoid preventing workspace activation
+            }
+
+            // Establish the explicit folder-to-internal-project relationship after legacy
+            // repository/project migrations have completed.
+            try
+            {
+                workspace?.EstablishRepositoryProjectLinks();
+            }
+            catch
+            {
+                // Keep workspace activation resilient for malformed legacy data.
             }
 
             ActiveWorkspace = workspace;

@@ -1,255 +1,237 @@
 <UserControl x:Class="EngineeringDiscovery.Wpf.Views.EngineeringWorkspace"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             mc:Ignorable="d">
+             xmlns:views="clr-namespace:EngineeringDiscovery.Wpf.Views"
+             Background="{StaticResource BackgroundBrush}"
+             Foreground="{StaticResource PrimaryTextBrush}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="ConversationBusyVisibility" />
+        <BooleanToVisibilityConverter x:Key="PendingConfirmationVisibility" />
 
-    <!-- Engineering Workspace layout (EP-3)
-         Regions:
-           - Conversation (primary)
-           - Context (summary panel)
-           - Evidence (placeholder panel)
-         The control intentionally contains no engineering logic; it only presents areas where
-         the Engineering Partner's conversation and working memory will be surfaced.
-    -->
+        <Style x:Key="ConversationMessageBorder" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Speaker}" Value="You">
+                    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Speaker}" Value="EngineOS">
+                    <Setter Property="Background" Value="{StaticResource CardBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
 
     <Grid Background="{StaticResource BackgroundBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="0" />
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*" MinHeight="300" />
+            <RowDefinition Height="*" MinHeight="0" />
+        </Grid.RowDefinitions>
 
-        <!-- Conversation (primary) -->
-        <Border Grid.Column="0" Padding="16" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="0">
-            <StackPanel>
-                <DockPanel Margin="0,0,0,12">
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <TextBlock Text="Current Task" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="●" Margin="10,0,6,0" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="Active" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <Button DockPanel.Dock="Right"
-                            Content="Generate Plan"
-                            Style="{StaticResource AccentButton}"
-                            Command="{Binding EngineeringState.PrimaryActionCommand}" />
-                </DockPanel>
-
-                <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="Title" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox Text="{Binding Package.Purpose}" Margin="0,6,0,0" />
-
-                        <TextBlock Text="Goal" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,12,0,0" />
-                        <TextBox Text="{Binding EngineeringState.CurrentRecommendation}" Margin="0,6,0,0" Height="96" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
-                    </StackPanel>
-                </Border>
-
-                <TextBlock Text="Conversation" FontSize="20" FontWeight="Bold" Margin="0,0,0,12" Foreground="{StaticResource PrimaryTextBrush}" />
-                <Border x:Name="PART_Conversation" Background="{StaticResource CardBrush}" CornerRadius="4" Padding="12" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <!-- conversation history grows -->
-                            <RowDefinition Height="*" />
-                            <!-- fixed input area -->
-                            <RowDefinition Height="56" />
-                        </Grid.RowDefinitions>
-
-                        <!-- Conversation history: professional transcript style -->
-                        <ScrollViewer Grid.Row="0" x:Name="ConversationScroll" VerticalScrollBarVisibility="Auto" Padding="4">
-                        <ItemsControl x:Name="ConversationItems" ItemsSource="{Binding Conversation.Messages}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border x:Name="Bubble" CornerRadius="8" Padding="8" Margin="0,6,0,6" Background="{StaticResource EngineOSBackgroundBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Speaker}" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,6,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding Speaker}" Value="User">
-                                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBackgroundBrush}" />
-                                                <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Speaker}" Value="EngineOS">
-                                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource EngineOSBackgroundBrush}" />
-                                                <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-
-                        <!-- Fixed input area docked to bottom -->
-                        <Border Grid.Row="1" Background="{StaticResource CardBrush}" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrushColor}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="100" />
-                                </Grid.ColumnDefinitions>
-
-                                <TextBox x:Name="InputBox" Grid.Column="0" Height="36" VerticalContentAlignment="Center" AcceptsReturn="False" TextWrapping="NoWrap" HorizontalAlignment="Stretch"
-                                         Text="{Binding Conversation.Draft, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
-                                         Background="{StaticResource InputBackgroundBrush}"
-                                         BorderBrush="{StaticResource InputBorderBrush}"
-                                         Foreground="{StaticResource PrimaryTextBrush}"
-                                         Padding="8,4"
-                                         />
-                                <Button x:Name="SendButton" Grid.Column="1" Content="Send" Style="{StaticResource AccentButton}" Margin="12,0,0,0"
-                                        Command="{Binding Conversation.SendCommand}" />
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </Border>
-            </StackPanel>
+        <Border Grid.Row="0"
+                Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource BorderBrushColor}"
+                BorderThickness="1"
+                Margin="8,8,8,0"
+                Padding="12,8">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="ENGINEOS / PROJECT HEADER"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="{Binding RepositoryName, FallbackValue=Engineering Workspace}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryTextBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="300"
+                               Margin="0,1,0,0" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{Binding RepositoryPath}"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280"
+                               VerticalAlignment="Center"
+                               Margin="16,0,12,0" />
+                    <TextBlock Text="{Binding EngineeringState.CurrentReadiness}"
+                               Foreground="{StaticResource PrimaryTextBrush}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
         </Border>
 
-        <!-- Engineering Package region (presentation only) -->
-        <Border Grid.Column="0" Grid.Row="1" Margin="0,12,0,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1" CornerRadius="6" Padding="12" Visibility="Collapsed">
-            <!-- Package header: prominent status banner and compact status editor -->
-            <StackPanel>
-                <DockPanel LastChildFill="True">
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <Ellipse x:Name="StatusBadge" Width="18" Height="18" Fill="{StaticResource MutedTextBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Package.Status}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <!-- Engineering State summary (prominent) -->
-                    <StackPanel x:Name="EngineeringStateSummary" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="{Binding EngineeringState.CurrentPhase}" Foreground="{StaticResource SecondaryTextBrush}" />
-                            <TextBlock Text="{Binding EngineeringState.CurrentReadiness}" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="{Binding EngineeringState.CurrentRecommendation}" Foreground="{StaticResource SecondaryTextBrush}" />
-                            <Button Content="{Binding EngineeringState.PrimaryActionText}" Command="{Binding EngineeringState.PrimaryActionCommand}" Style="{StaticResource PrimaryButton}" />
-                        </StackPanel>
-                        <StackPanel Margin="12,0,0,0">
-                            <TextBlock Text="Repository Discovery" Foreground="{StaticResource SecondaryTextBrush}" />
-                            <ItemsControl ItemsSource="{Binding EngineeringState.Evidence}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource PrimaryTextBrush}" />
-                                            <TextBlock Text=": " Foreground="{StaticResource SecondaryTextBrush}" />
-                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </StackPanel>
-                </DockPanel>
+        <Grid Grid.Row="1" Margin="8,8,8,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2.2*" MinWidth="420" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="1*" MinWidth="300" />
+            </Grid.ColumnDefinitions>
 
-                <Grid Margin="8,12,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="1*" />
-                    </Grid.ColumnDefinitions>
+            <Border x:Name="PART_Conversation"
+                    Grid.Column="0"
+                    Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <!-- Left: artifact summary -->
-                    <StackPanel Grid.Column="0">
-                        <!-- Engineering Evidence summary -->
-                        <TextBlock Text="Engineering Evidence" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,8" />
-                        <ItemsControl ItemsSource="{Binding EngineeringState.Evidence}">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="CONVERSATION"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="Ask EngineOS about the project, current work, rounds, handoffs, and recorded evidence."
+                                       Foreground="{StaticResource PrimaryTextBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Conversation.StatusText}"
+                                   DockPanel.Dock="Right"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,0,0" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Conversation.Messages}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource SecondaryTextBrush}" Width="80" />
-                                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource PrimaryTextBrush}" />
-                                    </StackPanel>
+                                    <Border Style="{StaticResource ConversationMessageBorder}"
+                                            CornerRadius="4"
+                                            Padding="10"
+                                            Margin="0,3">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <DockPanel Grid.Row="0">
+                                                <TextBlock Text="{Binding Speaker}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentBrush}" />
+                                                <TextBlock Text="{Binding TimestampUtc, StringFormat=HH:mm}"
+                                                           Margin="8,0,0,0"
+                                                           Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </DockPanel>
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Text}"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{StaticResource PrimaryTextBrush}"
+                                                       FontSize="14"
+                                                       LineHeight="20"
+                                                       Margin="0,5,0,0" />
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </ScrollViewer>
 
-                        <TextBlock Text="{Binding Package.Purpose}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                    <Grid Grid.Row="2" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Grid.Column="0"
+                                     Width="90"
+                                     Height="4"
+                                     VerticalAlignment="Center"
+                                     IsIndeterminate="True"
+                                     Visibility="{Binding Conversation.IsBusy, Converter={StaticResource ConversationBusyVisibility}}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Conversation.StatusText}"
+                                   Margin="8,0,0,0"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
 
-                        <StackPanel Margin="0,12,0,0">
-                            <TextBlock Text="Context" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
-                            <ItemsControl ItemsSource="{Binding Package.ContextIncluded}" Margin="0,6,0,0">
-                                <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                    <TextBlock x:Name="IncludedGlyph" Text="✓" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,8,0" />
-                                    <TextBlock x:Name="MissingGlyph" Text="○" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,8,0" Visibility="Collapsed" />
-                                    <TextBlock Text="{Binding Text}" Foreground="{StaticResource PrimaryTextBrush}" />
-                                </StackPanel>
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding Included}" Value="False">
-                                        <Setter TargetName="IncludedGlyph" Property="Visibility" Value="Collapsed" />
-                                        <Setter TargetName="MissingGlyph" Property="Visibility" Value="Visible" />
-                                        <Setter TargetName="MissingGlyph" Property="Foreground" Value="{StaticResource MutedTextBrush}" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding Package.LastUpdated, StringFormat='Updated {0:g}'}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,12,0,0" />
-                    </StackPanel>
-
-                    <!-- Right: actions and version info -->
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                        <!-- Recommended Action: only one primary action presented at a time, driven by workspace state -->
-                        <Border Background="Transparent" Padding="6" Margin="0,0,0,8">
-                            <StackPanel>
-                                <TextBlock Text="Recommended Action" Foreground="{StaticResource SecondaryTextBrush}" />
-                                <TextBlock Text="{Binding Package.Status, Converter={StaticResource RecommendedActionConverter}}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryTextBrush}" />
+                    <Border Grid.Row="3"
+                            Background="{StaticResource BackgroundBrush}"
+                            BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="1"
+                            Padding="8"
+                            Margin="0,8,0,0"
+                            Visibility="{Binding Conversation.HasPendingConfirmation, Converter={StaticResource PendingConfirmationVisibility}}">
+                        <DockPanel>
+                            <Button Content="Confirm"
+                                    Command="{Binding Conversation.ConfirmActionCommand}"
+                                    DockPanel.Dock="Right"
+                                    Style="{StaticResource AccentButton}"
+                                    Padding="14,5"
+                                    ToolTip="Execute the confirmed Build or Test operation" />
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="{Binding Conversation.ConfirmationText}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="This confirmation is visible and deliberate. Conversation will execute only the confirmed Build or Test capability."
+                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0" />
                             </StackPanel>
-                        </Border>
-
-                        <!-- Primary action button (driven by workspace): binds to a command provided by the workspace via DataContext -->
-                        <Button x:Name="PrimaryActionButton" Style="{StaticResource PrimaryButton}" Content="{Binding PrimaryActionText}" Command="{Binding PrimaryActionCommand}" />
-
-                        <Button Style="{StaticResource AccentButton}" Content="Send to Copilot" Margin="0,8,0,0" Command="{Binding Package.SendToCopilotCommand}" />
-
-                        <StackPanel Margin="0,12,0,0">
-                            <TextBlock Text="Version" Foreground="{StaticResource SecondaryTextBrush}" />
-                            <TextBlock Text="{Binding Package.Version}" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
-                            <TextBlock Text="Reviewed" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" />
-                            <TextBlock Text="{Binding Package.ReviewedVersion}" Foreground="{StaticResource PrimaryTextBrush}" />
-                        </StackPanel>
-
-                        <TextBlock x:Name="NeedsReviewText" Text="⚠ Conversation changed since last review." Foreground="{StaticResource AccentBrush}" Visibility="{Binding Path=Package.Status, Converter={StaticResource NeedsReviewVisibilityConverter}}" Margin="0,12,0,0" />
-                    </StackPanel>
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- Right rail: Context and Evidence -->
-        <StackPanel Grid.Column="1" Margin="0" Background="{StaticResource PanelBackgroundBrush}" Orientation="Vertical" Visibility="Collapsed">
-            <!-- Context panel -->
-            <GroupBox Header="Context" Margin="0,0,0,12">
-                <StackPanel x:Name="PART_Context" Margin="4">
-                    <TextBlock Text="Current Investigation: (none)" Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="Current Understanding: (not available)" Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="Working Memory: summary placeholder" Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <!-- Repository summary -->
-                    <Border Margin="0,8,0,0" Padding="8" Background="{StaticResource SurfaceBrush}" CornerRadius="4">
-                        <StackPanel>
-                            <TextBlock Text="Repository" FontWeight="Bold" />
-                            <TextBlock Text="Name: {Binding RepositoryName}" Margin="0,4,0,0" />
-                            <TextBlock Text="Path: {Binding RepositoryPath}" Margin="0,2,0,0" FontStyle="Italic" />
-                            <TextBlock Text="Status: {Binding RepositoryStatus}" Margin="0,6,0,0" />
-                        </StackPanel>
+                        </DockPanel>
                     </Border>
-                    <Button Content="Discover Repository" Margin="0,8,0,0" Width="160" HorizontalAlignment="Left" Click="DiscoverRepository_Click" />
-                </StackPanel>
-            </GroupBox>
 
-            <!-- Evidence panel -->
-            <GroupBox Header="Evidence">
-                <StackPanel x:Name="PART_Evidence" Margin="4">
-                    <TextBlock Text="Repository" FontWeight="Bold" Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="Screenshots" FontWeight="Bold" Margin="0,6,0,0" Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="Logs" FontWeight="Bold" Margin="0,6,0,0" Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="Files" FontWeight="Bold" Margin="0,6,0,0" Foreground="{StaticResource PrimaryTextBrush}" />
-                    <TextBlock Text="(Evidence sources will be added incrementally)" Margin="0,12,0,0" FontStyle="Italic" Foreground="{StaticResource MutedTextBrush}" />
-                </StackPanel>
-            </GroupBox>
-        </StackPanel>
+                    <DockPanel Grid.Row="4" Margin="0,8,0,0">
+                        <Button Content="Send"
+                                Command="{Binding Conversation.SendCommand}"
+                                DockPanel.Dock="Right"
+                                Style="{StaticResource AccentButton}"
+                                Padding="16,7"
+                                MinWidth="72"
+                                ToolTip="Ask EngineOS about the loaded project" />
+                        <TextBox Text="{Binding Conversation.Draft, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="52"
+                                 MaxHeight="96"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Margin="0,0,8,0"
+                                 Padding="9"
+                                 FontSize="14"
+                                 Foreground="{StaticResource PrimaryTextBrush}"
+                                 Background="{StaticResource BackgroundBrush}"
+                                 BorderBrush="{StaticResource AccentBrush}"
+                                 ToolTip="Ask a question about the loaded project, current work, or recorded evidence" />
+                    </DockPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          Background="{StaticResource BorderBrushColor}" />
+
+            <views:EngineeringSteeringPanel Grid.Column="2"
+                                            DataContext="{Binding DevelopmentSurface.Steering}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Auto"
+                      CanContentScroll="False">
+            <views:DevelopmentSurface DataContext="{Binding DevelopmentSurface}" />
+        </ScrollViewer>
     </Grid>
-
 </UserControl>

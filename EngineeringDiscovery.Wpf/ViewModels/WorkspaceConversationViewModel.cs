@@ -1,12 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using EngineeringDiscovery.Core.Services;
 using EngineeringDiscovery.Core.Domain.EngineeringModel;
-using System.Diagnostics;
+using EngineeringDiscovery.Core.Services;
+using EngineeringDiscovery.Wpf.Models;
+using EngineeringDiscovery.Wpf.Services;
 
 namespace EngineeringDiscovery.Wpf.ViewModels
 {
@@ -15,6 +18,8 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         public string Speaker { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
         public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
+        public ConversationResponseKind ResponseKind { get; set; } = ConversationResponseKind.Informational;
+        public string? ProposedAction { get; set; }
     }
 
     public class AsyncRelayCommand : ICommand
@@ -48,10 +53,21 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         private static int _instanceCounter = 0;
         private readonly int _instanceId;
         private readonly IEngineeringPartner _partner;
+        private readonly IStructuredConversationPartner? _structuredPartner;
+        private readonly IConfirmedEngineeringOperationExecutor? _operationExecutor;
+        private readonly SemaphoreSlim _operationGate = new(1, 1);
+
+        private string _draft = string.Empty;
+        private string? _pendingAction;
+        private EngineeringOperationKind? _pendingOperation;
+        private bool _isSending;
+        private bool _isConfirming;
+        private bool _isInitializing;
+        private bool _initializationFailed;
+        private bool _initialized;
 
         public ObservableCollection<ConversationMessage> Messages { get; } = new ObservableCollection<ConversationMessage>();
 
-        private string _draft = string.Empty;
         public string Draft
         {
             get => _draft;
@@ -66,26 +82,82 @@ namespace EngineeringDiscovery.Wpf.ViewModels
             }
         }
 
-        private bool _isSending;
         public bool IsSending
         {
             get => _isSending;
             private set
             {
-                if (_isSending != value)
-                {
-                    _isSending = value;
-                    OnPropertyChanged(nameof(IsSending));
-                    (SendCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                }
+                if (_isSending == value) return;
+                _isSending = value;
+                OnPropertyChanged(nameof(IsSending));
+                NotifyBusyStateChanged();
+            }
+        }
+
+        public bool IsInitializing
+        {
+            get => _isInitializing;
+            private set
+            {
+                if (_isInitializing == value) return;
+                _isInitializing = value;
+                OnPropertyChanged(nameof(IsInitializing));
+                NotifyBusyStateChanged();
+            }
+        }
+
+        public bool IsConfirming
+        {
+            get => _isConfirming;
+            private set
+            {
+                if (_isConfirming == value) return;
+                _isConfirming = value;
+                OnPropertyChanged(nameof(IsConfirming));
+                OnPropertyChanged(nameof(IsBusy));
+                OnPropertyChanged(nameof(StatusText));
+                (SendCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (ConfirmActionCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+
+        public bool IsBusy => IsInitializing || IsSending || IsConfirming;
+
+        public string StatusText
+        {
+            get
+            {
+                if (IsInitializing) return "Connecting to EngineOS…";
+                if (IsSending) return "EngineOS is thinking…";
+                if (IsConfirming) return "Executing the confirmed operation…";
+                if (_initializationFailed) return "Conversation is unavailable. Send a message to retry.";
+                return !SessionId.HasValue || SessionId.Value == Guid.Empty ? "Ready to connect" : "Ready";
             }
         }
 
         public Guid? SessionId { get; private set; }
 
-        private bool _initialized = false;
-
         public ICommand SendCommand { get; }
+        public ICommand ConfirmActionCommand { get; }
+
+        public string? PendingAction
+        {
+            get => _pendingAction;
+            private set
+            {
+                if (_pendingAction == value) return;
+                _pendingAction = value;
+                OnPropertyChanged(nameof(PendingAction));
+                OnPropertyChanged(nameof(HasPendingConfirmation));
+                OnPropertyChanged(nameof(ConfirmationText));
+                (ConfirmActionCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+
+        public bool HasPendingConfirmation => !string.IsNullOrWhiteSpace(PendingAction);
+        public string ConfirmationText => HasPendingConfirmation
+            ? $"Confirmation required before: {PendingAction}"
+            : string.Empty;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -93,11 +165,21 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         // uses this to coordinate package lifecycle (mark Needs Review when appropriate).
         public event Action? MessagesChanged;
 
-        public WorkspaceConversationViewModel(IEngineeringPartner partner)
+        public WorkspaceConversationViewModel(
+            IEngineeringPartner partner,
+            IStructuredConversationPartner? structuredPartner = null,
+            IConfirmedEngineeringOperationExecutor? operationExecutor = null)
         {
-            _instanceId = System.Threading.Interlocked.Increment(ref _instanceCounter);
+            _instanceId = Interlocked.Increment(ref _instanceCounter);
             _partner = partner ?? throw new ArgumentNullException(nameof(partner));
-            SendCommand = new AsyncRelayCommand(async () => await SendCurrentMessageAsync(), () => !IsSending && !string.IsNullOrWhiteSpace(Draft));
+            _structuredPartner = structuredPartner ?? partner as IStructuredConversationPartner;
+            _operationExecutor = operationExecutor;
+            SendCommand = new AsyncRelayCommand(
+                SendCurrentMessageAsync,
+                () => !IsBusy && !string.IsNullOrWhiteSpace(Draft));
+            ConfirmActionCommand = new AsyncRelayCommand(
+                ConfirmPendingActionAsync,
+                () => HasPendingConfirmation && !IsConfirming);
 
             // Observe own Messages collection for changes and notify the host workspace via an event.
             Messages.CollectionChanged += (s, e) => OnMessagesChanged();
@@ -106,6 +188,20 @@ namespace EngineeringDiscovery.Wpf.ViewModels
         }
 
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        private void NotifyBusyStateChanged()
+        {
+            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged(nameof(StatusText));
+            (SendCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+
+        private void SetSession(Guid? sessionId)
+        {
+            SessionId = sessionId;
+            OnPropertyChanged(nameof(SessionId));
+            OnPropertyChanged(nameof(StatusText));
+        }
 
         private void OnMessagesChanged()
         {
@@ -116,94 +212,236 @@ namespace EngineeringDiscovery.Wpf.ViewModels
 
         public async Task InitializeAsync(string openingStatement = "")
         {
-            if (_initialized) return;
-            _initialized = true;
+            if (_initialized || IsInitializing) return;
 
-            Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} started");
+            await _operationGate.WaitAsync().ConfigureAwait(true);
             try
             {
+                if (_initialized) return;
+
+                IsInitializing = true;
+                _initializationFailed = false;
+                OnPropertyChanged(nameof(StatusText));
+
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} started");
                 Debug.WriteLine($"[ED-EP7] Calling StartSessionAsync from VM #{_instanceId} with openingStatement='{openingStatement}'");
                 var model = await _partner.StartSessionAsync(openingStatement);
-                SessionId = model?.Id ?? Guid.Empty;
-
-                if (model?.Conversation != null && model.Conversation.Any())
+                if (model is null)
                 {
-                    foreach (var e in model.Conversation)
+                    _initializationFailed = true;
+                    Messages.Add(new ConversationMessage
                     {
-                        Messages.Add(new ConversationMessage { Speaker = e.Speaker ?? string.Empty, Text = e.Message ?? string.Empty, TimestampUtc = e.TimestampUtc });
+                        Speaker = "Engineering Partner",
+                        Text = "Hello — the Engineering Partner is currently unavailable. You can still type a question and send it to retry the connection.",
+                        TimestampUtc = DateTime.UtcNow
+                    });
+                    return;
+                }
+
+                SetSession(model.Id);
+                if (model.Conversation != null && model.Conversation.Any())
+                {
+                    foreach (var entry in model.Conversation)
+                    {
+                        Messages.Add(new ConversationMessage
+                        {
+                            Speaker = entry.Speaker ?? string.Empty,
+                            Text = entry.Message ?? string.Empty,
+                            TimestampUtc = entry.TimestampUtc
+                        });
                     }
                 }
                 else
                 {
-                    Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "Good morning. What are we working on today?", TimestampUtc = DateTime.UtcNow });
+                    Messages.Add(new ConversationMessage
+                    {
+                        Speaker = "EngineOS",
+                        Text = "I’m ready to answer questions about the loaded project and its recorded engineering context.",
+                        TimestampUtc = DateTime.UtcNow
+                    });
                 }
 
-                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} Session created: {SessionId}");
+                _initialized = model.Id != Guid.Empty;
+                _initializationFailed = !_initialized;
+                OnPropertyChanged(nameof(StatusText));
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} session created: {SessionId}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} failed: " + ex);
-                Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "Hello — the Engineering Partner is currently unavailable. You can still type messages and they will be sent when the service returns.", TimestampUtc = DateTime.UtcNow });
+                _initializationFailed = true;
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} failed: {ex}");
+                Messages.Add(new ConversationMessage
+                {
+                    Speaker = "Engineering Partner",
+                    Text = "Hello — the Engineering Partner is currently unavailable. You can still type a question and send it to retry the connection.",
+                    TimestampUtc = DateTime.UtcNow
+                });
             }
-            Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} complete");
+            finally
+            {
+                IsInitializing = false;
+                _operationGate.Release();
+                Debug.WriteLine($"[ED-EP7] InitializeAsync #{_instanceId} complete");
+            }
         }
 
         public async Task SendCurrentMessageAsync()
         {
             var text = (Draft ?? string.Empty).Trim();
-            if (string.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text) || !await _operationGate.WaitAsync(0).ConfigureAwait(true))
             {
-                Debug.WriteLine("[ED-EP5.1] Ignored empty message send");
+                Debug.WriteLine("[ED-EP5.1] Ignored empty or concurrent message send");
                 return;
-            }
-
-            Debug.WriteLine("[ED-EP5.1] User message sending: " + text);
-
-            var userMsg = new ConversationMessage { Speaker = "You", Text = text, TimestampUtc = DateTime.UtcNow };
-            Messages.Add(userMsg);
-            Draft = string.Empty;
-
-            if (SessionId == null || SessionId == Guid.Empty)
-            {
-                try
-                {
-                    var m = await _partner.StartSessionAsync(string.Empty);
-                    SessionId = m?.Id ?? Guid.Empty;
-                    Debug.WriteLine("[ED-EP5.1] Session created on send: " + SessionId);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("[ED-EP5.1] Failed to start session on send: " + ex);
-                    Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "Unable to start session. Try again later.", TimestampUtc = DateTime.UtcNow });
-                    return;
-                }
             }
 
             IsSending = true;
             try
             {
-                Debug.WriteLine("[ED-EP5.1] Calling partner.SendMessageAsync");
-                var reply = await _partner.SendMessageAsync(SessionId.Value, text);
-                Debug.WriteLine("[ED-EP5.1] Partner response received");
-                if (!string.IsNullOrWhiteSpace(reply))
+                Debug.WriteLine("[ED-EP5.1] User message sending: " + text);
+                Messages.Add(new ConversationMessage { Speaker = "You", Text = text, TimestampUtc = DateTime.UtcNow });
+                Draft = string.Empty;
+
+                if (!SessionId.HasValue || SessionId.Value == Guid.Empty)
                 {
-                    Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = reply, TimestampUtc = DateTime.UtcNow });
+                    Debug.WriteLine("[ED-EP5.1] Retrying session creation on send");
+                    var model = await _partner.StartSessionAsync(string.Empty);
+                    if (model is null || model.Id == Guid.Empty)
+                    {
+                        throw new InvalidOperationException("The Engineering Partner did not return a valid session.");
+                    }
+
+                    SetSession(model.Id);
+                    _initialized = true;
+                    _initializationFailed = false;
+                }
+
+                Debug.WriteLine("[ED-EP-READONLY] Calling structured/read-only partner response");
+                StructuredConversationResult? structured = null;
+                string reply;
+                if (_structuredPartner is not null)
+                {
+                    structured = await _structuredPartner.SendStructuredReadOnlyMessageAsync(SessionId!.Value, text).ConfigureAwait(true);
+                    reply = structured.Reply;
                 }
                 else
                 {
-                    Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "(no reply was returned)", TimestampUtc = DateTime.UtcNow });
+                    reply = await _partner.SendReadOnlyMessageAsync(SessionId!.Value, text).ConfigureAwait(true);
                 }
+
+                SetPendingAction(structured);
+                Debug.WriteLine("[ED-EP-READONLY] Partner response received");
+                Messages.Add(new ConversationMessage
+                {
+                    Speaker = "EngineOS",
+                    Text = string.IsNullOrWhiteSpace(reply) ? "(no reply was returned)" : reply,
+                    TimestampUtc = DateTime.UtcNow,
+                    ResponseKind = structured?.Kind ?? ConversationResponseKind.Informational,
+                    ProposedAction = structured?.ProposedAction
+                });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[ED-EP5.1] Error during SendMessageAsync: " + ex);
-                Messages.Add(new ConversationMessage { Speaker = "Engineering Partner", Text = "An error occurred while sending the message. Please try again.", TimestampUtc = DateTime.UtcNow });
+                Debug.WriteLine("[ED-EP-READONLY] Error during SendReadOnlyMessageAsync: " + ex);
+                Messages.Add(new ConversationMessage
+                {
+                    Speaker = "EngineOS",
+                    Text = "I couldn’t answer that because the conversation service is unavailable. Please try again.",
+                    TimestampUtc = DateTime.UtcNow
+                });
             }
             finally
             {
                 IsSending = false;
+                _operationGate.Release();
             }
             Debug.WriteLine("[ED-EP5.1] Conversation updated");
         }
+
+        private void SetPendingAction(StructuredConversationResult? structured)
+        {
+            if (structured?.RequiresConfirmation == true)
+            {
+                PendingAction = structured.ProposedAction;
+                _pendingOperation = structured.Operation;
+                return;
+            }
+
+            PendingAction = null;
+            _pendingOperation = null;
+        }
+
+        private async Task ConfirmPendingActionAsync()
+        {
+            var action = PendingAction;
+            var operation = _pendingOperation;
+            if (string.IsNullOrWhiteSpace(action) || IsConfirming) return;
+
+            IsConfirming = true;
+            try
+            {
+                if (operation is not (EngineeringOperationKind.Build or EngineeringOperationKind.Test))
+                {
+                    AddExecutionMessage(
+                        $"I cannot execute {action} from Conversation yet. Only confirmed Build and Test operations are supported in this phase; nothing was run or changed.",
+                        action);
+                    return;
+                }
+
+                if (_operationExecutor is null)
+                {
+                    AddExecutionMessage(
+                        $"{FormatOperation(operation.Value)} could not be executed because the development operation surface is unavailable. No result was recorded and nothing was changed.",
+                        action);
+                    return;
+                }
+
+                DevelopmentCommandResult? result = await _operationExecutor.ExecuteAsync(operation.Value).ConfigureAwait(true);
+                AddExecutionMessage(FormatExecutionResult(operation.Value, result), action);
+            }
+            catch (Exception ex)
+            {
+                AddExecutionMessage(
+                    $"{FormatOperation(operation ?? EngineeringOperationKind.Build)} could not be completed: {ex.Message}. See Output and Problems for details.",
+                    action);
+            }
+            finally
+            {
+                PendingAction = null;
+                _pendingOperation = null;
+                IsConfirming = false;
+            }
+        }
+
+        private void AddExecutionMessage(string text, string action)
+        {
+            Messages.Add(new ConversationMessage
+            {
+                Speaker = "EngineOS",
+                Text = text,
+                TimestampUtc = DateTime.UtcNow,
+                ResponseKind = ConversationResponseKind.Informational,
+                ProposedAction = action
+            });
+        }
+
+        private static string FormatExecutionResult(EngineeringOperationKind operation, DevelopmentCommandResult? result)
+        {
+            var label = FormatOperation(operation);
+            if (result is null)
+            {
+                return $"{label} could not be executed. No result was available; see Output and Problems for details.";
+            }
+
+            return result.Succeeded
+                ? $"{label} completed successfully. See Output and Results for the captured evidence."
+                : $"{label} failed. See Output and Problems for details.";
+        }
+
+        private static string FormatOperation(EngineeringOperationKind operation) => operation switch
+        {
+            EngineeringOperationKind.Build => "Build",
+            EngineeringOperationKind.Test => "Tests",
+            _ => operation.ToString()
+        };
     }
 }

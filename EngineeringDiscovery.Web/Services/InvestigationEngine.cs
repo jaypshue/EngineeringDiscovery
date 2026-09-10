@@ -151,25 +151,31 @@ namespace EngineeringDiscovery.Web.Services
                 {
                     var repoRoot = effectiveRepositoryRoot ?? Path.GetDirectoryName(effectiveSolutionPath) ?? string.Empty;
                     Console.WriteLine($"[PROV-DIAG] RepositoryLoader.Load called with repoRoot='{repoRoot}' Exists={System.IO.Directory.Exists(repoRoot)}");
+                    var diagPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "engineos-pipeline-diag.txt");
+                    try { System.IO.File.WriteAllText(diagPath, $"Pipeline start: {DateTime.UtcNow:o}\nrepoRoot={repoRoot}\nExists={System.IO.Directory.Exists(repoRoot)}\n"); } catch { }
                     var contexts = loader.Load(repoRoot);
                     Console.WriteLine($"[PROV-DIAG] RepositoryLoader.Load returned { (contexts==null?0:contexts.Count) } CompilationContexts for repoRoot='{repoRoot}'");
+                    try { System.IO.File.AppendAllText(diagPath, $"CompilationContexts returned: {contexts?.Count ?? 0}\n"); } catch { }
                     if (contexts != null)
                     {
                         foreach (var c in contexts)
                         {
                             try
                             {
-                                var sourceRootsCount = 0;
-                                try { sourceRootsCount = c.JavaLayout != null ? c.JavaLayout.SourceRoots.Count : 0; } catch { }
-                                Console.WriteLine($"[PROV-DIAG] CompilationContext: Language={c.Language} ProjectFilePath={c.ProjectFilePath} SourceRoots={sourceRootsCount}");
+                                var typesCount = c.Types?.Count ?? 0;
+                                var membersCount = c.MemberDescriptors?.Count ?? 0;
+                                var nsCount = c.NamespaceObservations?.Count ?? 0;
+                                Console.WriteLine($"[PROV-DIAG] CompilationContext: Language={c.Language} ProjectName={c.ProjectName} ProjectFilePath={c.ProjectFilePath} Types={typesCount} Members={membersCount} Namespaces={nsCount}");
+                                try { System.IO.File.AppendAllText(diagPath, $"  Context: Lang={c.Language} Project={c.ProjectName} Path={c.ProjectFilePath} Types={typesCount} Members={membersCount} NS={nsCount}\n"); } catch { }
                             }
                             catch { }
                         }
                     }
 
                     foreach (var c in contexts) try { context.CompilationContexts.Add(c); } catch { }
+                    try { System.IO.File.AppendAllText(diagPath, $"context.CompilationContexts.Count after add: {context.CompilationContexts.Count}\n"); } catch { }
                 }
-                catch { }
+                catch (Exception ex) { try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "engineos-pipeline-diag.txt"), $"RepositoryLoader EXCEPTION: {ex.GetType().Name}: {ex.Message}\n"); } catch { } }
 
                 var pipeline = new InvestigationPipeline()
                     .Add(new ProjectClassificationStep(inv))
@@ -184,6 +190,7 @@ namespace EngineeringDiscovery.Web.Services
                     .Add(new LayerAnalysisStep(inv));
 
                 pipeline.Execute(context);
+                try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "engineos-pipeline-diag.txt"), $"After pipeline.Execute:\n  inv.TypeObservations={inv.TypeObservations?.Count ?? 0}\n  inv.NamespaceObservations={inv.NamespaceObservations?.Count ?? 0}\n  inv.MemberObservations={inv.MemberObservations?.Count ?? 0}\n  inv.Findings={inv.Findings?.Count ?? 0}\n  inv.Artifacts={inv.Artifacts?.Count ?? 0}\n  inv.RelationshipGraph={(inv.RelationshipGraph != null ? "present" : "null")}\n  inv.RepositoryMetrics={(inv.RepositoryMetrics != null ? "present" : "null")}\n"); } catch { }
             }
             catch { }
 

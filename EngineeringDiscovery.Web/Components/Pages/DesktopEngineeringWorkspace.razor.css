@@ -1,0 +1,232 @@
+.desktop-engineering-workspace {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) minmax(340px, 360px);
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    color: var(--text);
+}
+
+.workspace-surface {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    background: rgba(11, 18, 32, 0.72);
+}
+
+.workspace-surface-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.workspace-surface-meta {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace-surface-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.repository-tree,
+.work-area-body {
+    overflow: auto;
+}
+
+.repository-tree {
+    padding: 8px;
+}
+
+.tree-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tree-child-list {
+    margin-left: 14px;
+}
+
+.tree-item {
+    min-width: 0;
+}
+
+.tree-row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 26px;
+    gap: 4px;
+}
+
+.tree-toggle {
+    width: 20px;
+    flex: 0 0 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.68rem;
+    text-align: center;
+}
+
+.tree-label {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    padding: 4px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-project,
+.tree-namespace {
+    cursor: default;
+}
+
+.tree-type {
+    cursor: pointer;
+}
+
+.tree-project {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.tree-kind {
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.tree-member {
+    width: 100%;
+    cursor: pointer;
+}
+
+.tree-type:hover,
+.tree-type.is-selected,
+.tree-member:hover,
+.tree-member.is-selected {
+    border-radius: 4px;
+    background: rgba(96, 165, 250, 0.1);
+    color: var(--accent);
+}
+
+.work-area-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.source-file-header {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.source-code {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 100%;
+    margin: 0;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.12);
+    color: var(--text);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.workspace-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 160px;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.workspace-empty-state strong {
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.workspace-status {
+    max-width: 360px;
+    color: var(--muted);
+    font-size: 0.76rem;
+}
+
+.workspace-secondary-context {
+    flex: 0 0 auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.luna-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px;
+}
+
+::deep .luna-body .conversation-host {
+    height: 100%;
+    min-height: 0;
+}
+
+@media (max-width: 1100px) {
+    .desktop-engineering-workspace {
+        grid-template-columns: 220px minmax(0, 1fr) minmax(320px, 340px);
+    }
+}
+
+@media (max-width: 820px) {
+    .desktop-engineering-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(180px, 28vh) minmax(260px, 1fr) minmax(360px, 48vh);
+        overflow-y: auto;
+    }
+
+    .workspace-surface {
+        min-height: 0;
+    }
+}
