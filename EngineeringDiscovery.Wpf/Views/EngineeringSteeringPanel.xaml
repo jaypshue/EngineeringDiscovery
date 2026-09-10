@@ -142,7 +142,7 @@
                            FontWeight="SemiBold"
                            Foreground="{StaticResource AccentBrush}"
                            Margin="0,12,0,0" />
-                <TextBox Text="{Binding AgentOutputText}"
+                <TextBox Text="{Binding AgentOutputText, Mode=OneWay}"
                          IsReadOnly="True"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
