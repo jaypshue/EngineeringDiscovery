@@ -140,6 +140,31 @@
             <Setter Property="Padding" Value="12,7" />
             <Setter Property="Margin" Value="2,2,0,0" />
             <Setter Property="Opacity" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="WorkbenchTabHeader"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="{TemplateBinding Margin}">
+                            <ContentPresenter x:Name="WorkbenchTabHeaderContent"
+                                              ContentSource="Header"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="WorkbenchTabHeader" Property="Background" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="WorkbenchTabHeader" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="WorkbenchTabHeaderContent" Property="TextElement.Foreground" Value="{StaticResource AccentForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{StaticResource BorderBrushColor}" />

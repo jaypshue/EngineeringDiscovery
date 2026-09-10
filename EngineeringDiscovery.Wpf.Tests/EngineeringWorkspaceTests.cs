@@ -159,6 +159,14 @@ namespace EngineeringDiscovery.Wpf.Tests
             Assert.Contains("Trigger Property=\"IsSelected\"", content);
             Assert.Contains("FontWeight\" Value=\"Bold\"", content);
             Assert.Contains("Background\" Value=\"{StaticResource AccentBrush}\"", content);
+            Assert.Contains("<Setter Property=\"Template\">", content);
+            Assert.Contains("<ControlTemplate TargetType=\"TabItem\">", content);
+            Assert.Contains("Background=\"{TemplateBinding Background}\"", content);
+            Assert.Contains("BorderBrush=\"{TemplateBinding BorderBrush}\"", content);
+            Assert.Contains("Padding=\"{TemplateBinding Padding}\"", content);
+            Assert.Contains("ContentSource=\"Header\"", content);
+            Assert.Contains("TargetName=\"WorkbenchTabHeader\" Property=\"Background\" Value=\"{StaticResource AccentBrush}\"", content);
+            Assert.Contains("TargetName=\"WorkbenchTabHeaderContent\" Property=\"TextElement.Foreground\" Value=\"{StaticResource AccentForegroundBrush}\"", content);
             Assert.DoesNotContain("<RowDefinition Height=\"240\"", content);
             Assert.Contains("Tag=\"{x:Static models:DevelopmentWorkbenchView.Files}\"", content);
             Assert.Contains("Tag=\"{x:Static models:DevelopmentWorkbenchView.Search}\"", content);
