@@ -125,6 +125,11 @@ namespace EngineeringDiscovery.Wpf.Tests
             Assert.Contains("HumanAttention", content);
             Assert.Contains("Generate Prompt", content);
             Assert.Contains("GeneratePromptCommand", content);
+            Assert.Contains("Send to Coding Agent", content);
+            Assert.Contains("SendToCodingAgentCommand", content);
+            Assert.Contains("Cancel Coding Agent", content);
+            Assert.Contains("AgentStatus", content);
+            Assert.Contains("AgentResponseText", content);
             Assert.DoesNotContain("Execute Round", content);
             Assert.DoesNotContain("SendMessageAsync", content);
         }

@@ -39,14 +39,15 @@ public sealed class DevelopmentSurfaceViewModel : ObservableObject, IDisposable,
         WorkspaceState workspaceState,
         IRepositoryFileService fileService,
         IGitChangesService gitChangesService,
-        IDevelopmentCommandService commandService)
+        IDevelopmentCommandService commandService,
+        ICodingAgentHandoffService? codingAgentHandoffService = null)
     {
         _stateQuery = stateQuery ?? throw new ArgumentNullException(nameof(stateQuery));
         _workspaceState = workspaceState ?? throw new ArgumentNullException(nameof(workspaceState));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _gitChangesService = gitChangesService ?? throw new ArgumentNullException(nameof(gitChangesService));
         _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
-        Steering = new EngineeringSteeringViewModel(_stateQuery, _workspaceState);
+        Steering = new EngineeringSteeringViewModel(_stateQuery, _workspaceState, codingAgentHandoffService);
 
         OpenDocuments = new ObservableCollection<DocumentViewModel>();
         RootNodes = new ObservableCollection<RepositoryFileNode>();

@@ -50,6 +50,9 @@ namespace EngineeringDiscovery.Wpf
                     services.AddSingleton<EngineeringDiscovery.Wpf.Services.IRepositoryFileService, EngineeringDiscovery.Wpf.Services.RepositoryFileService>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.Services.IGitChangesService, EngineeringDiscovery.Wpf.Services.GitChangesService>();
                     services.AddSingleton<EngineeringDiscovery.Wpf.Services.IDevelopmentCommandService, EngineeringDiscovery.Wpf.Services.DevelopmentCommandService>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.ICodingAgentProcessRunner, EngineeringDiscovery.Core.Services.SystemCodingAgentProcessRunner>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.ICodingAgentProvider, EngineeringDiscovery.Core.Services.CopilotCodingAgentProvider>();
+                    services.AddSingleton<EngineeringDiscovery.Core.Services.ICodingAgentHandoffService, EngineeringDiscovery.Core.Services.CodingAgentHandoffService>();
                     services.AddSingleton<EngineeringDiscovery.Core.Services.IEngineeringOperationGateway, EngineeringDiscovery.Wpf.Services.WpfEngineeringOperationGateway>();
 
                     // Production repo fingerprint service

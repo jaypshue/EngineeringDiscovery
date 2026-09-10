@@ -13,6 +13,7 @@ namespace EngineeringDiscovery.Core.Domain.Iteration
             EvidenceReference = string.Empty;
             Assessment = string.Empty;
             NextAction = string.Empty;
+            AgentResponseArtifact = null;
             CreatedUtc = DateTime.UtcNow;
         }
 
@@ -23,6 +24,7 @@ namespace EngineeringDiscovery.Core.Domain.Iteration
         public string EvidenceReference { get; set; }
         public string Assessment { get; set; }
         public string NextAction { get; set; }
+        public CodingAgentResponseArtifact? AgentResponseArtifact { get; set; }
         public DateTime CreatedUtc { get; set; }
     }
 }

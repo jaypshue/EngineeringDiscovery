@@ -1,6 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,13 +17,14 @@ namespace EngineeringDiscovery.Wpf.ViewModels;
 
 /// <summary>
 /// Read-only WPF projection of engineering direction and round history.
-/// It deliberately does not execute a round: Phase 1 establishes the steering
-/// workflow while repository commands and agent execution remain separate concerns.
+/// It owns the explicit user-initiated coding-agent handoff state, but does not
+/// approve, assess, or automatically continue agent work.
 /// </summary>
 public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
 {
     private readonly IEngineeringStateQuery _stateQuery;
     private readonly WorkspaceState _workspaceState;
+    private readonly ICodingAgentHandoffService? _codingAgentHandoffService;
     private HandoffState? _promptHandoff;
     private string _currentDirection = "No current direction established.";
     private string _currentTaskTitle = string.Empty;
@@ -43,17 +47,33 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
     private string _currentRoundAgentResponse = "No agent response captured.";
     private string _currentRoundAssessment = "No EngineOS assessment recorded.";
     private Guid? _promptRoundId;
+    private Guid? _promptStepId;
     private bool _hasPromptArtifact;
     private bool _disposed;
     private bool _hasDevelopmentRounds;
+    private bool _isAgentWorking;
+    private string _agentStatus = "Generate a prompt before sending it to a coding agent.";
+    private string _agentOutputText = "No agent output captured.";
+    private string _agentResponseText = "No agent response captured.";
+    private string _agentResponseStatus = "No response captured.";
+    private string _agentResponseProvider = string.Empty;
+    private string _agentResponseAssociation = "No agent response recorded.";
+    private CodingAgentResponseArtifact? _agentResponseArtifact;
+    private CancellationTokenSource? _agentCts;
 
-    public EngineeringSteeringViewModel(IEngineeringStateQuery stateQuery, WorkspaceState workspaceState)
+    public EngineeringSteeringViewModel(
+        IEngineeringStateQuery stateQuery,
+        WorkspaceState workspaceState,
+        ICodingAgentHandoffService? codingAgentHandoffService = null)
     {
         _stateQuery = stateQuery ?? throw new ArgumentNullException(nameof(stateQuery));
         _workspaceState = workspaceState ?? throw new ArgumentNullException(nameof(workspaceState));
+        _codingAgentHandoffService = codingAgentHandoffService;
 
         DevelopmentRounds = new ObservableCollection<DevelopmentRoundViewModel>();
         GeneratePromptCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(GeneratePrompt, CanGeneratePrompt);
+        SendToCodingAgentCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(SendToCodingAgentAsync, () => CanSendToCodingAgent);
+        CancelCodingAgentCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(CancelCodingAgent, () => IsAgentWorking);
 
         _workspaceState.OnChange += WorkspaceState_OnChange;
         Refresh();
@@ -74,6 +94,64 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
     public bool HasNoDevelopmentRounds => !HasDevelopmentRounds;
 
     public ICommand GeneratePromptCommand { get; }
+    public ICommand SendToCodingAgentCommand { get; }
+    public ICommand CancelCodingAgentCommand { get; }
+
+    public bool HasRepository => Directory.Exists(ResolveRepositoryPath());
+
+    public bool IsAgentWorking
+    {
+        get => _isAgentWorking;
+        private set
+        {
+            if (!SetProperty(ref _isAgentWorking, value)) return;
+            OnPropertyChanged(nameof(CanSendToCodingAgent));
+            (CancelCodingAgentCommand as CommunityToolkit.Mvvm.Input.RelayCommand)?.NotifyCanExecuteChanged();
+            (SendToCodingAgentCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand)?.NotifyCanExecuteChanged();
+        }
+    }
+
+    public bool CanSendToCodingAgent =>
+        _codingAgentHandoffService is not null &&
+        HasPromptArtifact &&
+        HasRepository &&
+        !IsAgentWorking;
+
+    public string AgentStatus
+    {
+        get => _agentStatus;
+        private set => SetProperty(ref _agentStatus, value);
+    }
+
+    public string AgentOutputText
+    {
+        get => _agentOutputText;
+        private set => SetProperty(ref _agentOutputText, value);
+    }
+
+    public string AgentResponseText
+    {
+        get => _agentResponseText;
+        private set => SetProperty(ref _agentResponseText, value);
+    }
+
+    public string AgentResponseStatus
+    {
+        get => _agentResponseStatus;
+        private set => SetProperty(ref _agentResponseStatus, value);
+    }
+
+    public string AgentResponseProvider
+    {
+        get => _agentResponseProvider;
+        private set => SetProperty(ref _agentResponseProvider, value);
+    }
+
+    public string AgentResponseAssociation
+    {
+        get => _agentResponseAssociation;
+        private set => SetProperty(ref _agentResponseAssociation, value);
+    }
 
     public string CurrentDirection
     {
@@ -154,6 +232,8 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
         {
             if (!SetProperty(ref _hasPromptArtifact, value)) return;
             OnPropertyChanged(nameof(HasNoPromptArtifact));
+            OnPropertyChanged(nameof(CanSendToCodingAgent));
+            (SendToCodingAgentCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand)?.NotifyCanExecuteChanged();
         }
     }
 
@@ -285,6 +365,7 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
 
         var reviewRound = activeRound ?? iterations.LastOrDefault();
         UpdateRoundReview(reviewRound);
+        RestoreAgentResponseArtifact(reviewRound);
         RestorePromptArtifact(iterations, activeRound);
 
         var currentHandoff = _stateQuery.GetCurrentHandoff();
@@ -303,7 +384,10 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
 
         UpdateConfidenceAndAttention(lifecycle, openIssues, engagements);
         UpdatePromptState();
+        OnPropertyChanged(nameof(HasRepository));
+        OnPropertyChanged(nameof(CanSendToCodingAgent));
         (GeneratePromptCommand as CommunityToolkit.Mvvm.Input.RelayCommand)?.NotifyCanExecuteChanged();
+        (SendToCodingAgentCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
     private void UpdateRoundReview(EngineeringIteration? round)
@@ -312,15 +396,51 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
         CurrentRoundSummary = string.IsNullOrWhiteSpace(step?.HumanObservation)
             ? "No round summary recorded."
             : step.HumanObservation;
-        CurrentRoundAgentResponse = string.IsNullOrWhiteSpace(step?.CopilotResponse)
-            ? "No agent response captured."
-            : step.CopilotResponse;
+        var response = step?.AgentResponseArtifact?.Response;
+        CurrentRoundAgentResponse = !string.IsNullOrWhiteSpace(response)
+            ? response
+            : string.IsNullOrWhiteSpace(step?.CopilotResponse)
+                ? "No agent response captured."
+                : step.CopilotResponse;
         CurrentRoundAssessment = string.IsNullOrWhiteSpace(step?.Assessment)
             ? "No EngineOS assessment recorded."
             : step.Assessment;
         CurrentRoundChanges = "Not captured in the round record. Use Changes evidence.";
         CurrentRoundTests = "Not captured in the round record. Use Results evidence.";
         CurrentRoundProblems = "Not captured in the round record. Use Problems evidence.";
+    }
+
+    private void RestoreAgentResponseArtifact(EngineeringIteration? round)
+    {
+        if (IsAgentWorking) return;
+        var artifact = round?.Steps?
+            .LastOrDefault(step => step.AgentResponseArtifact is not null)
+            ?.AgentResponseArtifact;
+        if (artifact is null)
+        {
+            _agentResponseArtifact = null;
+            AgentResponseProvider = string.Empty;
+            AgentResponseText = "No agent response captured.";
+            AgentResponseStatus = "No response captured.";
+            AgentResponseAssociation = "No agent response recorded.";
+            if (!IsAgentWorking) AgentStatus = "No agent response captured.";
+            OnPropertyChanged(nameof(CanSendToCodingAgent));
+            (SendToCodingAgentCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand)?.NotifyCanExecuteChanged();
+            return;
+        }
+
+        _agentResponseArtifact = artifact;
+        AgentResponseProvider = artifact.Provider;
+        AgentResponseText = string.IsNullOrWhiteSpace(artifact.Response)
+            ? artifact.FailureReason ?? "No agent response captured."
+            : artifact.Response;
+        AgentResponseStatus = FormatAgentStatus(artifact.Status, artifact.FailureReason);
+        AgentResponseAssociation = round is null
+            ? "Response not associated with a development round."
+            : "Response preserved in the current development round.";
+        AgentStatus = AgentResponseStatus;
+        OnPropertyChanged(nameof(CanSendToCodingAgent));
+        (SendToCodingAgentCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
     private void RestorePromptArtifact(
@@ -334,6 +454,7 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
             PromptText = promptStep.Prompt;
             HasPromptArtifact = true;
             _promptRoundId = activeRound!.Id;
+            _promptStepId = promptStep.Id;
             PromptAssociation = $"Preserved in Round {iterations.ToList().IndexOf(activeRound) + 1}.";
             PromptStatus = "Prompt preserved in the current round.";
             return;
@@ -344,6 +465,7 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
         PromptText = "Generate a prompt when a handoff is available.";
         HasPromptArtifact = false;
         _promptRoundId = null;
+        _promptStepId = null;
         PromptAssociation = "No round prompt recorded.";
     }
 
@@ -403,6 +525,119 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
 
     private bool CanGeneratePrompt() => _promptHandoff is not null;
 
+    private async Task SendToCodingAgentAsync()
+    {
+        if (!CanSendToCodingAgent || _codingAgentHandoffService is null) return;
+
+        var repositoryPath = ResolveRepositoryPath();
+        if (string.IsNullOrWhiteSpace(repositoryPath) || !Directory.Exists(repositoryPath))
+        {
+            AgentStatus = "Failed: the selected repository/workspace does not exist.";
+            return;
+        }
+
+        _agentCts?.Dispose();
+        _agentCts = new CancellationTokenSource();
+        IsAgentWorking = true;
+        AgentStatus = "Working: starting the configured coding agent…";
+        AgentOutputText = "";
+        AgentResponseText = "Waiting for the coding agent response…";
+        AgentResponseStatus = "Running";
+        AgentResponseProvider = string.Empty;
+        AgentResponseAssociation = "Response will be associated with the current development round when one exists.";
+
+        Action<CodingAgentOutputChunk> output = AppendAgentOutput;
+
+        try
+        {
+            var result = await _codingAgentHandoffService.SubmitAsync(
+                new CodingAgentHandoffRequest(
+                    PromptText,
+                    repositoryPath,
+                    DevelopmentRoundId: _promptRoundId,
+                    DevelopmentStepId: _promptStepId),
+                output,
+                _agentCts.Token).ConfigureAwait(true);
+
+            _agentResponseArtifact = result.Artifact;
+            AgentResponseProvider = result.Artifact.Provider;
+            AgentResponseText = string.IsNullOrWhiteSpace(result.Artifact.Response)
+                ? result.Artifact.FailureReason ?? "No agent response captured."
+                : result.Artifact.Response;
+            AgentResponseStatus = FormatAgentStatus(result.Artifact.Status, result.Artifact.FailureReason);
+            AgentResponseAssociation = result.AssociatedRoundId.HasValue
+                ? result.ArtifactPersisted
+                    ? "Response preserved in the current development round."
+                    : "Response captured, but round persistence failed."
+                : "Response captured; no active development round record exists.";
+            AgentStatus = result.Artifact.Status switch
+            {
+                CodingAgentExecutionStatus.Succeeded => result.AssociatedRoundId.HasValue
+                    ? result.ArtifactPersisted
+                        ? "Completed: coding-agent response captured and preserved."
+                        : "Completed: coding-agent response captured; persistence failed."
+                    : "Completed: coding-agent response captured; no active round record exists.",
+                CodingAgentExecutionStatus.Cancelled => "Cancelled: coding-agent handoff stopped by the user.",
+                CodingAgentExecutionStatus.TimedOut => "Timed out: coding-agent handoff exceeded its configured limit.",
+                _ => $"Failed: {result.Artifact.FailureReason ?? "coding-agent provider failure."}"
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            AgentResponseStatus = "Cancelled";
+            AgentResponseText = "Coding-agent handoff was cancelled by the user.";
+            AgentStatus = "Cancelled: coding-agent handoff stopped by the user.";
+        }
+        catch (Exception ex)
+        {
+            AgentResponseStatus = "Failed";
+            AgentResponseText = ex.Message;
+            AgentStatus = $"Failed: {ex.Message}";
+        }
+        finally
+        {
+            IsAgentWorking = false;
+            _agentCts?.Dispose();
+            _agentCts = null;
+        }
+    }
+
+    private void AppendAgentOutput(CodingAgentOutputChunk chunk)
+    {
+        void Append()
+        {
+            var prefix = chunk.IsError ? "[stderr] " : string.Empty;
+            var line = prefix + chunk.Text;
+            AgentOutputText = string.IsNullOrEmpty(AgentOutputText)
+                ? line
+                : AgentOutputText + Environment.NewLine + line;
+        }
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) Append();
+        else dispatcher.Invoke(Append);
+    }
+
+    private void CancelCodingAgent()
+    {
+        if (!IsAgentWorking) return;
+        AgentStatus = "Cancelling coding-agent handoff…";
+        _agentCts?.Cancel();
+    }
+
+    private string ResolveRepositoryPath() =>
+        _stateQuery.GetWorkspaceContext()?.RepositoryPath
+        ?? _workspaceState.ActiveWorkspace?.RepositoryPath
+        ?? string.Empty;
+
+    private static string FormatAgentStatus(CodingAgentExecutionStatus status, string? failureReason) => status switch
+    {
+        CodingAgentExecutionStatus.Succeeded => "Completed",
+        CodingAgentExecutionStatus.Cancelled => "Cancelled",
+        CodingAgentExecutionStatus.TimedOut => "Timed out",
+        _ => string.IsNullOrWhiteSpace(failureReason) ? "Failed" : $"Failed: {failureReason}"
+    };
+
     private void GeneratePrompt()
     {
         if (_promptHandoff is null) return;
@@ -443,6 +678,7 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
 
         step.Prompt = PromptText;
         _promptRoundId = activeRound.Id;
+        _promptStepId = step.Id;
         _workspaceState.PersistAndNotify();
         return ordered.IndexOf(activeRound) + 1;
     }
@@ -483,6 +719,9 @@ public sealed class EngineeringSteeringViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        _agentCts?.Cancel();
+        _agentCts?.Dispose();
+        _agentCts = null;
         _workspaceState.OnChange -= WorkspaceState_OnChange;
         _disposed = true;
     }
